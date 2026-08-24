@@ -133,7 +133,7 @@ describe("cli: help", () => {
       expect(r.stdout).toContain("-v, --version");
       expect(r.stdout).not.toContain("Must appear before the command");
       expect(r.stdout).toContain("Examples:\n");
-      expect(r.stdout).toContain("https://fx.sh/docs");
+      expect(r.stdout).toContain("https://github.com/ttaatoo/hx");
       expect(r.stdout).toContain("run `/feedback` inside hx");
       expect(r.stdout).not.toContain("  Work      ");
       expect(r.stdout).not.toContain("\n\n\nRun `hx <command> --help`");

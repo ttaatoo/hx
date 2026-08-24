@@ -103,7 +103,15 @@ jobs:
               --cache-dir "$RUNNER_TEMP/fx-base-cache" \
               --global-cache-dir "$RUNNER_TEMP/fx-global-cache"
           )
-          cp "$base_worktree/zig-out/bin/hx" "$evidence_dir/base-fx"
+          if [ -f "$base_worktree/zig-out/bin/hx" ]; then
+            cp "$base_worktree/zig-out/bin/hx" "$evidence_dir/base-fx"
+          elif [ -f "$base_worktree/zig-out/bin/fx" ]; then
+            cp "$base_worktree/zig-out/bin/fx" "$evidence_dir/base-fx"
+          else
+            echo "base binary missing in $base_worktree/zig-out/bin" >&2
+            ls -la "$base_worktree/zig-out/bin" >&2 || true
+            exit 1
+          fi
           file "$evidence_dir/base-fx" > "$evidence_dir/base-file.txt"
           cat "$evidence_dir/base-file.txt"
           grep -Eq "$EXPECTED_FILE" "$evidence_dir/base-file.txt"

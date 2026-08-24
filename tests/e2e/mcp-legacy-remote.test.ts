@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runFx } from "../evals/eval-helpers";
+import { FX_BIN, runFx } from "../evals/eval-helpers";
 import {
   LEGACY_REMOTE_TOOL_RESULT,
   LEGACY_SSE_TOOL_RESULT,
@@ -633,7 +633,7 @@ describe("version-scoped legacy MCP remote transports", () => {
           ], {
             models: [{ id: MODEL, type: "language", tags: ["tool-use"] }],
           });
-          const binary = join(REPO_ROOT, "zig-out", "bin", "fx");
+          const binary = FX_BIN;
           tui = await TmuxSession.create({
             isolated: true,
             cwd: root.workspace,
