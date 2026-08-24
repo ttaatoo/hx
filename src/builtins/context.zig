@@ -1055,7 +1055,7 @@ test "project instruction file cap keeps a line-safe prefix and reports source f
     const alloc = std.testing.allocator;
     var tmp = std.testing.tmpDir(.{});
     defer tmp.cleanup();
-    try writeTestFile(tmp.dir, "home/.fx/AGENTS.md", "GLOBAL-ONE\nGLOBAL-TWO\n");
+    try writeTestFile(tmp.dir, "home/.hx/AGENTS.md", "GLOBAL-ONE\nGLOBAL-TWO\n");
     try writeTestFile(tmp.dir, "home/work/AGENTS.md", "PROJECT-ONE\nPROJECT-TWO\n");
     const home = try io_mod.dirRealpathAlloc(alloc, tmp.dir, "home");
     defer alloc.free(home);
@@ -1311,7 +1311,7 @@ test "initial gather orders global ancestors workspace and exact hidden and buil
     var tmp = std.testing.tmpDir(.{});
     defer tmp.cleanup();
 
-    try writeTestFile(tmp.dir, "home/.fx/AGENTS.md", "RULE_GLOBAL");
+    try writeTestFile(tmp.dir, "home/.hx/AGENTS.md", "RULE_GLOBAL");
     try writeTestFile(tmp.dir, "home/projects/AGENTS.md", "RULE_PARENT");
     try writeTestFile(tmp.dir, "home/projects/work/AGENTS.md", "RULE_WORKSPACE");
     try writeTestFile(tmp.dir, "home/projects/work/.github/AGENTS.md", "RULE_HIDDEN");
@@ -1359,10 +1359,10 @@ test "initial gather renders an identical global and workspace source once" {
     var tmp = std.testing.tmpDir(.{});
     defer tmp.cleanup();
 
-    try writeTestFile(tmp.dir, "home/.fx/AGENTS.md", "RULE_SHARED_GLOBAL_AND_WORKSPACE");
+    try writeTestFile(tmp.dir, "home/.hx/AGENTS.md", "RULE_SHARED_GLOBAL_AND_WORKSPACE");
     const home = try io_mod.dirRealpathAlloc(alloc, tmp.dir, "home");
     defer alloc.free(home);
-    const workspace = try io_mod.dirRealpathAlloc(alloc, tmp.dir, "home/.fx");
+    const workspace = try io_mod.dirRealpathAlloc(alloc, tmp.dir, "home/.hx");
     defer alloc.free(workspace);
 
     var context = try gatherProjectContextWithHome(alloc, .{

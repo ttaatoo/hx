@@ -1892,7 +1892,7 @@ describe("effect-aware command permissions", () => {
   );
 
   test(
-    "fx ask yolo returns repeated user-profile command results to the model",
+    "hx ask yolo returns repeated user-profile command results to the model",
     async () => {
       const root = createIsolatedRoot();
       const callIds = ["direct_1", "direct_2", "direct_3"];
@@ -1922,7 +1922,7 @@ describe("effect-aware command permissions", () => {
     TIMEOUT,
   );
   test(
-    "fx ask yolo completes more than ten serial user-profile commands when unlimited",
+    "hx ask yolo completes more than ten serial user-profile commands when unlimited",
     async () => {
       const root = createIsolatedRoot();
       const gateway = startFakeGateway([
@@ -1952,7 +1952,7 @@ describe("effect-aware command permissions", () => {
     TIMEOUT,
   );
   test(
-    "fx ask yolo executes pwd through the default user profile without an artifact",
+    "hx ask yolo executes pwd through the default user profile without an artifact",
     async () => {
       const root = createIsolatedRoot();
       const gateway = startFakeGateway([toolCall("pwd"), finalText("ask direct complete")]);
@@ -1989,7 +1989,7 @@ describe("effect-aware command permissions", () => {
     TIMEOUT,
   );
   test(
-    "fx ask projects hostile ls filenames through the default user profile",
+    "hx ask projects hostile ls filenames through the default user profile",
     async () => {
       const root = createIsolatedRoot();
       const gateway = startFakeGateway([toolCall("ls"), finalText("ask ls complete")]);
@@ -2020,7 +2020,7 @@ describe("effect-aware command permissions", () => {
     TIMEOUT,
   );
   test(
-    "fx ask preserves quoted shell metacharacters through the user profile",
+    "hx ask preserves quoted shell metacharacters through the user profile",
     async () => {
       const root = createIsolatedRoot();
       const gateway = startFakeGateway([
@@ -2053,7 +2053,7 @@ describe("effect-aware command permissions", () => {
     TIMEOUT,
   );
   test(
-    "fx ask keeps parser hardening cases approval-bearing",
+    "hx ask keeps parser hardening cases approval-bearing",
     async () => {
       const commands = [
         "wc -c < input.txt",
@@ -2089,7 +2089,7 @@ describe("effect-aware command permissions", () => {
     TIMEOUT,
   );
   test(
-    "fx ask blocks approval-bearing commands before side effects",
+    "hx ask blocks approval-bearing commands before side effects",
     async () => {
       const root = createIsolatedRoot();
       const marker = join(root.workspace, "must-not-exist");
@@ -2116,7 +2116,7 @@ describe("effect-aware command permissions", () => {
     TIMEOUT,
   );
   test(
-    "fx ask blocks hostile git before any executable or repository access",
+    "hx ask blocks hostile git before any executable or repository access",
     async () => {
       const root = createIsolatedRoot();
       const gateway = startFakeGateway([

@@ -15,7 +15,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-FX_BIN="${REPO_ROOT}/zig-out/bin/fx"
+FX_BIN="${REPO_ROOT}/zig-out/bin/hx"
 RESULTS_DIR="${REPO_ROOT}/benchmarks/results"
 SESSION_FIXTURE_ROOT="${TMPDIR:-/tmp}/fx-session-list-benchmark-$$"
 SESSION_FIXTURE_HOME="${SESSION_FIXTURE_ROOT}/home"
@@ -50,7 +50,7 @@ if [ "$SKIP_BUILD" = false ]; then
 fi
 
 if [ ! -x "$FX_BIN" ]; then
-  echo "error: fx binary not found at $FX_BIN"
+  echo "error: hx binary not found at $FX_BIN"
   exit 1
 fi
 
@@ -105,56 +105,56 @@ HOME="$GENERAL_FIXTURE_HOME" FX_BENCH=1 hyperfine \
 
 echo ""
 
-# Benchmark 1: fx help (minimal startup path)
-echo "--- fx help ---"
+# Benchmark 1: hx help (minimal startup path)
+echo "--- hx help ---"
 HOME="$GENERAL_FIXTURE_HOME" hyperfine \
   "${SHELL_OPTS[@]}" \
   --runs "$RUNS" \
   --warmup "$WARMUP" \
   --export-json "${RESULTS_DIR}/help.json" \
-  --command-name "fx help" \
+  --command-name "hx help" \
   "$FX_BIN help"
 
 echo ""
 
-# Benchmark 2: fx status --json (config load + JSON serialize)
-echo "--- fx status --json ---"
+# Benchmark 2: hx status --json (config load + JSON serialize)
+echo "--- hx status --json ---"
 HOME="$GENERAL_FIXTURE_HOME" hyperfine \
   "${SHELL_OPTS[@]}" \
   --runs "$RUNS" \
   --warmup "$WARMUP" \
   --export-json "${RESULTS_DIR}/status.json" \
-  --command-name "fx status --json" \
+  --command-name "hx status --json" \
   "$FX_BIN status --json"
 
 echo ""
 
-# Benchmark 3: fx doctor --json (system checks)
-echo "--- fx doctor --json ---"
+# Benchmark 3: hx doctor --json (system checks)
+echo "--- hx doctor --json ---"
 HOME="$GENERAL_FIXTURE_HOME" hyperfine \
   "${SHELL_OPTS[@]}" \
   --runs "$RUNS" \
   --warmup "$WARMUP" \
   --export-json "${RESULTS_DIR}/doctor.json" \
-  --command-name "fx doctor --json" \
+  --command-name "hx doctor --json" \
   "$FX_BIN doctor --json"
 
 echo ""
 
-# Benchmark 4: fx sessions --json (file I/O path)
-echo "--- fx sessions --json ---"
+# Benchmark 4: hx sessions --json (file I/O path)
+echo "--- hx sessions --json ---"
 HOME="$SESSION_FIXTURE_HOME" hyperfine \
   "${SHELL_OPTS[@]}" \
   --runs "$RUNS" \
   --warmup "$WARMUP" \
   --export-json "${RESULTS_DIR}/sessions.json" \
-  --command-name "fx sessions --json" \
+  --command-name "hx sessions --json" \
   "$FX_BIN sessions --json"
 
 echo ""
 
-# Benchmark 5: fx background --json (file I/O path)
-echo "--- fx background --json ---"
+# Benchmark 5: hx background --json (file I/O path)
+echo "--- hx background --json ---"
 (
   cd "$SESSION_FIXTURE_WORKSPACE"
   HOME="$SESSION_FIXTURE_HOME" hyperfine \
@@ -162,7 +162,7 @@ echo "--- fx background --json ---"
     --runs "$RUNS" \
     --warmup "$WARMUP" \
     --export-json "${RESULTS_DIR}/background.json" \
-    --command-name "fx background --json" \
+    --command-name "hx background --json" \
     "$FX_BIN background --json"
 )
 

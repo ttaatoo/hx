@@ -229,41 +229,41 @@ fn runInteractiveWithDeps(comptime App: type, comptime cooperative: bool, alloc:
                 return .returned;
             },
             error.RecordingStartFailed => {
-                writeStderr(deps, "fx: unable to start terminal recording.\n");
+                writeStderr(deps, "hx: unable to start terminal recording.\n");
                 return .{ .exit = 1 };
             },
             error.NoSavedSessions => {
-                writeStderr(deps, "fx: no saved sessions for this workspace.\n");
+                writeStderr(deps, "hx: no saved sessions for this workspace.\n");
                 return .{ .exit = 1 };
             },
             error.SessionNotFound => {
-                writeStderr(deps, "fx: saved session not found.\n");
+                writeStderr(deps, "hx: saved session not found.\n");
                 return .{ .exit = 1 };
             },
             error.SessionBusy => {
-                writeStderr(deps, "fx: another Fx process may be using this session (running or suspended); check other terminals or run jobs, then use fg or quit that process\n");
+                writeStderr(deps, "hx: another Fx process may be using this session (running or suspended); check other terminals or run jobs, then use fg or quit that process\n");
                 return .{ .exit = 1 };
             },
             error.SessionLockUnsupported => {
-                writeStderr(deps, "fx: the filesystem cannot provide the required session lock\n");
+                writeStderr(deps, "hx: the filesystem cannot provide the required session lock\n");
                 return .{ .exit = 1 };
             },
             error.SessionAuthorityBoundaryUnavailable,
             error.SessionCommitBoundaryUnavailable,
             => {
-                writeStderr(deps, "fx: this session is being updated; wait a moment and retry\n");
+                writeStderr(deps, "hx: this session is being updated; wait a moment and retry\n");
                 return .{ .exit = 1 };
             },
             error.OneOffSessionNotResumable => {
-                writeStderr(deps, "fx: one-off child sessions cannot accept additional prompts; create a persistent child to continue the conversation\n");
+                writeStderr(deps, "hx: one-off child sessions cannot accept additional prompts; create a persistent child to continue the conversation\n");
                 return .{ .exit = 1 };
             },
             error.InvalidSessionFormat => {
-                writeStderr(deps, "fx: saved session is unreadable. Run `fx doctor`; if it is recoverable, use `fx session recover <id>`.\n");
+                writeStderr(deps, "hx: saved session is unreadable. Run `hx doctor`; if it is recoverable, use `hx session recover <id>`.\n");
                 return .{ .exit = 1 };
             },
             error.UnsupportedSessionSchema => {
-                writeStderr(deps, "fx: saved session uses an unsupported version and cannot be resumed by this fx build.\n");
+                writeStderr(deps, "hx: saved session uses an unsupported version and cannot be resumed by this fx build.\n");
                 return .{ .exit = 1 };
             },
             error.RetiredSandboxValue, error.UnsupportedSandboxValue => {
@@ -343,7 +343,7 @@ fn runInteractiveWithDeps(comptime App: type, comptime cooperative: bool, alloc:
         } else {
             writeStderr(
                 deps,
-                "fx: upgrade installed, but no validated resume handoff was available. Your conversation remains on disk; run `fx doctor`.\n",
+                "hx: upgrade installed, but no validated resume handoff was available. Your conversation remains on disk; run `hx doctor`.\n",
             );
         }
         return .{ .exit = 1 };
@@ -381,9 +381,9 @@ fn writeUpgradeRelaunchFailure(
     var buffer: [768]u8 = undefined;
     const message = std.fmt.bufPrint(
         &buffer,
-        "fx: upgrade installed, but relaunch failed: {s}\nContinue session with: fx --resume {s}\n",
+        "hx: upgrade installed, but relaunch failed: {s}\nContinue session with: fx --resume {s}\n",
         .{ @errorName(err), session_id },
-    ) catch "fx: upgrade installed, but relaunch failed; run `fx doctor`.\n";
+    ) catch "hx: upgrade installed, but relaunch failed; run `hx doctor`.\n";
     writeStderr(deps, message);
 }
 
@@ -463,7 +463,7 @@ fn formatResumeHandoff(buffer: []u8, session_id: []const u8) ![]const u8 {
 }
 
 fn formatUnexpectedError(buffer: []u8, err: anyerror) ![]const u8 {
-    return std.fmt.bufPrint(buffer, "fx: {s}\n", .{@errorName(err)});
+    return std.fmt.bufPrint(buffer, "hx: {s}\n", .{@errorName(err)});
 }
 
 fn reportUnexpectedInteractiveError(deps: RunDeps, err: anyerror) void {
@@ -477,7 +477,7 @@ fn writeStderr(deps: RunDeps, text: []const u8) void {
 }
 
 fn tryWriteErrorMessage(deps: RunDeps, err: anyerror) void {
-    writeStderr(deps, "fx: ");
+    writeStderr(deps, "hx: ");
     if (sandbox.configErrorMessage(err)) |message| {
         writeStderr(deps, message);
     } else {
@@ -1027,7 +1027,7 @@ test "app entry reports unexpected init errors once and preserves identity" {
     capture.record_stderr_event = true;
 
     try std.testing.expectError(error.TestInitFailed, runWithDeps(TestApp, alloc, &.{}, testConfig(), capture.deps()));
-    try std.testing.expectEqualStrings("fx: TestInitFailed\n", capture.stderr.written());
+    try std.testing.expectEqualStrings("hx: TestInitFailed\n", capture.stderr.written());
     try std.testing.expectEqual(@as(usize, 1), capture.stderr_calls);
     try expectEvents(&.{ "init:none", "stderr-attempt" });
 }
@@ -1040,7 +1040,7 @@ test "app entry releases terminal before reporting worker start errors" {
     capture.record_stderr_event = true;
 
     try std.testing.expectError(error.TestWorkerStartFailed, runWithDeps(TestApp, alloc, &.{}, testConfig(), capture.deps()));
-    try std.testing.expectEqualStrings("fx: TestWorkerStartFailed\n", capture.stderr.written());
+    try std.testing.expectEqualStrings("hx: TestWorkerStartFailed\n", capture.stderr.written());
     try std.testing.expectEqual(@as(usize, 1), capture.stderr_calls);
     try expectEvents(&.{ "init:none", "mcp-discovery", "rebind-after-init", "auto-upgrade", "file-index", "worker-thread", "terminal-release", "stderr-attempt", "deinit" });
 }
@@ -1066,7 +1066,7 @@ test "app entry releases terminal before reporting initial context failures exac
         var expected_stderr_buf: [64]u8 = undefined;
         const expected_stderr = try std.fmt.bufPrint(
             &expected_stderr_buf,
-            "fx: {s}\n",
+            "hx: {s}\n",
             .{@errorName(expected_error)},
         );
         try std.testing.expectEqualStrings(expected_stderr, capture.stderr.written());
@@ -1095,7 +1095,7 @@ test "app entry reports run errors before deinit and outer cleanup" {
     capture.record_stderr_event = true;
 
     try std.testing.expectError(error.TestRunFailed, runWithOuterCleanup(TestApp, alloc, &.{}, testConfig(), capture.deps()));
-    try std.testing.expectEqualStrings("fx: TestRunFailed\n", capture.stderr.written());
+    try std.testing.expectEqualStrings("hx: TestRunFailed\n", capture.stderr.written());
     try std.testing.expectEqual(@as(usize, 1), capture.stderr_calls);
     try std.testing.expectEqual(@as(usize, 0), capture.stdout_calls);
     try expectEvents(&.{ "init:none", "mcp-discovery", "rebind-after-init", "auto-upgrade", "file-index", "worker-thread", "model-cache", "run", "terminal-release", "stderr-attempt", "deinit", "outer-defer" });
@@ -1193,7 +1193,7 @@ test "app entry maps missing saved sessions to exit one" {
     const outcome = try runWithDeps(TestApp, alloc, &.{}, testConfig(), capture.deps());
 
     try std.testing.expectEqual(@as(u8, 1), outcome.exit);
-    try std.testing.expectEqualStrings("fx: no saved sessions for this workspace.\n", capture.stderr.written());
+    try std.testing.expectEqualStrings("hx: no saved sessions for this workspace.\n", capture.stderr.written());
 }
 
 test "app entry maps unavailable session state to one expected startup failure" {
@@ -1204,23 +1204,23 @@ test "app entry maps unavailable session state to one expected startup failure" 
     }{
         .{
             .init_error = error.SessionBusy,
-            .message = "fx: another Fx process may be using this session (running or suspended); check other terminals or run jobs, then use fg or quit that process\n",
+            .message = "hx: another Fx process may be using this session (running or suspended); check other terminals or run jobs, then use fg or quit that process\n",
         },
         .{
             .init_error = error.SessionLockUnsupported,
-            .message = "fx: the filesystem cannot provide the required session lock\n",
+            .message = "hx: the filesystem cannot provide the required session lock\n",
         },
         .{
             .init_error = error.SessionAuthorityBoundaryUnavailable,
-            .message = "fx: this session is being updated; wait a moment and retry\n",
+            .message = "hx: this session is being updated; wait a moment and retry\n",
         },
         .{
             .init_error = error.SessionCommitBoundaryUnavailable,
-            .message = "fx: this session is being updated; wait a moment and retry\n",
+            .message = "hx: this session is being updated; wait a moment and retry\n",
         },
         .{
             .init_error = error.OneOffSessionNotResumable,
-            .message = "fx: one-off child sessions cannot accept additional prompts; create a persistent child to continue the conversation\n",
+            .message = "hx: one-off child sessions cannot accept additional prompts; create a persistent child to continue the conversation\n",
         },
     };
 

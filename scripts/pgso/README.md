@@ -75,7 +75,7 @@ Candidate behavior qualification records each scenario's debug trace under `cand
 
 ## Qualification policy
 
-Startup compares `help`, `--version`, `status --json`, `background --json`, `doctor --json`, and `sessions --json`. It first executes each verified immutable artifact once to require successful output and empty stderr. Timing then uses pinned Hyperfine with no intermediate shell, ten warmups per artifact in each of at least ten rounds, at least 100 measured samples per artifact, and alternating control-then-candidate and candidate-then-control order. No contiguous block exceeds ten measured runs, so larger manual campaigns do not concentrate short machine-noise bursts on one artifact. Startup measurement sets `FX_DISABLE_KEYCHAIN=1` so the compiler comparison cannot be dominated by host-global macOS Keychain subprocess latency; the deterministic behavior corpus remains responsible for exercising Keychain integration. No per-sample Python process management or evidence-file write is included in the timed boundary, and measurement never replaces `zig-out/bin/fx`. Heavy qualification compares file indexing at 100,000 paths, UI activity, and approval transcript, diff, combined, and large-payload workloads.
+Startup compares `help`, `--version`, `status --json`, `background --json`, `doctor --json`, and `sessions --json`. It first executes each verified immutable artifact once to require successful output and empty stderr. Timing then uses pinned Hyperfine with no intermediate shell, ten warmups per artifact in each of at least ten rounds, at least 100 measured samples per artifact, and alternating control-then-candidate and candidate-then-control order. No contiguous block exceeds ten measured runs, so larger manual campaigns do not concentrate short machine-noise bursts on one artifact. Startup measurement sets `FX_DISABLE_KEYCHAIN=1` so the compiler comparison cannot be dominated by host-global macOS Keychain subprocess latency; the deterministic behavior corpus remains responsible for exercising Keychain integration. No per-sample Python process management or evidence-file write is included in the timed boundary, and measurement never replaces `zig-out/bin/hx`. Heavy qualification compares file indexing at 100,000 paths, UI activity, and approval transcript, diff, combined, and large-payload workloads.
 
 Heavy comparisons use at least 50 measured samples for each artifact and alternate pair order AB then BA. Command failures and timeouts fail qualification and are never replaced. A candidate fails when either p50 or p95 is more than 10% slower than its matching control. The existing Linux startup workflow remains the authority for the repository's absolute 2 ms command budget.
 
@@ -101,9 +101,9 @@ supplement, and binary hashes, and aggregation rejects any mismatch.
 The output root contains:
 
 ```text
-control/bin/fx
-instrumented/fx
-candidate/fx
+control/bin/hx
+instrumented/hx
+candidate/hx
 profiles/merged.profdata
 profiles/supplements/
 heavy/
@@ -117,11 +117,11 @@ Generated binaries, bitcode, objects, profiles, caches, measurements, and logs a
 
 The driver also streams operational progress to the invoking terminal or GitHub Actions log. Every stage announces its start and terminal status with elapsed time, every child command announces its start and terminal status, and child stdout and stderr remain visible while the process runs. A silent child emits a heartbeat every 30 seconds. JSON evidence retains at most the last 1,048,576 characters from each output stream per command and records the total character counts and truncation status; no environment variables are printed.
 
-Corpus scenarios inherit only a small operating-system environment allowlist. Credentials, live-test flags, tracing settings, and repository dotenv files are excluded unless a value is explicitly declared in the versioned corpus. The runner temporarily installs the assigned artifact at `zig-out/bin/fx` for E2E compatibility, then restores the prior file (or prior absence) after success, failure, timeout, or cancellation.
+Corpus scenarios inherit only a small operating-system environment allowlist. Credentials, live-test flags, tracing settings, and repository dotenv files are excluded unless a value is explicitly declared in the versioned corpus. The runner temporarily installs the assigned artifact at `zig-out/bin/hx` for E2E compatibility, then restores the prior file (or prior absence) after success, failure, timeout, or cancellation.
 
 The native workflow uploads bounded phase evidence rather than caches or
 intermediate compiler objects. Pull requests and manual runs have read-only
 repository permissions and do not change release, dev-channel, CDN, tag, or
 GitHub Release state. The stable release workflow may call the same gate with
 release packaging enabled; only the candidate copied by the successful final
-aggregate is packaged as `fx-macos-aarch64.tar.gz`.
+aggregate is packaged as `hx-macos-aarch64.tar.gz`.

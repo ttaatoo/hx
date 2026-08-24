@@ -331,7 +331,7 @@ fn composeEmptyRow(
 fn skillSourceScopeLabel(source: skill_runtime.SkillSource) []const u8 {
     return switch (source) {
         .global_fx => "Fx · Global",
-        .workspace_fx => "fx · Workspace",
+        .workspace_fx => "hx · Workspace",
         .workspace_shared => "Fx · Workspace",
         .workspace_opencode => "OpenCode · Workspace",
         .global_opencode => "OpenCode · Global",
@@ -359,7 +359,7 @@ fn visibleSkillCount(projection: SkillsMenuProjection) usize {
 }
 
 test "skills menu labels native workspace skills with lowercase product name" {
-    try std.testing.expectEqualStrings("fx · Workspace", skillSourceScopeLabel(.workspace_fx));
+    try std.testing.expectEqualStrings("hx · Workspace", skillSourceScopeLabel(.workspace_fx));
 }
 
 test "skills menu renders source tabs and single-line results" {

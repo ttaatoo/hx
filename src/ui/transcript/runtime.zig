@@ -10184,13 +10184,13 @@ test "resume view snapshot omits a visible leading welcome entry" {
     try runtime.writeTranscriptClassified(
         alloc,
         &metrics,
-        "fx · Run /help for commands\n\n",
+        "hx · Run /help for commands\n\n",
         true,
         .welcome,
     );
     try runtime.enableShadowVt(alloc);
     try runtime.shadow_vt.?.feed(
-        "\x1b[1;1Hfx · Run /help for commands" ++
+        "\x1b[1;1Hhx · Run /help for commands" ++
             "\x1b[3;1Hvisible one\x1b[4;1Hvisible two",
     );
     runtime.has_painted_transcript = true;

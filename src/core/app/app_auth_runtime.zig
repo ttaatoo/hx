@@ -231,7 +231,7 @@ pub fn Runtime(comptime App: type) type {
                     try writeAuthNotice(app, .{
                         .topic = "auth",
                         .tone = .neutral,
-                        .body = "Removed ~/.fx/grok-auth.json. SuperGrok is still available from ~/.grok/auth.json. Run grok logout to clear that store.",
+                        .body = "Removed ~/.hx/grok-auth.json. SuperGrok is still available from ~/.grok/auth.json. Run grok logout to clear that store.",
                     });
                     return;
                 }
@@ -274,7 +274,7 @@ pub fn Runtime(comptime App: type) type {
                     try writeAuthNotice(app, .{
                         .topic = "auth",
                         .tone = .@"error",
-                        .body = "Could not complete fx logout. The current source is unchanged.",
+                        .body = "Could not complete hx logout. The current source is unchanged.",
                     });
                     return;
                 },
@@ -299,7 +299,7 @@ pub fn Runtime(comptime App: type) type {
         fn applyLogoutResult(app: *App, result: login_flow.LogoutResult) !void {
             // Logging out is an explicit rejection of that credential, so a
             // remembered pointer to it would silently reactivate on next login.
-            // A remembered source always wins resolution, so an active fx login
+            // A remembered source always wins resolution, so an active hx login
             // is the only way one can be remembered; clearing otherwise is a
             // no-op against a store that holds nothing.
             if (app.auth.credentialSource() == .fx_login) forgetCredentialSource(app);
@@ -308,7 +308,7 @@ pub fn Runtime(comptime App: type) type {
                 .{
                     .topic = "auth",
                     .tone = .warning,
-                    .body = "Could not confirm durable fx logout. The active source was recalculated.",
+                    .body = "Could not confirm durable hx logout. The active source was recalculated.",
                 }
             else if (result.session_deleted)
                 .{
@@ -320,7 +320,7 @@ pub fn Runtime(comptime App: type) type {
                 .{
                     .topic = "auth",
                     .tone = .neutral,
-                    .body = "No fx login session found.",
+                    .body = "No hx login session found.",
                 });
             if (result.remote_revocation_failed) {
                 try writeAuthNotice(app, .{
@@ -1105,7 +1105,7 @@ pub fn Runtime(comptime App: type) type {
                     else => .{ .topic = "auth", .tone = .@"error", .body = "SuperGrok sign-in failed. The current credential is unchanged." },
                 }
             else switch (err) {
-                error.ClientIdMissing => .{ .topic = "auth", .tone = .@"error", .body = "fx login is not configured yet. The current credential is unchanged." },
+                error.ClientIdMissing => .{ .topic = "auth", .tone = .@"error", .body = "hx login is not configured yet. The current credential is unchanged." },
                 error.AccessDenied => .{ .topic = "auth", .tone = .@"error", .body = "Sign-in was denied. The current credential is unchanged." },
                 error.ExpiredToken, error.LoginTimedOut => .{ .topic = "auth", .tone = .warning, .body = "Sign-in expired. The current credential is unchanged; run /login to try again." },
                 else => .{ .topic = "auth", .tone = .@"error", .body = "Sign-in failed. The current credential is unchanged." },
@@ -1515,7 +1515,7 @@ test "completed credential switch emits exactly one transcript line" {
     try std.testing.expectEqualStrings(expected, app.transcript.items);
 }
 
-test "team change stays a local notice and does not activate fx login" {
+test "team change stays a local notice and does not activate hx login" {
     var app: TestApp = .{};
     defer app.deinit();
     app.auth.select_result = true;
@@ -1530,7 +1530,7 @@ test "team change stays a local notice and does not activate fx login" {
     try std.testing.expect(std.mem.find(u8, app.transcript.items, "Team switching is not supported") != null);
 }
 
-test "team change on an active fx login does not persist a team" {
+test "team change on an active hx login does not persist a team" {
     var app: TestApp = .{};
     defer app.deinit();
     app.auth.active_source = .fx_login;
@@ -1542,7 +1542,7 @@ test "team change on an active fx login does not persist a team" {
     try std.testing.expect(std.mem.find(u8, app.transcript.items, "Team switching is not supported") != null);
 }
 
-test "successful direct login remembers fx login after activation" {
+test "successful direct login remembers hx login after activation" {
     var app: TestApp = .{};
     defer app.deinit();
     app.auth.select_result = true;
@@ -1696,7 +1696,7 @@ test "logout durability failure still reconciles live auth" {
 
     try std.testing.expectEqual(@as(usize, 1), app.auth.logout_reconcile_count);
     try std.testing.expectEqual(@as(usize, 1), app.model_cache.reset_count);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "Could not confirm durable fx logout.") != null);
+    try std.testing.expect(std.mem.find(u8, app.transcript.items, "Could not confirm durable hx logout.") != null);
     try std.testing.expect(std.mem.find(u8, app.transcript.items, login_flow.remote_revocation_warning) != null);
     try std.testing.expect(std.mem.find(u8, app.transcript.items, "current source is unchanged") == null);
 }
@@ -1707,7 +1707,7 @@ test "prompt credential refresh failure is recoverable and detail-free" {
     app.auth.refresh_error = error.OAuthRequestFailed;
 
     try std.testing.expect(!try Runtime(TestApp).preparePromptCredential(&app));
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "fx login credential refresh failed.") != null);
+    try std.testing.expect(std.mem.find(u8, app.transcript.items, "hx login credential refresh failed.") != null);
     try std.testing.expect(std.mem.find(u8, app.transcript.items, "Choose another source below.") != null);
     try std.testing.expect(std.mem.find(u8, app.transcript.items, "OAuthRequestFailed") == null);
     try std.testing.expect(app.shell.render_requests.footer_requested);
@@ -1736,7 +1736,7 @@ test "prompt credential admission rejects a credential that remains unavailable"
 
     try std.testing.expect(!try Runtime(TestApp).preparePromptCredential(&app));
     try std.testing.expectEqual(@as(usize, 2), app.auth.refresh_count);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "fx login credential refresh failed.") != null);
+    try std.testing.expect(std.mem.find(u8, app.transcript.items, "hx login credential refresh failed.") != null);
     try std.testing.expect(app.auth.picker_opened);
 }
 

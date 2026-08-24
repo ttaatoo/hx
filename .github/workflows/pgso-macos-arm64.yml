@@ -84,9 +84,9 @@ jobs:
           name: pgso-seed-${{ github.sha }}
           path: |
             ${{ runner.temp }}/fx-pgso-seed/manifest.json
-            ${{ runner.temp }}/fx-pgso-seed/control/bin/fx
+            ${{ runner.temp }}/fx-pgso-seed/control/bin/hx
             ${{ runner.temp }}/fx-pgso-seed/ir/pgso/fx.bc
-            ${{ runner.temp }}/fx-pgso-seed/instrumented/fx
+            ${{ runner.temp }}/fx-pgso-seed/instrumented/hx
             ${{ runner.temp }}/fx-pgso-seed/profiles/merged.profdata
             ${{ runner.temp }}/fx-pgso-seed/logs
           if-no-files-found: error
@@ -127,7 +127,7 @@ jobs:
           path: ${{ runner.temp }}/fx-pgso-seed
 
       - name: Restore executable mode
-        run: chmod +x "$RUNNER_TEMP/fx-pgso-seed/instrumented/fx" "$RUNNER_TEMP/fx-pgso-seed/control/bin/fx"
+        run: chmod +x "$RUNNER_TEMP/fx-pgso-seed/instrumented/hx" "$RUNNER_TEMP/fx-pgso-seed/control/bin/hx"
 
       - name: Run assigned training scenarios
         run: |
@@ -184,7 +184,7 @@ jobs:
           path: ${{ runner.temp }}/fx-pgso-training
 
       - name: Restore executable mode
-        run: chmod +x "$RUNNER_TEMP/fx-pgso-seed/instrumented/fx" "$RUNNER_TEMP/fx-pgso-seed/control/bin/fx"
+        run: chmod +x "$RUNNER_TEMP/fx-pgso-seed/instrumented/hx" "$RUNNER_TEMP/fx-pgso-seed/control/bin/hx"
 
       - name: Build the one production candidate
         run: |
@@ -202,8 +202,8 @@ jobs:
           path: |
             ${{ runner.temp }}/fx-pgso-candidate/manifest.json
             ${{ runner.temp }}/fx-pgso-candidate/failure.json
-            ${{ runner.temp }}/fx-pgso-candidate/control/bin/fx
-            ${{ runner.temp }}/fx-pgso-candidate/candidate/fx
+            ${{ runner.temp }}/fx-pgso-candidate/control/bin/hx
+            ${{ runner.temp }}/fx-pgso-candidate/candidate/hx
             ${{ runner.temp }}/fx-pgso-candidate/profiles/merged.profdata
             ${{ runner.temp }}/fx-pgso-candidate/profiles/supplements
             ${{ runner.temp }}/fx-pgso-candidate/heavy/file_index/external-control/file-index-bench
@@ -260,7 +260,7 @@ jobs:
           path: ${{ runner.temp }}/fx-pgso-candidate
 
       - name: Restore executable mode
-        run: chmod +x "$RUNNER_TEMP/fx-pgso-candidate/candidate/fx" "$RUNNER_TEMP/fx-pgso-candidate/control/bin/fx"
+        run: chmod +x "$RUNNER_TEMP/fx-pgso-candidate/candidate/hx" "$RUNNER_TEMP/fx-pgso-candidate/control/bin/hx"
 
       - name: Run assigned behavior scenarios
         run: |
@@ -315,7 +315,7 @@ jobs:
           path: ${{ runner.temp }}/fx-pgso-candidate
 
       - name: Restore executable mode
-        run: chmod +x "$RUNNER_TEMP/fx-pgso-candidate/candidate/fx" "$RUNNER_TEMP/fx-pgso-candidate/control/bin/fx"
+        run: chmod +x "$RUNNER_TEMP/fx-pgso-candidate/candidate/hx" "$RUNNER_TEMP/fx-pgso-candidate/control/bin/hx"
 
       - name: Measure same-runner control and candidate
         run: |
@@ -366,8 +366,8 @@ jobs:
       - name: Restore executable mode
         run: |
           chmod +x \
-            "$RUNNER_TEMP/fx-pgso-candidate/candidate/fx" \
-            "$RUNNER_TEMP/fx-pgso-candidate/control/bin/fx" \
+            "$RUNNER_TEMP/fx-pgso-candidate/candidate/hx" \
+            "$RUNNER_TEMP/fx-pgso-candidate/control/bin/hx" \
             "$RUNNER_TEMP/fx-pgso-candidate/heavy/file_index/external-control/file-index-bench" \
             "$RUNNER_TEMP/fx-pgso-candidate/heavy/file_index/candidate/file-index-bench" \
             "$RUNNER_TEMP/fx-pgso-candidate/heavy/ui_activity/external-control/ui-activity-progress-bench" \
@@ -435,7 +435,7 @@ jobs:
           path: ${{ runner.temp }}/fx-pgso-heavy
 
       - name: Restore executable mode
-        run: chmod +x "$RUNNER_TEMP/fx-pgso-candidate/candidate/fx" "$RUNNER_TEMP/fx-pgso-candidate/control/bin/fx"
+        run: chmod +x "$RUNNER_TEMP/fx-pgso-candidate/candidate/hx" "$RUNNER_TEMP/fx-pgso-candidate/control/bin/hx"
 
       - name: Aggregate fail-closed evidence
         run: |
@@ -450,22 +450,22 @@ jobs:
         if: inputs.package_release
         run: |
           python3 -m scripts.pgso report --output-dir "$RUNNER_TEMP/fx-pgso-aggregate" >/dev/null
-          archive="$RUNNER_TEMP/fx-macos-aarch64.tar.gz"
+          archive="$RUNNER_TEMP/hx-macos-aarch64.tar.gz"
           package_dir="$RUNNER_TEMP/fx-release-package"
           mkdir -p "$package_dir"
-          cp "$RUNNER_TEMP/fx-pgso-aggregate/candidate/fx" LICENSE THIRD_PARTY_NOTICES.md "$package_dir/"
+          cp "$RUNNER_TEMP/fx-pgso-aggregate/candidate/hx" LICENSE THIRD_PARTY_NOTICES.md "$package_dir/"
           tar -czf "$archive" -C "$package_dir" fx LICENSE THIRD_PARTY_NOTICES.md
           cd "$RUNNER_TEMP"
-          shasum -a 256 fx-macos-aarch64.tar.gz > fx-macos-aarch64.tar.gz.sha256
+          shasum -a 256 hx-macos-aarch64.tar.gz > hx-macos-aarch64.tar.gz.sha256
 
       - name: Upload stable release artifact
         if: inputs.package_release
         uses: actions/upload-artifact@v4
         with:
-          name: fx-macos-aarch64
+          name: hx-macos-aarch64
           path: |
-            ${{ runner.temp }}/fx-macos-aarch64.tar.gz
-            ${{ runner.temp }}/fx-macos-aarch64.tar.gz.sha256
+            ${{ runner.temp }}/hx-macos-aarch64.tar.gz
+            ${{ runner.temp }}/hx-macos-aarch64.tar.gz.sha256
           if-no-files-found: error
 
       - name: Upload aggregate evidence

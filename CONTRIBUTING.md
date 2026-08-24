@@ -2,7 +2,7 @@
 
 ## Scope
 
-`fx` is a CLI-first coding agent written in Zig.
+`hx` is a CLI-first coding agent written in Zig, based on vercel-labs/fx.
 
 Supported platforms are Linux and macOS on x86_64 and aarch64. Windows, WebAssembly, and browser hosts are out of scope.
 
@@ -26,7 +26,7 @@ Requirements:
 
 * interactive terminal for manual shell testing
 
-* a SuperGrok session via `fx login grok`, or Anthropic via `ANTHROPIC_API_KEY` / `~/.fx/providers.json`. Codex (`fx login codex`) is optional. This fork does not use Vercel AI Gateway.
+* a SuperGrok session via `hx login grok`, or Anthropic via `ANTHROPIC_API_KEY` / `~/.hx/providers.json`. Codex (`hx login codex`) is optional. This repository does not use Vercel AI Gateway.
 
 Common commands:
 
@@ -39,7 +39,7 @@ zig build run
 
 ## Verification Workflow
 
-Keep the local development loop focused: run the narrowest test that covers the changed path, build fx, and exercise the change using `./zig-out/bin/fx`. The installed `fx` on `PATH` is not valid development evidence.
+Keep the local development loop focused: run the narrowest test that covers the changed path, build hx, and exercise the change using `./zig-out/bin/hx`. The installed `hx` on `PATH` is not valid development evidence.
 
 Once the focused checks pass, create a clean checkpoint commit, push the non-`main` feature branch, and open a draft PR immediately. The **Full CI** workflow runs the complete deterministic suite on native Linux x86_64, Linux aarch64, macOS x86_64, and macOS aarch64 runners. The native matrix builds, tests, and smoke-tests ReleaseSafe on every platform; formatting and the public-surface audit run in those ReleaseSafe jobs. Four duration-balanced, isolated ReleaseSafe E2E shards per platform use checked-in weights to assign every Bun test file once; files inside each shard run sequentially in separate Bun processes so terminal fixtures and process state cannot leak between files. A failed file receives one bounded retry after tmux is reset.
 
@@ -122,38 +122,38 @@ duplicate, stale, and unclassified files without running the full PGSO gate.
 Config precedence (highest wins):
 
 1. Environment variables such as `FX_MODEL`, `FX_PERMISSION_MODE`, and `FX_MAX_AGENT_STEPS`
-2. `~/.fx/settings.json` → `workspaces["<workspace_path>"]` (profile workspace overrides)
-3. `~/.fx/settings.json` top-level (profile global settings)
+2. `~/.hx/settings.json` → `workspaces["<workspace_path>"]` (profile workspace overrides)
+3. `~/.hx/settings.json` top-level (profile global settings)
 4. `<workspace>/.fx.json` (committed project defaults)
 5. Built-in defaults
 
 Project `.fx.json` accepts only repo-safe defaults: `sandbox`, `max_agent_steps`, `max_tool_result_bytes`, and `context`. Profile-owned keys such as `model`, `effort`, `fast_mode`, `slash_menu_categories`, `startup_scrollback`, `prompt_history`, `statusLine`, `skill_match_fuzzy`, `first_call_tool_choice`, `auto_upgrade`, `update_channel`, `permission_mode`, and `permission` are ignored from project config before their values are parsed.
 
-Runtime state lives under `~/.fx/`:
+Runtime state lives under `~/.hx/`:
 
-* `~/.fx/sessions/<session-id>/session.json`
+* `~/.hx/sessions/<session-id>/session.json`
 
-* `~/.fx/sessions/<session-id>/background/`
+* `~/.hx/sessions/<session-id>/background/`
 
-* `~/.fx/sessions/<session-id>/subagent/`
+* `~/.hx/sessions/<session-id>/subagent/`
 
-* `~/.fx/sessions/<session-id>/logs/`
+* `~/.hx/sessions/<session-id>/logs/`
 
 Sessions are global and portable across workspaces. Each session tracks a `workspace_root` that updates when resumed from a different directory.
 
-Subagent children are ordinary sessions with their own `~/.fx/sessions/<child-id>/` directory and their own history. The `subagent/` directory is per session on both sides of the relationship: a parent records create-operation identities there, and a child records its own control state there.
+Subagent children are ordinary sessions with their own `~/.hx/sessions/<child-id>/` directory and their own history. The `subagent/` directory is per session on both sides of the relationship: a parent records create-operation identities there, and a child records its own control state there.
 
 ## Skills
 
 There are two distinct skill categories in `fx`:
 
-* `fx` roots that belong to the product itself: `.fx/skills`, `skills/`, `~/.fx/skills`
+* `fx` roots that belong to the product itself: `.fx/skills`, `skills/`, `~/.hx/skills`
 
 * compatibility roots discovered for other agent installs: `.opencode/skills`, `.codex/skills`, `.claude/skills`, `.agents/skills`, `.claw/skills`, plus their global equivalents
 
 `/skills list` should make that distinction visible to the user.
 
-`/skills add` and `/skills install` install full skill directories into the profile-owned `~/.fx/skills` managed root, not just `SKILL.md`. Workspace `.fx/skills` and `skills/` remain discoverable project-local instructions, not managed install targets.
+`/skills add` and `/skills install` install full skill directories into the profile-owned `~/.hx/skills` managed root, not just `SKILL.md`. Workspace `.fx/skills` and `skills/` remain discoverable project-local instructions, not managed install targets.
 
 The interactive agent can also install skills via the `install_skill` tool when the user asks to install one in conversation, including pasted `npx skills add ...` syntax.
 
@@ -165,7 +165,7 @@ Version-scoped adapters retain legacy stdio,
 `2024-11-05` HTTP+SSE. Native sessions load runnable MCP configuration only
 from the trusted profile:
 
-* `~/.fx/mcp.json`
+* `~/.hx/mcp.json`
 
 Project `.fx.json` does not define runnable MCP commands, URLs, env, or secrets.
 
@@ -218,8 +218,8 @@ under the `0700` profile directory. `FX_DISABLE_KEYCHAIN=1` selects that portabl
 backend explicitly for deterministic tests and local troubleshooting.
 
 Servers are optional by default. Required startup failures block the first TUI
-or `fx ask` model request; optional failures publish a reduced, degraded
-capability set. One-shot `fx ask` starts required servers before its first model
+or `hx ask` model request; optional failures publish a reduced, degraded
+capability set. One-shot `hx ask` starts required servers before its first model
 request and defers optional servers until the turn first performs an MCP
 operation or delegates MCP capability to a child. `/mcp list` renders a bounded,
 secret-free health snapshot.
@@ -301,13 +301,13 @@ test("my scenario", async () => {
 
 ### Tape-based test (replay a real capture)
 
-For bugs reported by a user, have them run fx with `FX_RECORD=<path>`. Drop the tape in `tests/e2e/tapes/<name>.fxtape` and assert against `fx replay --golden`:
+For bugs reported by a user, have them run hx with `FX_RECORD=<path>`. Drop the tape in `tests/e2e/tapes/<name>.fxtape` and assert against `hx replay --golden`:
 
 ```bash
-fx replay tests/e2e/tapes/my-bug.fxtape --golden tests/e2e/tapes/my-bug.txt
+hx replay tests/e2e/tapes/my-bug.fxtape --golden tests/e2e/tapes/my-bug.txt
 ```
 
-Check in the golden file and wire a regression test that re-runs `fx replay` in CI and diffs.
+Check in the golden file and wire a regression test that re-runs `hx replay` in CI and diffs.
 
 ## What Not To Do
 
@@ -331,11 +331,11 @@ Releases are triggered automatically when the version in `src/main.zig` has no G
 2. Merge to `main`
 3. The release workflow checks for a GitHub Release named `vX.Y.Z`. If it is missing, it builds four platform binaries, creates the git tag when that tag does not already exist (inherited tags are not moved), and publishes a GitHub Release with the binaries attached
 
-This fork distributes binaries from GitHub Releases. Homebrew stable installs those assets. Do not reuse an inherited tag such as `v0.0.4`; bump the version instead.
+This repository distributes binaries from GitHub Releases. Homebrew stable installs those assets. Do not reuse an inherited tag such as `v0.0.4`; bump the version instead.
 
-After CI passes for a push to `main`, the dev release workflow publishes commit-addressed binaries and then updates `dev.json`. Dogfooders opt in with `fx upgrade --channel dev`; the choice is stored in their user settings and applies to manual upgrades, automatic upgrades, and the `ctrl+g` handoff. `fx upgrade --channel stable` returns to tagged releases. Dev publishing does not create tags or GitHub Releases.
+After CI passes for a push to `main`, the dev release workflow publishes commit-addressed binaries and then updates `dev.json`. Dogfooders opt in with `hx upgrade --channel dev`; the choice is stored in their user settings and applies to manual upgrades, automatic upgrades, and the `ctrl+g` handoff. `hx upgrade --channel stable` returns to tagged releases. Dev publishing does not create tags or GitHub Releases.
 
-Release notes are public product copy. Describe user-visible behavior, always spell the product `fx`, and omit contributor attribution, tracker references, repository or website work, delivery infrastructure, CI and test details, branch history, and implementation-only refactors. Use commits and pull requests as research evidence only. Changelog formatting and release-marker rules live in `AGENTS.md`.
+Release notes are public product copy. Describe user-visible behavior, always spell the product `hx`, and omit contributor attribution, tracker references, repository or website work, delivery infrastructure, CI and test details, branch history, and implementation-only refactors. Use commits and pull requests as research evidence only. Changelog formatting and release-marker rules live in `AGENTS.md`.
 
 Do not create tags manually. The workflow owns tag creation.
 
@@ -348,11 +348,11 @@ The workflow builds a ReleaseSafe binary, then uses [hyperfine](https://github.c
 | Command                | Budget | What it measures                                   |
 | ---------------------- | ------ | -------------------------------------------------- |
 | `fx` (startup)         | 2ms    | Binary launch through CLI dispatch (no TTY needed) |
-| `fx help`              | 2ms    | Minimal startup, pure text output                  |
-| `fx status --json`     | 2ms    | Config read + JSON serialization                   |
-| `fx background --json` | 2ms    | Background record read                             |
-| `fx doctor --json`     | 2ms    | System checks, subprocess spawns                   |
-| `fx sessions --json`   | 2ms    | Session directory read                             |
+| `hx help`              | 2ms    | Minimal startup, pure text output                  |
+| `hx status --json`     | 2ms    | Config read + JSON serialization                   |
+| `hx background --json` | 2ms    | Background record read                             |
+| `hx doctor --json`     | 2ms    | System checks, subprocess spawns                   |
+| `hx sessions --json`   | 2ms    | Session directory read                             |
 
 On PRs the check **fails** if any command exceeds its budget.
 
@@ -380,7 +380,7 @@ workflow builds ReleaseSafe first. Results are written to
 Minimum checklist:
 
 1. Run `zig fmt --check src/` and the focused tests for the changed path.
-2. Run `zig build`, then exercise the change with `./zig-out/bin/fx`.
+2. Run `zig build`, then exercise the change with `./zig-out/bin/hx`.
 3. Push the feature branch and open a draft PR immediately.
 4. Require all four **Full CI** jobs and the final ship gate to pass for the exact current commit before marking the PR ready.
 5. Update `README.md` if user-facing behavior changed.

@@ -18,15 +18,15 @@ If you cannot run the binary in your environment, say so explicitly and ask the 
 
 ### Always use the built binary in this repo
 
-When running fx for verification, **always use the freshly-built binary at** **`./zig-out/bin/fx`** from this checkout. Never run `fx` from `PATH`, never rely on whatever is at `~/.fx/bin/fx`, and never assume an installed copy reflects your change.
+When running hx for verification, **always use the freshly-built binary at** **`./zig-out/bin/hx`** from this checkout. Never run `hx` from `PATH`, never rely on whatever is at `~/.hx/bin/hx`, and never assume an installed copy reflects your change.
 
-* The user may have an older `fx` on their PATH (e.g. installed via `fx upgrade` or the CDN install script). Running that one will not exercise your edits.
+* The user may have an older `hx` on their PATH (e.g. installed via `hx upgrade` or Homebrew). Running that one will not exercise your edits.
 
-* `zig build` writes to `zig-out/bin/fx`. That is the only binary that contains your latest change.
+* `zig build` writes to `zig-out/bin/hx`. That is the only binary that contains your latest change.
 
-* When a user reports "still not working" after you believe you fixed something, do not assume they are running the wrong binary. Assume your fix is incomplete and investigate further. If you genuinely suspect a PATH mismatch, ask — do not silently copy binaries into `~/.fx/bin/`.
+* When a user reports "still not working" after you believe you fixed something, do not assume they are running the wrong binary. Assume your fix is incomplete and investigate further. If you genuinely suspect a PATH mismatch, ask — do not silently copy binaries into `~/.hx/bin/`.
 
-* In any shell invocation — tmux, direct run, scripts — reference fx as `/Users/<you>/path/to/repo/zig-out/bin/fx` (absolute) or `./zig-out/bin/fx` (when cwd is the repo root). Bare `fx` is always wrong for dev verification.
+* In any shell invocation — tmux, direct run, scripts — reference hx as `/Users/<you>/path/to/repo/zig-out/bin/hx` (absolute) or `./zig-out/bin/hx` (when cwd is the repo root). Bare `hx` is always wrong for dev verification.
 
 ## Language and Toolchain
 
@@ -116,19 +116,19 @@ Do not scatter help text or argument parsing across multiple files.
 
 ## Configuration and State
 
-Profile configuration and runtime state lives under `~/.fx/`. Project `.fx.json` contains committed project defaults only.
+Profile configuration and runtime state lives under `~/.hx/`. Project `.fx.json` contains committed project defaults only.
 
 Config precedence (highest wins):
 
 1. Environment variables such as `FX_MODEL`, `FX_PERMISSION_MODE`, and `FX_MAX_AGENT_STEPS`
-2. `~/.fx/settings.json` → `workspaces["<workspace_path>"]` (profile workspace overrides)
-3. `~/.fx/settings.json` top-level (profile global settings)
+2. `~/.hx/settings.json` → `workspaces["<workspace_path>"]` (profile workspace overrides)
+3. `~/.hx/settings.json` top-level (profile global settings)
 4. `<workspace>/.fx.json` (committed project defaults)
 5. Built-in defaults
 
 Project `.fx.json` accepts only repo-safe defaults: `sandbox`, `max_agent_steps`, `max_tool_result_bytes`, and `context`. Profile-owned keys such as `model`, `effort`, `fast_mode`, `slash_menu_categories`, `startup_scrollback`, `prompt_history`, `statusLine`, `skill_match_fuzzy`, `first_call_tool_choice`, `auto_upgrade`, `permission_mode`, `credential_source`, and `permission` are ignored from project config before their values are parsed.
 
-Runtime state lives under `~/.fx/sessions/<session-id>/` (`session.json`, `background/`, `subagent/`, `logs/`). Sessions are global and portable across workspaces — each session tracks its `workspace_root` which updates when resumed in a different workspace. A subagent child is an ordinary session with its own directory; `subagent/` holds create-operation identities on a parent and the control record on a child.
+Runtime state lives under `~/.hx/sessions/<session-id>/` (`session.json`, `background/`, `subagent/`, `logs/`). Sessions are global and portable across workspaces — each session tracks its `workspace_root` which updates when resumed in a different workspace. A subagent child is an ordinary session with its own directory; `subagent/` holds create-operation identities on a parent and the control record on a child.
 
 ## Permissions
 
@@ -220,7 +220,7 @@ Two test suites live under `tests/`, both using Bun:
 
 ### `tests/evals/` — LLM Evals
 
-Eval scenarios that exercise the agent through `fx ask --json`. Require `AI_GATEWAY_API_KEY`.
+Eval scenarios that exercise the agent through `hx ask --json`. Require `AI_GATEWAY_API_KEY`.
 
 ```bash
 cd tests/evals && bun install && bun test           # run all evals
@@ -264,7 +264,7 @@ Keep PR titles as clean imperative sentences, such as `Restore feedback report f
 
 ## Full CI on Feature Branches
 
-Do not run the complete deterministic test suite locally as the default development loop. Run the focused test for the changed path, build the binary, and exercise that path with `./zig-out/bin/fx`.
+Do not run the complete deterministic test suite locally as the default development loop. Run the focused test for the changed path, build the binary, and exercise that path with `./zig-out/bin/hx`.
 
 After the focused checks pass, create a clean checkpoint commit, push the non-`main` feature branch, and open a draft PR immediately. `.github/workflows/full-ci.yml` runs the following on all four supported native runner architectures:
 
@@ -289,16 +289,16 @@ Best for resize and SIGWINCH interactions. The helper in `tests/e2e/tmux-helpers
 zig build test
 ```
 
-### FX\_RECORD + fx replay (capture-and-replay)
+### FX\_RECORD + hx replay (capture-and-replay)
 
-Run fx with `FX_RECORD=<path>` to dump every byte fx writes, every resize, and every Ctrl+C into a framed binary tape. Replay the tape through the built-in virtual terminal:
+Run hx with `FX_RECORD=<path>` to dump every byte fx writes, every resize, and every Ctrl+C into a framed binary tape. Replay the tape through the built-in virtual terminal:
 
 ```bash
 FX_RECORD=/tmp/bug.fxtape fx        # user reproduces the glitch
-fx replay /tmp/bug.fxtape           # print the final cell grid
-fx replay /tmp/bug.fxtape --frames  # scrub through every intermediate frame
-fx replay /tmp/bug.fxtape --json    # structured frame metadata + grid
-fx replay /tmp/bug.fxtape --golden out.txt   # write grid to a file
+hx replay /tmp/bug.fxtape           # print the final cell grid
+hx replay /tmp/bug.fxtape --frames  # scrub through every intermediate frame
+hx replay /tmp/bug.fxtape --json    # structured frame metadata + grid
+hx replay /tmp/bug.fxtape --golden out.txt   # write grid to a file
 ```
 
 The tape is deterministic — any reviewer can replay it without a TTY, and a golden file can be checked in as a regression test.
@@ -336,7 +336,7 @@ and dynamic-loader floors vary enough to exceed 2ms independently of Fx, so
 local runs report raw means without assigning a substitute product budget. The
 process baseline is diagnostic only and is never subtracted.
 
-When adding features, consider their impact on startup latency. The `fx help` path is the baseline cold-start benchmark.
+When adding features, consider their impact on startup latency. The `hx help` path is the baseline cold-start benchmark.
 
 ## Binary Size Observability
 
@@ -395,7 +395,7 @@ Whether automated or manual, the changelog is public product copy. Describe obse
 
 Public changelog entries must:
 
-* Spell the product name `fx`. Preserve different casing only when it is part of an exact code identifier such as `FX_MODEL`.
+* Spell the product name `hx`. Preserve different casing only when it is part of an exact code identifier such as `FX_MODEL`. Internal Zig modules and `FX_*` environment variables stay `fx`.
 * Use only relevant sections from `### Breaking Changes`, `### New Features`, `### Improvements`, `### Bug Fixes`, and `### Security`. Omit empty sections.
 * Bold a short feature or fix name, then describe the user-visible change after a colon.
 * Omit pull request numbers, issue numbers, commit hashes, contributor names, and author attribution.
@@ -426,7 +426,7 @@ Do not create version tags manually. Do not change `build.zig.zon` version (it i
 
 ## Repository and License
 
-The canonical repository is `vercel-labs/fx` on GitHub. All URLs, links, and references to the repo must use `vercel-labs/fx` (not `vercel/fx`, `user/fx`, or any other org/owner). Licensed under Apache-2.0.
+The canonical repository is `ttaatoo/hx` on GitHub. This product is based on `vercel-labs/fx`. Licensed under Apache-2.0. See NOTICE.
 
 ## What Not To Do
 
@@ -451,7 +451,7 @@ The canonical repository is `vercel-labs/fx` on GitHub. All URLs, links, and ref
 ## Before Marking a PR Ready
 
 1. Run `zig fmt --check src/` and the focused tests for the changed path.
-2. Build and exercise the change locally with `./zig-out/bin/fx`.
+2. Build and exercise the change locally with `./zig-out/bin/hx`.
 3. Push a clean checkpoint commit and open a draft PR immediately.
 4. Require **Full CI** and the final ship gate to pass on the exact current commit across all four native runners.
 5. Update docs if behavior changed.

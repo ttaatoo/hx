@@ -779,7 +779,7 @@ fn buildBrowserAuthorizationUrl(
     try form.append(&out.writer, "id_token_add_organizations", "true");
     try form.append(&out.writer, "codex_cli_simplified_flow", "true");
     try form.append(&out.writer, "state", state);
-    try form.append(&out.writer, "originator", "fx");
+    try form.append(&out.writer, "originator", "hx");
     return out.toOwnedSlice();
 }
 

@@ -18,7 +18,10 @@ fn setRecvTimeout(conn: *std.http.Client.Connection) void {
     std.posix.setsockopt(sock, std.posix.SOL.SOCKET, std.posix.SO.RCVTIMEO, std.mem.asBytes(&timeout)) catch {};
 }
 
-pub const cdn_base = "https://releases.fx.sh";
+pub const cdn_base = "https://github.com/ttaatoo/hx/releases/download";
+pub const github_latest_api = "https://api.github.com/repos/ttaatoo/hx/releases/latest";
+pub const archive_prefix = "hx";
+const github_user_agent = "hx (+https://github.com/ttaatoo/hx)";
 
 pub fn resolveCdnBase() []const u8 {
     if (io_mod.getenv("FX_E2E_UPGRADE_BASE_URL")) |url| {
@@ -93,6 +96,9 @@ pub fn fetchTarget(alloc: Allocator, channel: Channel, base_url: []const u8) !Ta
 }
 
 fn fetchLatestVersion(alloc: Allocator, base_url: []const u8) ![]u8 {
+    if (!isLoopbackE2eUpgradeBase(base_url) and std.mem.eql(u8, base_url, cdn_base)) {
+        return fetchGithubLatestTag(alloc);
+    }
     var client: std.http.Client = .{ .allocator = alloc, .io = io_mod.getIo() };
     defer client.deinit();
     const url = try std.fmt.allocPrint(alloc, "{s}/latest.txt", .{base_url});
@@ -120,7 +126,11 @@ fn fetchTextBounded(
 ) ![]u8 {
     const uri = std.Uri.parse(url) catch return error.FetchFailed;
 
-    var req = client.request(.GET, uri, .{}) catch return error.FetchFailed;
+    var req = client.request(.GET, uri, .{
+        .headers = .{
+            .user_agent = .{ .override = github_user_agent },
+        },
+    }) catch return error.FetchFailed;
     defer req.deinit();
 
     if (req.connection) |conn| setRecvTimeout(conn);
@@ -146,6 +156,24 @@ fn fetchTextBounded(
         out.writer.writeAll(chunk[0..n]) catch return error.FetchFailed;
     }
     return out.toOwnedSlice() catch return error.OutOfMemory;
+}
+
+fn fetchGithubLatestTag(alloc: Allocator) ![]u8 {
+    var client: std.http.Client = .{ .allocator = alloc, .io = io_mod.getIo() };
+    defer client.deinit();
+    const raw = try fetchTextBounded(
+        &client,
+        alloc,
+        github_latest_api,
+        64 * 1024,
+    );
+    defer alloc.free(raw);
+
+    var parsed = std.json.parseFromSlice(std.json.Value, alloc, raw, .{}) catch return error.FetchFailed;
+    defer parsed.deinit();
+    const tag = parsed.value.object.get("tag_name") orelse return error.FetchFailed;
+    if (tag != .string or tag.string.len == 0) return error.FetchFailed;
+    return alloc.dupe(u8, tag.string);
 }
 
 pub const DownloadProgress = struct {
@@ -329,12 +357,15 @@ test "E2E upgrade base accepts only explicit IPv4 loopback origins" {
     try std.testing.expect(!isLoopbackE2eUpgradeBase("http://localhost:1234"));
 }
 
-test "production upgrade base uses the fx release domain" {
-    try std.testing.expectEqualStrings("https://releases.fx.sh", resolveCdnBase());
+test "production upgrade base uses GitHub Releases, not a Vercel CDN" {
+    try std.testing.expectEqualStrings(
+        "https://github.com/ttaatoo/hx/releases/download",
+        resolveCdnBase(),
+    );
 }
 
 test "extractChecksumHex parses sha256sum format" {
-    const with_filename = "abc123def456  fx-macos-aarch64.tar.gz\n";
+    const with_filename = "abc123def456  hx-macos-aarch64.tar.gz\n";
     const hex = extractChecksumHex(with_filename).?;
     try std.testing.expectEqualStrings("abc123def456", hex);
 }

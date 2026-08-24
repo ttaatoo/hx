@@ -2298,7 +2298,7 @@ function preflight(): void {
 
 function preflightBinaryOnly(): void {
   if (!existsSync(FX_BIN)) {
-    throw new Error(`fx binary not found at ${FX_BIN}. Run zig build first.`);
+    throw new Error(`hx binary not found at ${FX_BIN}. Run zig build first.`);
   }
   const stat = statSync(FX_BIN);
   if (!stat.isFile() || (stat.mode & 0o111) === 0) {

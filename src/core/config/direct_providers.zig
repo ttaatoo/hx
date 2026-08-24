@@ -531,8 +531,8 @@ test "direct provider catalog loads providers.json and matches models" {
     const alloc = std.testing.allocator;
     var tmp = std.testing.tmpDir(.{});
     defer tmp.cleanup();
-    try tmp.dir.createDirPath(io_mod.getIo(), "home/.fx");
-    var providers_file = try tmp.dir.createFile(io_mod.getIo(), "home/.fx/providers.json", .{});
+    try tmp.dir.createDirPath(io_mod.getIo(), "home/.hx");
+    var providers_file = try tmp.dir.createFile(io_mod.getIo(), "home/.hx/providers.json", .{});
     try providers_file.writeStreamingAll(io_mod.getIo(),
         \\{
         \\  "providers": {
@@ -585,8 +585,8 @@ test "loopback SuperGrok proxy env wins over a baked-in production base URL" {
     const alloc = std.testing.allocator;
     var tmp = std.testing.tmpDir(.{});
     defer tmp.cleanup();
-    try tmp.dir.createDirPath(io_mod.getIo(), "home/.fx");
-    var providers_file = try tmp.dir.createFile(io_mod.getIo(), "home/.fx/providers.json", .{});
+    try tmp.dir.createDirPath(io_mod.getIo(), "home/.hx");
+    var providers_file = try tmp.dir.createFile(io_mod.getIo(), "home/.hx/providers.json", .{});
     try providers_file.writeStreamingAll(io_mod.getIo(),
         \\{
         \\  "providers": {
@@ -690,8 +690,8 @@ test "startup overlay selects SuperGrok when an OAuth session is present" {
     const alloc = std.testing.allocator;
     var tmp = std.testing.tmpDir(.{});
     defer tmp.cleanup();
-    try tmp.dir.createDirPath(io_mod.getIo(), "home/.fx");
-    var auth_file = try tmp.dir.createFile(io_mod.getIo(), "home/.fx/grok-auth.json", .{
+    try tmp.dir.createDirPath(io_mod.getIo(), "home/.hx");
+    var auth_file = try tmp.dir.createFile(io_mod.getIo(), "home/.hx/grok-auth.json", .{
         .permissions = std.Io.File.Permissions.fromMode(0o600),
     });
     try auth_file.writeStreamingAll(io_mod.getIo(),
@@ -728,7 +728,7 @@ test "ANTHROPIC_API_KEY without providers.json yields an anthropic catalog entry
     const alloc = std.testing.allocator;
     var tmp = std.testing.tmpDir(.{});
     defer tmp.cleanup();
-    try tmp.dir.createDirPath(io_mod.getIo(), "home/.fx");
+    try tmp.dir.createDirPath(io_mod.getIo(), "home/.hx");
     const home = try io_mod.dirRealpathAlloc(alloc, tmp.dir, "home");
     defer alloc.free(home);
 

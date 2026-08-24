@@ -67,7 +67,7 @@ function selectedSlashRowIndex(escapes: string): number {
 }
 
 test("slash menu selection index ignores the welcome header help hint", () => {
-  const header = `${SELECTED_COMPLETION_SGR}𝒇x\x1b[0m${DIM_SGR} v0.3.27 · Run /help for commands`;
+  const header = `${SELECTED_COMPLETION_SGR}hx\x1b[0m${DIM_SGR} v0.3.27 · Run /help for commands`;
   const unselected = "\x1b[38;5;245m/help show available slash commands";
   const selected = `${SELECTED_COMPLETION_SGR}  /clear\x1b[38;5;245m start a fresh session and keep background processes`;
 
@@ -743,16 +743,16 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
 
       // Before the first turn names the session, the workspace distinguishes
       // parallel tabs while the model remains visible.
-      expect(await session.paneTitle()).toBe(`fx · workspace · ${model}`);
+      expect(await session.paneTitle()).toBe(`hx · workspace · ${model}`);
 
       // The first prompt names the session, and the tab follows it.
       await session.sendText("generate the release notes");
       await session.waitForText("TITLE_RENAME_COMPLETE", 30_000);
-      await waitForPaneTitle(session, `fx · generate the release notes · ${model}`, 5_000);
+      await waitForPaneTitle(session, `hx · generate the release notes · ${model}`, 5_000);
 
       await session.sendText("/rename deploy pipeline fix");
       await session.waitForText("renamed: deploy pipeline fix", 10_000);
-      await waitForPaneTitle(session, `fx · deploy pipeline fix · ${model}`, 5_000);
+      await waitForPaneTitle(session, `hx · deploy pipeline fix · ${model}`, 5_000);
 
       await session.sendText("/quit");
       expect(await session.waitForSessionEnd(10_000)).toBe(true);
@@ -784,7 +784,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         isolated: true,
       });
       await session.waitForComposer(10_000);
-      await waitForPaneTitle(session, `fx · deploy pipeline fix · ${model}`, 5_000);
+      await waitForPaneTitle(session, `hx · deploy pipeline fix · ${model}`, 5_000);
 
       await session.sendText("/quit");
       expect(await session.waitForSessionEnd(10_000)).toBe(true);
@@ -930,7 +930,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.waitForPane(
         (pane) =>
           composerContains(pane, "/feedback") &&
-          !pane.includes("open the fx feedback form"),
+          !pane.includes("open the hx feedback form"),
         5_000,
       );
       const afterDismiss = await capture("after-dismiss");
@@ -941,7 +941,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.waitForPane(
         (pane) =>
           composerContains(pane, "/feedbackx") &&
-          !pane.includes("open the fx feedback form"),
+          !pane.includes("open the hx feedback form"),
         5_000,
       );
       const afterDismissEdit = await capture("after-dismiss-edit");
@@ -1336,7 +1336,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
 
       await session.sendKeys("Escape");
       await session.waitForPane(
-        (current) => hasEmptyComposer(current) && current.includes("𝒇x") && !current.includes("Commands"),
+        (current) => hasEmptyComposer(current) && current.includes("hx") && !current.includes("Commands"),
         5_000,
       );
       await session.sendLiteralText("/resume ");
@@ -1353,7 +1353,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
 
       await session.sendKeys("Escape");
       await session.waitForPane(
-        (current) => hasEmptyComposer(current) && current.includes("𝒇x") && !current.includes("Sessions"),
+        (current) => hasEmptyComposer(current) && current.includes("hx") && !current.includes("Sessions"),
         5_000,
       );
       await session.sendLiteralText("/sandbox ");
@@ -1413,7 +1413,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.sendText("/help");
       let grid = await waitForHelpMenu(session, 38);
       let pane = grid.join("\n");
-      expect(pane).not.toContain("𝒇x");
+      expect(pane).not.toContain("hx");
       expect(pane).not.toContain("Run /help for commands");
       expect(pane).toContain("General");
       expect(pane).toContain("/help");
@@ -1511,7 +1511,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.sendText("/settings");
       const grid = await waitForSettingsMenu(session);
       let pane = grid.join("\n");
-      expect(pane).not.toContain("𝒇x");
+      expect(pane).not.toContain("hx");
       expect(pane).not.toContain("Run /help for commands");
       expect(pane).toContain("Settings");
       expect(pane).toContain("Interface");
@@ -1542,7 +1542,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       pane = await session.waitForPane(
         (current) =>
           hasEmptyComposer(current) &&
-          current.includes("𝒇x") &&
+          current.includes("hx") &&
           current.includes("workspace-statusline-visible") &&
           !current.includes("←→ Change"),
         5_000,
@@ -1590,7 +1590,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.sendText("/appearance");
       let grid = await waitForAppearanceMenu(session);
       let pane = grid.join("\n");
-      expect(pane).toContain("𝒇x");
+      expect(pane).toContain("hx");
       expect(pane).toContain("Input appearance");
       expect(pane).toContain("Maxxing mode");
       expect(pane).toContain("lines  tint");
@@ -1620,7 +1620,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.waitForPane(
         (current) =>
           hasEmptyComposer(current) &&
-          current.includes("𝒇x") &&
+          current.includes("hx") &&
           !current.includes("Appearance · Choose one"),
         5_000,
       );
@@ -1767,7 +1767,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.waitForPane(
         (current) =>
           hasEmptyComposer(current) &&
-          current.includes("𝒇x") &&
+          current.includes("hx") &&
           current.includes("compact-statusline-workspace") &&
           !current.includes("←→ Change"),
         5_000,
@@ -1839,7 +1839,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.waitForPane(
         (current) =>
           hasEmptyComposer(current) &&
-          current.includes("𝒇x") &&
+          current.includes("hx") &&
           !current.includes("←→ Change"),
         5_000,
       );
@@ -2402,12 +2402,12 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.sendKeys("-l '/sk'");
       await session.waitForText("browse and manage skills", 5_000);
       let grid = await session.capturePaneGrid();
-      expect(grid.join("\n")).toContain("𝒇x");
+      expect(grid.join("\n")).toContain("hx");
       expect(grid.join("\n")).not.toContain("Skills 4");
       await session.sendKeys("Enter");
       grid = await waitForSkillsMenu(session, 4);
       const pane = grid.join("\n");
-      expect(pane).not.toContain("𝒇x");
+      expect(pane).not.toContain("hx");
       expect(pane).not.toContain("Run /help for commands");
       expect(pane).toContain("[All]");
       expect(pane).toContain("Fx");
@@ -2427,7 +2427,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       expect(deep_history).not.toContain("Visible skills (");
       expect(deep_history).not.toContain("skill discovery warning:");
       expect(leadingBlankLineCount(tail_history)).toBeLessThan(3);
-      expect(tail_history).not.toContain("𝒇x v0.3.7");
+      expect(tail_history).not.toContain("hx v0.3.7");
       const escapes = await session.capturePaneEscapes();
       expect(escapes).not.toContain(`${DIM_SGR}fx-review`);
       expect(deep_history).not.toMatch(/(?:┃|❯) \/sk/);
@@ -2442,7 +2442,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.waitForPane(
         (current) =>
           hasEmptyComposer(current) &&
-          current.includes("𝒇x") &&
+          current.includes("hx") &&
           !current.includes("↑↓ Navigate"),
         5_000,
       );
@@ -2450,12 +2450,12 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.sendLiteralText("$work");
       grid = await waitForSkillsMenu(session, 1);
       expect(composerContains(grid.join("\n"), "$work")).toBe(true);
-      expect(grid.join("\n")).not.toContain("𝒇x");
+      expect(grid.join("\n")).not.toContain("hx");
       await session.sendKeys("C-[");
       await session.waitForPane(
         (current) =>
           composerContains(current, "$work") &&
-          current.includes("𝒇x") &&
+          current.includes("hx") &&
           !current.includes("↑↓ Navigate"),
         5_000,
       );
@@ -2465,7 +2465,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.waitForPane(
         (current) =>
           composerContains(current, " $") &&
-          current.includes("𝒇x") &&
+          current.includes("hx") &&
           !current.includes("Skills 4"),
         5_000,
       );
@@ -2475,7 +2475,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.waitForPane(
         (current) =>
           composerContains(current, "hello $") &&
-          current.includes("𝒇x") &&
+          current.includes("hx") &&
           !current.includes("Skills 4"),
         5_000,
       );
@@ -2595,7 +2595,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.sendKeys("Enter");
       grid = await session.capturePaneGrid();
       expect(composerContains(grid.join("\n"), "workspace-menu")).toBe(true);
-      expect(grid.join("\n")).toContain("𝒇x");
+      expect(grid.join("\n")).toContain("hx");
       expect(grid.join("\n")).not.toContain("↑↓ Navigate");
       expect(capturePaneHistory(session, -1000)).not.toContain("Unknown command");
       expect(session.isAlive()).toBe(true);
@@ -2698,12 +2698,12 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         height: 32,
       });
       await session.waitForComposer(10_000);
-      expect(await session.paneTitle()).toBe(`fx · workspace · ${SUPERGROK_MODEL}`);
+      expect(await session.paneTitle()).toBe(`hx · workspace · ${SUPERGROK_MODEL}`);
 
       await session.sendText("/models");
       let grid = await waitForModelsMenu(session, 2);
       let pane = grid.join("\n");
-      expect(pane).not.toContain("𝒇x");
+      expect(pane).not.toContain("hx");
       expect(pane).toContain(SUPERGROK_MODEL);
       expect(pane).toContain(SUPERGROK_FAST_MODEL);
       expect(pane).not.toContain("no matching models");
@@ -2749,7 +2749,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
 
       const settings = JSON.parse(readFileSync(fixture.settingsPath, "utf8")) as { model?: string };
       expect(settings.model).toBe(SUPERGROK_FAST_MODEL);
-      expect(await session.paneTitle()).toBe(`fx · workspace · ${SUPERGROK_FAST_MODEL}`);
+      expect(await session.paneTitle()).toBe(`hx · workspace · ${SUPERGROK_FAST_MODEL}`);
       expect(session.isAlive()).toBe(true);
 
       await session.sendText("/quit");
@@ -3100,7 +3100,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         await session.waitForPane(
           (pane) =>
             composerContains(pane, "Explain echo $HOME") &&
-            pane.includes("𝒇x") &&
+            pane.includes("hx") &&
             !pane.includes("No skills found."),
           5_000,
         );

@@ -752,11 +752,11 @@ pub const ModelListSnapshot = struct {
         if (!self.private_models_hidden) return null;
         const reason = self.public_only_reason orelse return "Using the public model catalog.";
         return switch (reason) {
-            .no_credential => "No SuperGrok or Anthropic credential is configured. Run fx login grok, or set ANTHROPIC_API_KEY.",
-            .fx_login_team_required => "A retired login session is ignored. Run fx login grok.",
-            .fx_login_refresh_required => "A retired login session is ignored. Run fx login grok.",
-            .credential_refresh_failed => "A retired login credential was ignored. Run fx login grok.",
-            .authenticated_credential_rejected => "A retired login credential was ignored. Run fx login grok.",
+            .no_credential => "No SuperGrok or Anthropic credential is configured. Run hx login grok, or set ANTHROPIC_API_KEY.",
+            .fx_login_team_required => "A retired login session is ignored. Run hx login grok.",
+            .fx_login_refresh_required => "A retired login session is ignored. Run hx login grok.",
+            .credential_refresh_failed => "A retired login credential was ignored. Run hx login grok.",
+            .authenticated_credential_rejected => "A retired login credential was ignored. Run hx login grok.",
             .chatgpt_subscription => "Codex models require an authenticated Codex catalog.",
             .grok_subscription => "SuperGrok models require an authenticated SuperGrok session.",
         };
@@ -802,13 +802,13 @@ pub const SessionListSnapshot = struct {
         }
         if (self.has_more) {
             try out.writer.print(
-                "[sessions] more saved sessions; continue with `fx sessions {s}--cursor {s}`\n",
+                "[sessions] more saved sessions; continue with `hx sessions {s}--cursor {s}`\n",
                 .{ if (self.all_workspaces) "--all " else "", self.next_cursor orelse "" },
             );
         }
         if (self.skipped_invalid > 0) {
             try out.writer.print(
-                "[sessions] warning: skipped {d} unreadable saved session{s}; run `fx doctor` for recovery guidance\n",
+                "[sessions] warning: skipped {d} unreadable saved session{s}; run `hx doctor` for recovery guidance\n",
                 .{ self.skipped_invalid, if (self.skipped_invalid == 1) "" else "s" },
             );
         }
@@ -1129,7 +1129,7 @@ pub const SessionRecoverySnapshot = struct {
         if (self.result.status == .indeterminate) {
             return std.fmt.allocPrint(
                 alloc,
-                "[session recovery] could not confirm target {s}\nsource: {s} (unchanged)\nresolve: fx --resume {s}\ninspect: fx doctor\n",
+                "[session recovery] could not confirm target {s}\nsource: {s} (unchanged)\nresolve: fx --resume {s}\ninspect: hx doctor\n",
                 .{
                     self.result.recovered_session_id,
                     self.result.source_session_id,
@@ -1598,9 +1598,9 @@ pub const UpgradeSnapshot = struct {
             },
             .up_to_date => {
                 if (std.mem.eql(u8, self.channel, "dev") and self.latest_revision.len > 0) {
-                    try out.writer.print("fx dev {s} is already up to date (", .{shortRevision(self.latest_revision)});
+                    try out.writer.print("hx dev {s} is already up to date (", .{shortRevision(self.latest_revision)});
                 } else {
-                    try out.writer.writeAll("fx is already up to date (");
+                    try out.writer.writeAll("hx is already up to date (");
                 }
                 try writeVersionWithPrefix(&out.writer, self.latest);
                 try out.writer.writeAll(")\n");
@@ -1953,7 +1953,7 @@ test "command failure snapshot renders stable escaped json" {
 test "core status snapshot text and json stay stable" {
     const snapshot = StatusSnapshot{
         .model = "alpha",
-        .auth_help = "This model uses SuperGrok / X Premium+. Run fx login grok. This uses subscription quota, not an XAI_API_KEY.",
+        .auth_help = "This model uses SuperGrok / X Premium+. Run hx login grok. This uses subscription quota, not an XAI_API_KEY.",
         .permission_mode = .ask,
         .workspace_root = "/tmp/fx",
         .history_turns = 3,
@@ -1964,14 +1964,14 @@ test "core status snapshot text and json stay stable" {
     const text = try snapshot.renderText(std.testing.allocator);
     defer std.testing.allocator.free(text);
     try std.testing.expectEqualStrings(
-        "[status] model=alpha\n[status] model_source=SuperGrok\n[status] update_channel=stable\n[status] build_channel=stable\n[status] auth=missing\n[status] auth_refreshable=false\n[status] auth_help=This model uses SuperGrok / X Premium+. Run fx login grok. This uses subscription quota, not an XAI_API_KEY.\n[status] permission_mode=ask\n[status] sandbox=none\n[status] workspace=/tmp/fx\n[status] history_turns=3\n[status] session_permission_grants=1\n[status] agent_step_limit=24\n",
+        "[status] model=alpha\n[status] model_source=SuperGrok\n[status] update_channel=stable\n[status] build_channel=stable\n[status] auth=missing\n[status] auth_refreshable=false\n[status] auth_help=This model uses SuperGrok / X Premium+. Run hx login grok. This uses subscription quota, not an XAI_API_KEY.\n[status] permission_mode=ask\n[status] sandbox=none\n[status] workspace=/tmp/fx\n[status] history_turns=3\n[status] session_permission_grants=1\n[status] agent_step_limit=24\n",
         text,
     );
 
     const json = try snapshot.renderJson(std.testing.allocator);
     defer std.testing.allocator.free(json);
     try std.testing.expectEqualStrings(
-        "{\"kind\":\"status\",\"model\":\"alpha\",\"model_source\":\"SuperGrok\",\"update_channel\":\"stable\",\"build_channel\":\"stable\",\"build_revision\":\"\",\"auth\":\"missing\",\"auth_refreshable\":false,\"auth_help\":\"This model uses SuperGrok / X Premium+. Run fx login grok. This uses subscription quota, not an XAI_API_KEY.\",\"permission_mode\":\"ask\",\"sandbox\":\"none\",\"workspace\":\"/tmp/fx\",\"history_turns\":3,\"session_permission_grants\":1,\"agent_step_limit\":24}",
+        "{\"kind\":\"status\",\"model\":\"alpha\",\"model_source\":\"SuperGrok\",\"update_channel\":\"stable\",\"build_channel\":\"stable\",\"build_revision\":\"\",\"auth\":\"missing\",\"auth_refreshable\":false,\"auth_help\":\"This model uses SuperGrok / X Premium+. Run hx login grok. This uses subscription quota, not an XAI_API_KEY.\",\"permission_mode\":\"ask\",\"sandbox\":\"none\",\"workspace\":\"/tmp/fx\",\"history_turns\":3,\"session_permission_grants\":1,\"agent_step_limit\":24}",
         json,
     );
 }
@@ -1990,14 +1990,14 @@ test "core status snapshot includes selected team when present" {
     const text = try snapshot.renderText(std.testing.allocator);
     defer std.testing.allocator.free(text);
     try std.testing.expectEqualStrings(
-        "[status] model=alpha\n[status] model_source=SuperGrok\n[status] update_channel=stable\n[status] build_channel=stable\n[status] auth=fx login\n[status] auth_refreshable=true\n[status] team=example-team\n[status] permission_mode=ask\n[status] sandbox=none\n[status] workspace=/tmp/fx\n[status] history_turns=0\n[status] session_permission_grants=0\n[status] agent_step_limit=24\n",
+        "[status] model=alpha\n[status] model_source=SuperGrok\n[status] update_channel=stable\n[status] build_channel=stable\n[status] auth=hx login\n[status] auth_refreshable=true\n[status] team=example-team\n[status] permission_mode=ask\n[status] sandbox=none\n[status] workspace=/tmp/fx\n[status] history_turns=0\n[status] session_permission_grants=0\n[status] agent_step_limit=24\n",
         text,
     );
 
     const json = try snapshot.renderJson(std.testing.allocator);
     defer std.testing.allocator.free(json);
     try std.testing.expectEqualStrings(
-        "{\"kind\":\"status\",\"model\":\"alpha\",\"model_source\":\"SuperGrok\",\"update_channel\":\"stable\",\"build_channel\":\"stable\",\"build_revision\":\"\",\"auth\":\"fx login\",\"auth_refreshable\":true,\"team\":\"example-team\",\"permission_mode\":\"ask\",\"sandbox\":\"none\",\"workspace\":\"/tmp/fx\",\"history_turns\":0,\"session_permission_grants\":0,\"agent_step_limit\":24}",
+        "{\"kind\":\"status\",\"model\":\"alpha\",\"model_source\":\"SuperGrok\",\"update_channel\":\"stable\",\"build_channel\":\"stable\",\"build_revision\":\"\",\"auth\":\"hx login\",\"auth_refreshable\":true,\"team\":\"example-team\",\"permission_mode\":\"ask\",\"sandbox\":\"none\",\"workspace\":\"/tmp/fx\",\"history_turns\":0,\"session_permission_grants\":0,\"agent_step_limit\":24}",
         json,
     );
 }
@@ -2150,23 +2150,23 @@ test "model list explains public-only and rejected-credential catalogs" {
     }{
         .{
             .snapshot = .{ .ids = &ids, .private_models_hidden = true, .public_only_reason = .no_credential },
-            .text = "[models] 1 available\n - alpha · SuperGrok\n[models] No SuperGrok or Anthropic credential is configured. Run fx login grok, or set ANTHROPIC_API_KEY.\n",
-            .body = "1 available\n - alpha · SuperGrok\nNo SuperGrok or Anthropic credential is configured. Run fx login grok, or set ANTHROPIC_API_KEY.",
+            .text = "[models] 1 available\n - alpha · SuperGrok\n[models] No SuperGrok or Anthropic credential is configured. Run hx login grok, or set ANTHROPIC_API_KEY.\n",
+            .body = "1 available\n - alpha · SuperGrok\nNo SuperGrok or Anthropic credential is configured. Run hx login grok, or set ANTHROPIC_API_KEY.",
         },
         .{
             .snapshot = rejected,
-            .text = "[models] 1 available\n - alpha · SuperGrok\n[models] A retired login credential was ignored. Run fx login grok.\n",
-            .body = "1 available\n - alpha · SuperGrok\nA retired login credential was ignored. Run fx login grok.",
+            .text = "[models] 1 available\n - alpha · SuperGrok\n[models] A retired login credential was ignored. Run hx login grok.\n",
+            .body = "1 available\n - alpha · SuperGrok\nA retired login credential was ignored. Run hx login grok.",
         },
         .{
             .snapshot = .{ .ids = &.{}, .private_models_hidden = true, .public_only_reason = .no_credential },
-            .text = "[models] no models returned by SuperGrok\n[models] No SuperGrok or Anthropic credential is configured. Run fx login grok, or set ANTHROPIC_API_KEY.\n",
-            .body = "no models returned by SuperGrok\nNo SuperGrok or Anthropic credential is configured. Run fx login grok, or set ANTHROPIC_API_KEY.",
+            .text = "[models] no models returned by SuperGrok\n[models] No SuperGrok or Anthropic credential is configured. Run hx login grok, or set ANTHROPIC_API_KEY.\n",
+            .body = "no models returned by SuperGrok\nNo SuperGrok or Anthropic credential is configured. Run hx login grok, or set ANTHROPIC_API_KEY.",
         },
         .{
             .snapshot = .{ .ids = &.{}, .private_models_hidden = true, .public_only_reason = .authenticated_credential_rejected },
-            .text = "[models] no models returned by SuperGrok\n[models] A retired login credential was ignored. Run fx login grok.\n",
-            .body = "no models returned by SuperGrok\nA retired login credential was ignored. Run fx login grok.",
+            .text = "[models] no models returned by SuperGrok\n[models] A retired login credential was ignored. Run hx login grok.\n",
+            .body = "no models returned by SuperGrok\nA retired login credential was ignored. Run hx login grok.",
         },
         .{
             .snapshot = .{ .ids = &.{}, .provider = .codex },
@@ -2275,7 +2275,7 @@ test "core session list snapshot text and json stay stable" {
     defer std.testing.allocator.free(paged_text);
     try std.testing.expectEqualStrings(
         "[sessions] 1 saved\n - Session title\n   id=abc | 3 turns | Spanish | updated 1970-01-01 00:00:00.002 UTC\n" ++
-            "[sessions] more saved sessions; continue with `fx sessions --cursor v1:2:abc`\n",
+            "[sessions] more saved sessions; continue with `hx sessions --cursor v1:2:abc`\n",
         paged_text,
     );
 
@@ -2718,7 +2718,7 @@ test "core session recovery snapshot text and json stay stable" {
     }).renderText(std.testing.allocator);
     defer std.testing.allocator.free(warning);
     try std.testing.expectEqualStrings(
-        "[session recovery] could not confirm target target-session\nsource: source-session (unchanged)\nresolve: fx --resume target-session\ninspect: fx doctor\n",
+        "[session recovery] could not confirm target target-session\nsource: source-session (unchanged)\nresolve: fx --resume target-session\ninspect: hx doctor\n",
         warning,
     );
 }
@@ -2899,7 +2899,7 @@ test "core upgrade snapshot renders errors and statuses" {
 
     const up_to_date_text = try up_to_date.renderText(std.testing.allocator);
     defer std.testing.allocator.free(up_to_date_text);
-    try std.testing.expectEqualStrings("fx is already up to date (v0.2.10)\n", up_to_date_text);
+    try std.testing.expectEqualStrings("hx is already up to date (v0.2.10)\n", up_to_date_text);
 
     const failed_text = try (UpgradeSnapshot{
         .current = "0.2.9",

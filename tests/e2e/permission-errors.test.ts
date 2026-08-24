@@ -91,7 +91,7 @@ async function waitForPaneExit(
     await Bun.sleep(25);
   }
   throw new Error(
-    `Timed out waiting for fx ask to exit.\n${await session.captureFullScrollback()}`,
+    `Timed out waiting for hx ask to exit.\n${await session.captureFullScrollback()}`,
   );
 }
 
@@ -125,7 +125,7 @@ async function runTtyPromptPermissionsCase(
       remainOnExit: true,
     });
     const prompt = await session.waitForText("Approve? [y/N]", TIMEOUT);
-    expect(prompt).toContain("fx wants to run:");
+    expect(prompt).toContain("hx wants to run:");
     expect(existsSync(marker)).toBe(false);
     await session.sendText(decision === "approve" ? "y" : "n");
     await waitForPaneExit(session, 0);

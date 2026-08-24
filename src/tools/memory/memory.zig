@@ -71,7 +71,7 @@ pub fn call(ctx: tool_dispatch.DispatchContext, erased: tool_dispatch.ToolInput)
         error.OutOfMemory => return error.OutOfMemory,
         error.MemoryClearFailed => return .{ .failure = try ctx.allocator.dupe(
             u8,
-            "memory clear failed: saved memories were not removed; ensure ~/.fx/memories.json is a removable file and retry",
+            "memory clear failed: saved memories were not removed; ensure ~/.hx/memories.json is a removable file and retry",
         ) },
         else => return .{ .failure = try std.fmt.allocPrint(ctx.allocator, "memory failed: {s}", .{@errorName(err)}) },
     };
@@ -283,11 +283,11 @@ test "memory clear fails closed when state cannot be deleted" {
     const alloc = std.testing.allocator;
     var tmp = std.testing.tmpDir(.{});
     defer tmp.cleanup();
-    try tmp.dir.createDirPath(io_mod.getIo(), "home/.fx/memories.json");
+    try tmp.dir.createDirPath(io_mod.getIo(), "home/.hx/memories.json");
     {
         var survivor = try tmp.dir.createFile(
             io_mod.getIo(),
-            "home/.fx/memories.json/must-survive.txt",
+            "home/.hx/memories.json/must-survive.txt",
             .{},
         );
         survivor.close(io_mod.getIo());
@@ -307,7 +307,7 @@ test "memory clear fails closed when state cannot be deleted" {
 
     var survivor = try tmp.dir.openFile(
         io_mod.getIo(),
-        "home/.fx/memories.json/must-survive.txt",
+        "home/.hx/memories.json/must-survive.txt",
         .{},
     );
     survivor.close(io_mod.getIo());

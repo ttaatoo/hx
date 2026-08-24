@@ -371,7 +371,7 @@ describe("web_fetch SuperGrok fixture", () => {
   );
 
   test(
-    "default fx ask validates malformed web_fetch before transport",
+    "default hx ask validates malformed web_fetch before transport",
     async () => {
       const root = createIsolatedRoot();
       const gateway = startFakeGateway([

@@ -28,7 +28,7 @@ const NO_GATEWAY_AUTH = {
   VERCEL_OIDC_TOKEN: undefined,
 };
 const MISSING_AUTH_MESSAGE =
-  "This model uses SuperGrok / X Premium+. Run fx login grok. This uses subscription quota, not an XAI_API_KEY.";
+  "This model uses SuperGrok / X Premium+. Run hx login grok. This uses subscription quota, not an XAI_API_KEY.";
 
 function maxLineWidth(text: string): number {
   return Math.max(...text.split(/\r?\n/).map((line) => Bun.stringWidth(line)));
@@ -103,7 +103,7 @@ function writeLegacySession(
 
 describe("cli: help", () => {
   test(
-    "fx help exits 0 and renders the complete navigation page",
+    "hx help exits 0 and renders the complete navigation page",
     async () => {
       const r = await runFx(["help"]);
       expect(r.code).toBe(0);
@@ -111,7 +111,7 @@ describe("cli: help", () => {
       expect(r.stdout).not.toContain("\x1b[");
       expect(r.stdout).not.toContain("\x1b]2;");
       expect(r.stdout).toStartWith(
-        `𝒇x v${sourceVersion()}\nFast, native coding agent for the terminal.\n`,
+        `hx v${sourceVersion()}\nFast, native coding agent for the terminal.\n`,
       );
       expect(r.stdout).toContain("Commands:\n");
       expect(r.stdout).toContain("Run one noninteractive request");
@@ -134,9 +134,9 @@ describe("cli: help", () => {
       expect(r.stdout).not.toContain("Must appear before the command");
       expect(r.stdout).toContain("Examples:\n");
       expect(r.stdout).toContain("https://fx.sh/docs");
-      expect(r.stdout).toContain("run `/feedback` inside 𝒇x");
+      expect(r.stdout).toContain("run `/feedback` inside hx");
       expect(r.stdout).not.toContain("  Work      ");
-      expect(r.stdout).not.toContain("\n\n\nRun `fx <command> --help`");
+      expect(r.stdout).not.toContain("\n\n\nRun `hx <command> --help`");
     },
     TIMEOUT,
   );
@@ -162,18 +162,18 @@ describe("cli: help", () => {
   );
 
   test(
-    "fx ask help renders documented options through both aliases",
+    "hx ask help renders documented options through both aliases",
     async () => {
       const env = {
         ...NO_GATEWAY_AUTH,
         FX_DISABLE_KEYCHAIN: "1",
       };
-      const expected = `fx ask
+      const expected = `hx ask
 
 Run one noninteractive request
 
 Usage:
-  fx ask [--auto|--yolo] [--image PATH] [--json] [--quiet] [--prompt-permissions] [--no-save] [--no-color] [--resume <last|id>|--resume-id <id>] [--continue-recovery] [--] <prompt>
+  hx ask [--auto|--yolo] [--image PATH] [--json] [--quiet] [--prompt-permissions] [--no-save] [--no-color] [--resume <last|id>|--resume-id <id>] [--continue-recovery] [--] <prompt>
 
 Options:
   --auto                Automatically review unresolved permission requests
@@ -206,7 +206,7 @@ With --prompt-permissions, JSON and quiet requests may prompt on stderr only whe
   );
 
   test(
-    "fx session help documents inspect resume migrate and recover",
+    "hx session help documents inspect resume migrate and recover",
     async () => {
       for (const args of [
         ["session", "--help"],
@@ -226,14 +226,14 @@ With --prompt-permissions, JSON and quiet requests may prompt on stderr only whe
   );
 
   test(
-    "fx acp help documents accepted options",
+    "hx acp help documents accepted options",
     async () => {
       for (const alias of ["--help", "-h"]) {
         const r = await runFx(["acp", alias]);
         expect(r.code).toBe(0);
         expect(r.stderr).toBe("");
         expect(r.stdout).toContain(
-          "Usage:\n  fx acp [--model <id>] [--log-file <path>]",
+          "Usage:\n  hx acp [--model <id>] [--log-file <path>]",
         );
         expect(r.stdout).toContain("--model <id>");
         expect(r.stdout).toContain("--log-file <path>");
@@ -243,7 +243,7 @@ With --prompt-permissions, JSON and quiet requests may prompt on stderr only whe
   );
 
   test(
-    "fx replay help describes golden output",
+    "hx replay help describes golden output",
     async () => {
       const r = await runFx(["replay", "--help"]);
       expect(r.code).toBe(0);
@@ -256,14 +256,14 @@ With --prompt-permissions, JSON and quiet requests may prompt on stderr only whe
   );
 
   test(
-    "fx acp rejects unknown options and missing option values",
+    "hx acp rejects unknown options and missing option values",
     async () => {
       for (const args of [["--bogus"], ["--model"], ["--log-file"]]) {
         const result = await runFx(["acp", ...args]);
         expect(result.code).toBe(1);
         expect(result.stdout).toBe("");
         expect(result.stderr).toBe(
-          "usage: fx acp [--model <id>] [--log-file <path>]\n",
+          "usage: hx acp [--model <id>] [--log-file <path>]\n",
         );
       }
     },
@@ -295,7 +295,7 @@ With --prompt-permissions, JSON and quiet requests may prompt on stderr only whe
         const r = await runFx([alias, "--record"]);
         expect(r.code).not.toBe(0);
         expect(r.stderr).toContain(
-          "usage: fx --record is only supported for interactive startup",
+          "usage: hx --record is only supported for interactive startup",
         );
       },
       TIMEOUT,
@@ -377,7 +377,7 @@ describe("cli: status", () => {
           mcp_config_error: "McpConfigInvalidJson",
         });
         expect(doctorText.stdout).toContain(
-          "[fail] mcp_config: failed to load ~/.fx/mcp.json: McpConfigInvalidJson\n",
+          "[fail] mcp_config: failed to load ~/.hx/mcp.json: McpConfigInvalidJson\n",
         );
         const doctorJson = JSON.parse(doctorJsonResult.stdout);
         expect(doctorJson.fail_count).toBe(1);
@@ -389,7 +389,7 @@ describe("cli: status", () => {
           {
             name: "mcp_config",
             status: "fail",
-            detail: "failed to load ~/.fx/mcp.json: McpConfigInvalidJson",
+            detail: "failed to load ~/.hx/mcp.json: McpConfigInvalidJson",
           },
         ]);
         expect(ask.code).toBe(1);
@@ -460,7 +460,7 @@ describe("cli: status", () => {
   );
 
   test(
-    "fx status --json returns valid status JSON",
+    "hx status --json returns valid status JSON",
     async () => {
       const r = await runFx(["status", "--json"]);
       expect(r.code).toBe(0);
@@ -479,7 +479,7 @@ describe("cli: status", () => {
   );
 
   test(
-    "fx status reports a persisted dev update channel",
+    "hx status reports a persisted dev update channel",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-update-channel-"));
       try {
@@ -511,7 +511,7 @@ describe("cli: status", () => {
   );
 
   test(
-    "fx upgrade help documents release channels",
+    "hx upgrade help documents release channels",
     async () => {
       const result = await runFx(["upgrade", "--help"]);
       expect(result.code).toBe(0);
@@ -522,7 +522,7 @@ describe("cli: status", () => {
   );
 
   test(
-    "fx status and models use Anthropic keys and SuperGrok OAuth",
+    "hx status and models use Anthropic keys and SuperGrok OAuth",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-direct-providers-"));
       try {
@@ -613,7 +613,7 @@ describe("cli: status", () => {
   );
 
   test(
-    "fx status --json defaults permission mode to auto",
+    "hx status --json defaults permission mode to auto",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-permission-default-"));
       try {
@@ -728,16 +728,16 @@ describe("cli: status", () => {
         expect(first.permission_mode).toBe("auto");
         expect(first.agent_step_limit).toBe(7);
         expect(status.stderr).toContain(
-          "fx: config project: ignored_project_user_only_setting; key=model",
+          "hx: config project: ignored_project_user_only_setting; key=model",
         );
         expect(status.stderr).toContain(
-          "fx: config project: ignored_project_user_only_setting; key=permission_mode",
+          "hx: config project: ignored_project_user_only_setting; key=permission_mode",
         );
         expect(status.stderr).toContain(
-          "fx: config project: ignored_project_user_only_setting; key=permission",
+          "hx: config project: ignored_project_user_only_setting; key=permission",
         );
         expect(status.stderr).toContain(
-          "fx: config project: ignored_project_user_only_setting; key=statusLine",
+          "hx: config project: ignored_project_user_only_setting; key=statusLine",
         );
         expect(status.stderr).not.toContain("danger");
 
@@ -800,7 +800,7 @@ describe("cli: status", () => {
         });
         expect(user.code).toBe(0);
         expect(JSON.parse(user.stdout)).toMatchObject({ kind: "status" });
-        expect(user.stderr).toContain("fx: config user: durable_path_unsafe");
+        expect(user.stderr).toContain("hx: config user: durable_path_unsafe");
 
         rmSync(join(fxDir, "settings.json"));
         expect(spawnSync("mkfifo", [join(workspace, ".fx.json")]).status).toBe(0);
@@ -811,7 +811,7 @@ describe("cli: status", () => {
         });
         expect(project.code).toBe(0);
         expect(JSON.parse(project.stdout)).toMatchObject({ kind: "status" });
-        expect(project.stderr).toContain("fx: config project: durable_path_unsafe");
+        expect(project.stderr).toContain("hx: config project: durable_path_unsafe");
       } finally {
         rmSync(root, { recursive: true, force: true });
       }
@@ -822,7 +822,7 @@ describe("cli: status", () => {
 
 describe("cli: usage", () => {
   test(
-    "fx usage reads rolling local facts without credentials or profile mutation",
+    "hx usage reads rolling local facts without credentials or profile mutation",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-usage-"));
       try {
@@ -923,7 +923,7 @@ describe("cli: usage", () => {
   );
 
   test(
-    "fx usage preserves known totals when the ledger is incomplete",
+    "hx usage preserves known totals when the ledger is incomplete",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-usage-incomplete-"));
       try {
@@ -990,7 +990,7 @@ describe("cli: usage", () => {
   );
 
   test(
-    "fx usage distinguishes empty, invalid, corrupt, and unsafe local state",
+    "hx usage distinguishes empty, invalid, corrupt, and unsafe local state",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-usage-states-"));
       try {
@@ -1090,7 +1090,7 @@ describe("cli: usage", () => {
   );
 
   test(
-    "fx usage preserves known totals but fails closed when recovery storage is unsafe",
+    "hx usage preserves known totals but fails closed when recovery storage is unsafe",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-usage-recovery-"));
       try {
@@ -1154,7 +1154,7 @@ describe("cli: usage", () => {
 
 describe("cli: permissions", () => {
   test(
-    "fx permissions --json returns valid permissions JSON",
+    "hx permissions --json returns valid permissions JSON",
     async () => {
       const r = await runFx(["permissions", "--json"]);
       expect(r.code).toBe(0);
@@ -1174,7 +1174,7 @@ describe("cli: permissions", () => {
 
 describe("cli: doctor", () => {
   test(
-    "fx doctor --json returns valid doctor JSON",
+    "hx doctor --json returns valid doctor JSON",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-doctor-json-"));
       try {
@@ -1217,7 +1217,7 @@ describe("cli: doctor", () => {
   );
 
   test(
-    "fx doctor --json leaves an empty home unchanged",
+    "hx doctor --json leaves an empty home unchanged",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-doctor-no-create-"));
       try {
@@ -1246,7 +1246,7 @@ describe("cli: doctor", () => {
   );
 
   test(
-    "fx doctor --json bounds session diagnostics without summary cache",
+    "hx doctor --json bounds session diagnostics without summary cache",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-doctor-bounded-"));
       try {
@@ -1316,7 +1316,7 @@ describe("cli: doctor", () => {
 
 describe("cli: logout", () => {
   test(
-    "fx logout leaves an active API key unchanged when no login exists",
+    "hx logout leaves an active API key unchanged when no login exists",
     async () => {
       const home = mkdtempSync(join(tmpdir(), "fx-e2e-logout-no-login-"));
       const apiToken = "logout-existing-api-key";
@@ -1559,7 +1559,7 @@ describe("cli: missing durable home", () => {
 
 describe("cli: sessions", () => {
   test(
-    "fx sessions --json returns valid sessions JSON",
+    "hx sessions --json returns valid sessions JSON",
     async () => {
       const home = mkdtempSync(join(tmpdir(), "fx-e2e-sessions-empty-"));
       try {
@@ -1577,7 +1577,7 @@ describe("cli: sessions", () => {
   );
 
   test(
-    "fx sessions text shows named, unnamed, and renamed sessions",
+    "hx sessions text shows named, unnamed, and renamed sessions",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-session-names-"));
       try {
@@ -2069,7 +2069,7 @@ describe("cli: sessions", () => {
   );
 
   test(
-    "fx sessions --json ignores malformed and oversized list caches",
+    "hx sessions --json ignores malformed and oversized list caches",
     async () => {
       for (const cached of ["{", "x".repeat(4 * 1024 * 1024 + 1)]) {
         const root = mkdtempSync(join(tmpdir(), "fx-e2e-sessions-cache-"));
@@ -2235,7 +2235,7 @@ describe("cli: removed delegated-task commands", () => {
 
 describe("cli: background", () => {
   test(
-    "fx background --json returns valid background JSON",
+    "hx background --json returns valid background JSON",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-background-empty-"));
       try {
@@ -2261,7 +2261,7 @@ describe("cli: background", () => {
   );
 
   test(
-    "fx background --json revalidates saved workspace background records",
+    "hx background --json revalidates saved workspace background records",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-background-"));
       try {
@@ -2339,7 +2339,7 @@ describe("cli: background", () => {
   );
 
   test(
-    "fx background exact json reports corrupt records instead of hiding them as missing",
+    "hx background exact json reports corrupt records instead of hiding them as missing",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-background-corrupt-"));
       try {
@@ -2461,7 +2461,7 @@ function writeBackgroundSession(args: {
 
 describe("cli: replay failures", () => {
   test(
-    "fx replay --json preserves structured failures for missing and malformed tapes",
+    "hx replay --json preserves structured failures for missing and malformed tapes",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-replay-json-errors-"));
       try {
@@ -2491,7 +2491,7 @@ describe("cli: replay failures", () => {
 
 describe("cli: ask input validation", () => {
   test(
-    "fx ask rejects invalid UTF-8 stdin before a model turn or session effects",
+    "hx ask rejects invalid UTF-8 stdin before a model turn or session effects",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-ask-invalid-utf8-"));
       const home = join(root, "home");
@@ -2526,7 +2526,7 @@ describe("cli: ask input validation", () => {
   );
 
   test(
-    "fx ask stdin resource overflow has distinct text and JSON errors",
+    "hx ask stdin resource overflow has distinct text and JSON errors",
     async () => {
       const oversized = Buffer.alloc(8 * 1024 * 1024 + 1, 0x78);
 
@@ -2538,7 +2538,7 @@ describe("cli: ask input validation", () => {
       expect(textResult.code).toBe(1);
       expect(textResult.stdout).toBe("");
       expect(textResult.stderr).toBe(
-        "fx ask: prompt exceeds the local input safety limit\n",
+        "hx ask: prompt exceeds the local input safety limit\n",
       );
 
       const jsonResult = await runFx(["ask", "--json", "--auto", "--no-save"], {
@@ -2558,7 +2558,7 @@ describe("cli: ask input validation", () => {
 
 describe("cli: session", () => {
   test(
-    "fx session with no id exits non-zero or shows usage",
+    "hx session with no id exits non-zero or shows usage",
     async () => {
       const r = await runFx(["session"]);
       expect(r.code).not.toBe(0);
@@ -2598,7 +2598,7 @@ describe("cli: interactive startup", () => {
 
 describe("cli: pr", () => {
   test(
-    "fx pr without SuperGrok auth exits non-zero",
+    "hx pr without SuperGrok auth exits non-zero",
     async () => {
       const home = mkdtempSync(join(tmpdir(), "fx-e2e-noauth-"));
       try {
@@ -2617,7 +2617,7 @@ describe("cli: pr", () => {
 
 describe("cli: issue", () => {
   test(
-    "fx issue without SuperGrok auth exits non-zero",
+    "hx issue without SuperGrok auth exits non-zero",
     async () => {
       const home = mkdtempSync(join(tmpdir(), "fx-e2e-noauth-"));
       try {
@@ -2636,19 +2636,19 @@ describe("cli: issue", () => {
 
 describe("cli: error handling", () => {
   test(
-    "fx ask rejects unknown options before a model turn",
+    "hx ask rejects unknown options before a model turn",
     async () => {
       const rejected = await runFx(["ask", "--definitely-unknown"], {
         env: { ...NO_GATEWAY_AUTH, FX_DISABLE_KEYCHAIN: "1" },
       });
       expect(rejected.code).toBe(1);
-      expect(rejected.stderr).toContain("usage: fx ask");
+      expect(rejected.stderr).toContain("usage: hx ask");
     },
     TIMEOUT,
   );
 
   test(
-    "fx ask with no prompt exits 1",
+    "hx ask with no prompt exits 1",
     async () => {
       const r = await runFx(["ask"]);
       expect(r.code).toBe(1);
@@ -2667,7 +2667,7 @@ describe("cli: error handling", () => {
   );
 
   test(
-    "fx ask explains no-save resume conflicts before a model turn",
+    "hx ask explains no-save resume conflicts before a model turn",
     async () => {
       const env = { ...NO_GATEWAY_AUTH, FX_DISABLE_KEYCHAIN: "1" };
       for (const args of [
@@ -2678,10 +2678,10 @@ describe("cli: error handling", () => {
         expect(rejected.code).toBe(1);
         expect(rejected.stdout).toBe("");
         expect(rejected.stderr).toContain(
-          "fx ask: --no-save cannot be used with --resume or --resume-id",
+          "hx ask: --no-save cannot be used with --resume or --resume-id",
         );
         expect(rejected.stderr).toContain(
-          "usage: fx ask [--auto|--yolo] [--image PATH] [--json] [--quiet] [--prompt-permissions] [--no-save]",
+          "usage: hx ask [--auto|--yolo] [--image PATH] [--json] [--quiet] [--prompt-permissions] [--no-save]",
         );
       }
     },
@@ -2702,7 +2702,7 @@ describe("cli: workspace access", () => {
         { env: enabled },
       );
       expect(help.code).toBe(0);
-      expect(help.stdout.startsWith("fx ask\n\n")).toBe(true);
+      expect(help.stdout.startsWith("hx ask\n\n")).toBe(true);
       expect(help.stderr).toBe("");
 
       const missing = await runFx(["--add-dir"], { env: enabled });

@@ -527,7 +527,7 @@ fn requiredInteger(object: std.json.ObjectMap, key: []const u8) !i64 {
     return value.integer;
 }
 
-test "fx grok auth session round trips" {
+test "hx grok auth session round trips" {
     const alloc = std.testing.allocator;
     var session = Session{
         .access_token = try alloc.dupe(u8, "grok-access"),

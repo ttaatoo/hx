@@ -179,20 +179,20 @@ pub fn catalogAccessForCredential(
 pub const stored_key_backend_label = if (builtin.os.tag == .macos) "macOS Keychain" else "profile file";
 
 /// Both modes resolve the same source set; the mode selects only whether an expired
-/// fx login session is refreshed first.
+/// hx login session is refreshed first.
 pub const LoadMode = enum { stored, refresh_if_needed };
 
 const FxLoginRefreshMode = enum { if_needed, force };
 
-pub const missing_chatgpt_credential_message = "fx needs a Codex subscription login for this model. Run fx login codex.";
+pub const missing_chatgpt_credential_message = "fx needs a Codex subscription login for this model. Run hx login codex.";
 pub const missing_chatgpt_interactive_credential_message = "Codex needs a subscription login. Run /login and choose Sign in with Codex.";
-pub const missing_direct_credential_message = "This model uses Anthropic. Set its apiKey in ~/.fx/providers.json or ANTHROPIC_API_KEY.";
-pub const missing_direct_interactive_credential_message = "This model uses Anthropic. Set its apiKey in ~/.fx/providers.json or ANTHROPIC_API_KEY.";
-pub const missing_grok_credential_message = "This model uses SuperGrok / X Premium+. Run fx login grok. This uses subscription quota, not an XAI_API_KEY.";
+pub const missing_direct_credential_message = "This model uses Anthropic. Set its apiKey in ~/.hx/providers.json or ANTHROPIC_API_KEY.";
+pub const missing_direct_interactive_credential_message = "This model uses Anthropic. Set its apiKey in ~/.hx/providers.json or ANTHROPIC_API_KEY.";
+pub const missing_grok_credential_message = "This model uses SuperGrok / X Premium+. Run hx login grok. This uses subscription quota, not an XAI_API_KEY.";
 pub const missing_grok_interactive_credential_message = "SuperGrok needs a subscription login. Run /login and choose Sign in with SuperGrok.";
 pub const missing_credential_message = missing_grok_credential_message;
 pub const missing_interactive_credential_message = missing_grok_interactive_credential_message;
-pub const unreadable_store_message = "Fx could not read a stored key from " ++ stored_key_backend_label ++ ". Run fx login grok, or set ANTHROPIC_API_KEY.";
+pub const unreadable_store_message = "Fx could not read a stored key from " ++ stored_key_backend_label ++ ". Run hx login grok, or set ANTHROPIC_API_KEY.";
 
 pub const MissingSurface = enum { cli, interactive };
 
@@ -336,7 +336,7 @@ pub fn resolvePreferring(
     return .{};
 }
 
-/// `loadSource` always refreshes an expired fx login, which `.stored` mode
+/// `loadSource` always refreshes an expired hx login, which `.stored` mode
 /// forbids: a diagnostic must not rewrite the session file or make an OAuth
 /// request. Honour the mode for the preferred source too.
 fn loadPreferredSource(
@@ -626,7 +626,7 @@ pub fn sourceLabel(source: Source) []const u8 {
     return switch (source) {
         .vercel_oidc_token => "VERCEL_OIDC_TOKEN",
         .ai_gateway_api_key => "AI_GATEWAY_API_KEY",
-        .fx_login => "fx login",
+        .fx_login => "hx login",
         .stored_key => "stored API key (" ++ stored_key_backend_label ++ ")",
         .chatgpt_subscription => "Codex subscription",
         .custom_provider => "direct provider API key",
@@ -647,7 +647,7 @@ test "stored key label discloses the backend that answered" {
 }
 
 test "missing credential messages ask for SuperGrok login" {
-    try std.testing.expect(std.mem.find(u8, missing_credential_message, "fx login grok") != null);
+    try std.testing.expect(std.mem.find(u8, missing_credential_message, "hx login grok") != null);
     try std.testing.expect(std.mem.find(u8, missing_credential_message, "AI_GATEWAY_API_KEY") == null);
     try std.testing.expect(std.mem.find(u8, missing_credential_message, "Vercel") == null);
     try std.testing.expect(std.mem.find(u8, missing_interactive_credential_message, "SuperGrok") != null);
@@ -694,7 +694,7 @@ test "catalog access isolates public and authenticated provider credentials" {
     try std.testing.expect(rejected.teamContext() == null);
 }
 
-test "selected fx login authorizes its team model catalog" {
+test "selected hx login authorizes its team model catalog" {
     var login = Credential{
         .token = try std.testing.allocator.dupe(u8, "login-token"),
         .source = .fx_login,
@@ -709,7 +709,7 @@ test "selected fx login authorizes its team model catalog" {
     try std.testing.expectEqualStrings("team_123", access.teamContext().?);
 }
 
-test "fx login catalog access requires a fresh credential and selected team" {
+test "hx login catalog access requires a fresh credential and selected team" {
     var login = Credential{
         .token = try std.testing.allocator.dupe(u8, "login-token"),
         .source = .fx_login,
@@ -879,7 +879,7 @@ test "a remembered Gateway choice does not load Vercel credentials" {
     try std.testing.expect(resolution.credential == null);
 }
 
-test "a remembered fx login never refreshes in stored mode" {
+test "a remembered hx login never refreshes in stored mode" {
     const alloc = std.testing.allocator;
     const env = try CredentialTestEnv.install(alloc, &.{});
     defer env.deinit();

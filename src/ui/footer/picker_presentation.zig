@@ -218,7 +218,7 @@ fn composeOnboardingPickerRow(
     const label = switch (source_row_index) {
         0 => "   Welcome to fx",
         1 => "",
-        2 => "   fx uses SuperGrok or Anthropic. Codex is optional.",
+        2 => "   hx uses SuperGrok or Anthropic. Codex is optional.",
         3 => "   Sign in with SuperGrok, or set ANTHROPIC_API_KEY.",
         4 => "",
         5 => "   You can change this anytime with /login.",
@@ -311,7 +311,7 @@ fn composeApiKeyPickerRow(
     else
         ui_render.dim_style);
     switch (row_index) {
-        0 => try row_text.appendClipped(alloc, &row, "   API key setup is not used on this fork", width),
+        0 => try row_text.appendClipped(alloc, &row, "   API key setup is not used on this repository", width),
         1 => {
             try row_text.appendClipped(alloc, &row, "   ┃ ", width);
             if (mask_count == 0) {
@@ -1584,7 +1584,7 @@ test "auth onboarding composes the welcome copy and setup choices" {
     }
 
     try std.testing.expect(std.mem.find(u8, screen.items, "Welcome to fx") != null);
-    try std.testing.expect(std.mem.find(u8, screen.items, "fx uses SuperGrok or Anthropic") != null);
+    try std.testing.expect(std.mem.find(u8, screen.items, "hx uses SuperGrok or Anthropic") != null);
     try std.testing.expect(std.mem.find(u8, screen.items, "You can change this anytime with /login.") != null);
     try std.testing.expect(std.mem.find(u8, screen.items, "⚠︎ Note: fx is experimental and defaults to auto mode. \x1b]8;id=fx-onboarding;https://fx.sh/docs/stability\x1b\\\x1b[4mLearn more\x1b[24m\x1b]8;;\x1b\\") != null);
     try std.testing.expect(std.mem.find(u8, screen.items, "Learn more: https://") == null);
@@ -1595,7 +1595,7 @@ test "auth onboarding composes the welcome copy and setup choices" {
 
     var body_row = try composeAuthPickerRow(alloc, view, 2, authPickerRowCount(view), 100);
     defer body_row.deinit(alloc);
-    try std.testing.expect(std.mem.find(u8, body_row.items, "fx uses SuperGrok or Anthropic") != null);
+    try std.testing.expect(std.mem.find(u8, body_row.items, "hx uses SuperGrok or Anthropic") != null);
 
     var spacer_row = try composeAuthPickerRow(alloc, view, 6, authPickerRowCount(view), 100);
     defer spacer_row.deinit(alloc);
@@ -1828,17 +1828,17 @@ test "partially visible auth picker shows a source window without duplicates" {
     var first_source = try composeAuthPickerRow(alloc, view, 1, 3, 80);
     defer first_source.deinit(alloc);
     try std.testing.expect(std.mem.find(u8, first_source.items, "AI_GATEWAY_API_KEY") != null);
-    try std.testing.expect(std.mem.find(u8, first_source.items, "fx login") == null);
+    try std.testing.expect(std.mem.find(u8, first_source.items, "hx login") == null);
 
     var selected_source = try composeAuthPickerRow(alloc, view, 2, 3, 80);
     defer selected_source.deinit(alloc);
-    try std.testing.expect(std.mem.find(u8, selected_source.items, "fx login") != null);
+    try std.testing.expect(std.mem.find(u8, selected_source.items, "hx login") != null);
 
     var scrolled_view = view;
     scrolled_view.selected_choice = .{ .source = .stored_key };
     var scrolled_first = try composeAuthPickerRow(alloc, scrolled_view, 1, 3, 80);
     defer scrolled_first.deinit(alloc);
-    try std.testing.expect(std.mem.find(u8, scrolled_first.items, "fx login") != null);
+    try std.testing.expect(std.mem.find(u8, scrolled_first.items, "hx login") != null);
 
     var scrolled_selected = try composeAuthPickerRow(alloc, scrolled_view, 2, 3, 80);
     defer scrolled_selected.deinit(alloc);

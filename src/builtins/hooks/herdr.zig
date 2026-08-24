@@ -1,7 +1,7 @@
 //! Best-effort lifecycle reporter for the herdr agent multiplexer.
 //!
 //! Each report uses a short-lived Unix socket. Failures and reply timeouts are
-//! ignored so the integration cannot block or terminate an fx session.
+//! ignored so the integration cannot block or terminate an hx session.
 
 const std = @import("std");
 const io_mod = @import("../../core/shared/io.zig");
@@ -18,7 +18,7 @@ const response_timeout = std.posix.timeval{ .sec = 0, .usec = 250_000 };
 
 // Third-party reporters use the `custom:` source prefix.
 const source = "custom:fx";
-const agent_name = "fx";
+const agent_name = "hx";
 
 const Request = union(enum) {
     report: struct { state: State, custom_status: ?[]const u8 },

@@ -1439,7 +1439,7 @@ describe("MCP remote authentication lifecycle", () => {
   }
 
   test(
-    "fx ask reports an actionable auth requirement without opening a browser",
+    "hx ask reports an actionable auth requirement without opening a browser",
     async () => {
       upstream = startModernMcpHttpFixture("json");
       auth = startAuthFixture(upstream.url);

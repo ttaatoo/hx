@@ -43,7 +43,7 @@ describe("web_search permission progress", () => {
       ]);
 
       expect(result.code).toBe(1);
-      expect(result.stderr).toContain("This model uses SuperGrok / X Premium+. Run fx login grok.");
+      expect(result.stderr).toContain("This model uses SuperGrok / X Premium+. Run hx login grok.");
       expectNoSearchProgress(result.stderr);
     },
     TIMEOUT,

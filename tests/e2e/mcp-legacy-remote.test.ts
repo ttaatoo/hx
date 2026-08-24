@@ -411,7 +411,7 @@ describe("version-scoped legacy MCP remote transports", () => {
   }, 30_000);
 
   for (const version of VERSIONS) {
-    test(`fresh fx ask calls Streamable HTTP ${version} with its lifecycle headers`, async () => {
+    test(`fresh hx ask calls Streamable HTTP ${version} with its lifecycle headers`, async () => {
       streamable = startLegacyStreamableHttpFixture(version);
       const root = createRoot(`ask-${version}`, "http", streamable.url);
       gateway = startToolGateway(`${version} complete.`);
@@ -882,7 +882,7 @@ describe("version-scoped legacy MCP remote transports", () => {
     expect(gateway.requests[2]?.body).toContain("McpAuthenticationRequired");
   }, 30_000);
 
-  test("fresh fx ask uses explicit HTTP+SSE endpoint discovery and message routing", async () => {
+  test("fresh hx ask uses explicit HTTP+SSE endpoint discovery and message routing", async () => {
     legacySse = startLegacyHttpSseFixture();
     const root = createRoot(
       "sse-ask",

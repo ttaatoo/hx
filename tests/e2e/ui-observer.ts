@@ -663,7 +663,7 @@ async function run() {
   if (!args.scenario) throw new Error("--scenario is required");
   if (!tmuxAvailable()) throw new Error("tmux is required");
   if (!existsSync(FX_BIN)) {
-    throw new Error(`fresh fx binary is missing: ${FX_BIN}\nRun: zig build`);
+    throw new Error(`fresh hx binary is missing: ${FX_BIN}\nRun: zig build`);
   }
 
   const fixture = createFixtureRoot(

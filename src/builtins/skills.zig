@@ -110,7 +110,7 @@ fn executeCommand(alloc: Allocator, command: Command, request: CommandRequest) !
         .remove => |name| removeCommandResult(alloc, request, name),
         .path => noticeFmt(
             alloc,
-            "fx workspace roots are auto-discovered from .fx/skills and skills/.\n" ++
+            "hx workspace roots are auto-discovered from .fx/skills and skills/.\n" ++
                 "fx managed install root: {s}\n" ++
                 "compatibility roots are auto-discovered from workspace and home (.opencode/.codex/.claude/.agents/.claw).",
             .{request.skills_dir},
@@ -1956,7 +1956,7 @@ test "built-in skills path reports native workspace roots" {
 
     switch (result) {
         .notice => |notice| try std.testing.expectEqualStrings(
-            "fx workspace roots are auto-discovered from .fx/skills and skills/.\n" ++
+            "hx workspace roots are auto-discovered from .fx/skills and skills/.\n" ++
                 "fx managed install root: /tmp/skills\n" ++
                 "compatibility roots are auto-discovered from workspace and home (.opencode/.codex/.claude/.agents/.claw).",
             notice.text,
@@ -2094,7 +2094,7 @@ test "built-in skills command creates and removes managed skills" {
         .name = "exact-skill",
         .info = .{
             .path = skill_dir,
-            .source_label = "global ~/.fx/skills",
+            .source_label = "global ~/.hx/skills",
             .managed_install = true,
         },
     }};

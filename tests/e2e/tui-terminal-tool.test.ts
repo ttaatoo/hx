@@ -346,7 +346,7 @@ function createFixture(prefix: string, endpointBytes?: number) {
       "x".repeat(
         endpointBytes -
           Buffer.byteLength(homeBase) -
-          Buffer.byteLength("/.fx/terminal-host/host.sock") -
+          Buffer.byteLength("/.hx/terminal-host/host.sock") -
           1,
       ),
     );
