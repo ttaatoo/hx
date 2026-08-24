@@ -1701,9 +1701,9 @@ test "surface footer measurement reserves only the compact auth picker rows" {
     var ctx = surfaceTestContext(&input);
     ctx.auth_picker = auth_runtime.PickerView{
         .active = true,
-        .available_sources = auth_runtime.SourceSet.initMany(&.{ .ai_gateway_api_key, .fx_login }),
-        .selected_choice = .{ .source = .fx_login },
-        .active_source = .fx_login,
+        .available_sources = auth_runtime.SourceSet.initMany(&.{ .custom_provider, .grok_subscription }),
+        .selected_choice = .{ .source = .grok_subscription },
+        .active_source = .grok_subscription,
         .include_skip = false,
     };
 
@@ -1738,12 +1738,11 @@ test "surface footer places the cursor after the team query" {
     var ctx = surfaceTestContext(&input);
     ctx.auth_picker = auth_runtime.PickerView{
         .active = true,
-        .available_sources = auth_runtime.SourceSet.initOne(.fx_login),
+        .available_sources = auth_runtime.SourceSet.initOne(.grok_subscription),
         .selected_choice = .{ .team = 0 },
-        .active_source = .fx_login,
+        .active_source = .grok_subscription,
         .include_skip = false,
         .stage = .change_team,
-        .fx_login_session_available = true,
         .teams = &teams,
         .team_query = "play",
     };
@@ -1781,10 +1780,9 @@ test "surface footer keeps the team query and cursor visible at minimum height" 
         .active = true,
         .available_sources = .empty,
         .selected_choice = null,
-        .active_source = .fx_login,
+        .active_source = .grok_subscription,
         .include_skip = false,
         .stage = .change_team,
-        .fx_login_session_available = true,
         .team_query = "play",
     };
 
@@ -1837,9 +1835,9 @@ test "surface footer keeps the selected auth source visible at minimum height" {
     var ctx = surfaceTestContext(&input);
     ctx.auth_picker = auth_runtime.PickerView{
         .active = true,
-        .available_sources = auth_runtime.SourceSet.initMany(&.{ .ai_gateway_api_key, .fx_login }),
-        .selected_choice = .{ .source = .fx_login },
-        .active_source = .ai_gateway_api_key,
+        .available_sources = auth_runtime.SourceSet.initMany(&.{ .custom_provider, .grok_subscription }),
+        .selected_choice = .{ .source = .grok_subscription },
+        .active_source = .custom_provider,
         .include_skip = false,
     };
 
@@ -1874,7 +1872,7 @@ test "surface footer keeps the selected auth source visible at minimum height" {
     defer frame.deinit(alloc);
 
     for (frame.composed.rows.items) |row| {
-        if (std.mem.find(u8, row.text.items, "hx login") != null) return;
+        if (std.mem.find(u8, row.text.items, "SuperGrok") != null) return;
     }
     return error.SelectedAuthSourceNotVisible;
 }

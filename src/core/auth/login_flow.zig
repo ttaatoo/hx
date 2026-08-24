@@ -1,17 +1,14 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const credentials = @import("credentials.zig");
 const chatgpt_session = @import("chatgpt_session.zig");
 const grok_session = @import("grok_session.zig");
 const debug_trace = @import("../shared/debug_trace.zig");
 const host = @import("../hosts/host.zig");
 const host_target = @import("../hosts/target.zig");
 const io_mod = @import("../shared/io.zig");
-const js_host_auth = @import("js_host_auth.zig");
 const oauth = @import("oauth.zig");
 const oauth_session = @import("oauth_session.zig");
 const oauth_transport = @import("oauth_transport.zig");
-const secret = @import("secret.zig");
 const test_builtin_gateway = if (builtin.is_test)
     @import("../../builtins/gateway.zig")
 else
@@ -134,23 +131,15 @@ pub const SignInSnapshot = struct {
 };
 
 pub const SignInCompletion = union(enum) {
-    vercel: TeamSelection,
     chatgpt: chatgpt_session.Session,
     grok: grok_session.Session,
 
     pub fn deinit(self: *SignInCompletion, alloc: Allocator) void {
         switch (self.*) {
-            .vercel => |*selection| selection.deinit(alloc),
             .chatgpt => |*session| session.deinit(alloc),
             .grok => |*session| session.deinit(alloc),
         }
-        self.* = .{ .vercel = .{} };
-    }
-
-    pub fn take(self: *SignInCompletion) SignInCompletion {
-        const completion = self.*;
-        self.* = .{ .vercel = .{} };
-        return completion;
+        self.* = undefined;
     }
 };
 
@@ -433,21 +422,23 @@ pub const SignInRuntime = struct {
             self.publishFailure(err);
             return;
         };
-        defer completion.deinit(alloc);
 
         self.mutex.lockUncancelable(io_mod.getIo());
         defer self.mutex.unlock(io_mod.getIo());
         if (self.state != .polling or self.cancel_requested.load(.seq_cst)) {
+            completion.deinit(alloc);
             debug_trace.logf("auth", "sign-in discarded session after cancel state={t}", .{self.state});
             return;
         }
         self.deps.save(self.deps.ctx, alloc, completion) catch |err| {
             debug_trace.logf("auth", "sign-in session save failed err={s}", .{@errorName(err)});
+            completion.deinit(alloc);
             self.failure = err;
             self.state = .failed;
             return;
         };
-        self.completion = completion.take();
+        if (self.completion) |*previous| previous.deinit(alloc);
+        self.completion = completion;
         self.state = .succeeded;
     }
 
@@ -483,55 +474,18 @@ pub const SignInRuntime = struct {
     }
 };
 
-fn prepareLogin(
-    alloc: Allocator,
-    transport: oauth_transport.Provider,
-) !PreparedLogin {
-    var client_id = oauth_session.configuredClientId() orelse return LoginError.ClientIdMissing;
-    const issuer_url = try oauth_session.configuredIssuerUrl();
-
-    var metadata = try oauth.discover(alloc, transport, issuer_url);
-    errdefer metadata.deinit(alloc);
-    try oauth_session.validateE2EEndpoint(issuer_url, metadata.device_authorization_endpoint);
-    try oauth_session.validateE2EEndpoint(issuer_url, metadata.token_endpoint);
-
-    var device = oauth.requestDeviceAuthorization(alloc, transport, metadata, client_id) catch |err| fallback: {
-        if (err != oauth.OAuthError.InvalidClient or std.mem.eql(u8, client_id, oauth_session.default_client_id)) return err;
-        client_id = oauth_session.default_client_id;
-        break :fallback try oauth.requestDeviceAuthorization(alloc, transport, metadata, client_id);
-    };
-    errdefer device.deinit(alloc);
-    const owned_client_id = try alloc.dupe(u8, client_id);
-    return .{
-        .metadata = metadata,
-        .device = device,
-        .client_id = owned_client_id,
-    };
-}
-
 fn completeSignIn(
     _: ?*anyopaque,
-    alloc: Allocator,
-    issuer_url: []const u8,
-    client_id: []const u8,
-    token: *oauth.TokenSet,
+    _: Allocator,
+    _: []const u8,
+    _: []const u8,
+    _: *oauth.TokenSet,
 ) !SignInCompletion {
-    var teams = std.ArrayList(Team).empty;
-    errdefer freeTeams(alloc, &teams);
-    const now_ms = io_mod.milliTimestamp();
-    const session = try take_login_session(alloc, issuer_url, client_id, token, null, now_ms);
-    return .{ .vercel = .{
-        .session = session,
-        .teams = teams,
-    } };
+    return error.RetiredGatewayLogin;
 }
 
-fn saveSignIn(_: ?*anyopaque, alloc: Allocator, completion: SignInCompletion) !void {
-    const session = switch (completion) {
-        .vercel => |selection| selection.session orelse return LoginError.NoSession,
-        .chatgpt, .grok => return error.InvalidSignInCompletion,
-    };
-    try oauth_session.saveNewSession(alloc, session);
+fn saveSignIn(_: ?*anyopaque, _: Allocator, _: SignInCompletion) !void {
+    return error.RetiredGatewayLogin;
 }
 
 pub fn runLogin(
@@ -950,50 +904,8 @@ fn discardStdinLine() void {
     }
 }
 
-fn fetchTeams(alloc: Allocator, access_token: []const u8, issuer_url: []const u8) !std.ArrayList(Team) {
-    if (!oauth_session.isLoopbackE2EIssuer(issuer_url)) return error.NoTeams;
-    if (comptime host_target.is_wasm) return fetchTeamsFromJsHost(alloc, access_token, issuer_url);
-    var client: std.http.Client = .{ .allocator = alloc, .io = io_mod.getIo() };
-    defer client.deinit();
-
-    const endpoint = try std.fmt.allocPrint(alloc, "{s}/v2/teams", .{issuer_url});
-    defer alloc.free(endpoint);
-
-    const auth_header = try std.fmt.allocPrint(alloc, "Bearer {s}", .{access_token});
-    defer secret.zeroAndFree(alloc, auth_header);
-
-    var out: std.Io.Writer.Allocating = .init(alloc);
-    defer out.deinit();
-
-    const result = try client.fetch(.{
-        .location = .{ .url = endpoint },
-        .method = .GET,
-        .headers = .{
-            .authorization = .{ .override = auth_header },
-            .accept_encoding = .omit,
-        },
-        .response_writer = &out.writer,
-        .redirect_behavior = .unhandled,
-    });
-    if (result.status != .ok) return error.TeamRequestFailed;
-    const body = try out.toOwnedSlice();
-    defer alloc.free(body);
-    return parseTeams(alloc, body);
-}
-
-fn fetchTeamsFromJsHost(
-    alloc: Allocator,
-    access_token: []const u8,
-    issuer_url: []const u8,
-) !std.ArrayList(Team) {
-    if (!oauth_session.isLoopbackE2EIssuer(issuer_url)) return error.NoTeams;
-    const endpoint = try std.fmt.allocPrint(alloc, "{s}/v2/teams", .{issuer_url});
-    defer alloc.free(endpoint);
-
-    var response = try js_host_auth.executeBearerGet(alloc, endpoint, access_token);
-    defer response.deinit(alloc);
-    if (response.disposition != .accepted) return error.TeamRequestFailed;
-    return parseTeams(alloc, response.body);
+fn fetchTeams(_: Allocator, _: []const u8, _: []const u8) !std.ArrayList(Team) {
+    return error.NoTeams;
 }
 
 fn parseTeams(alloc: Allocator, bytes: []const u8) !std.ArrayList(Team) {
@@ -1302,7 +1214,7 @@ fn check_take_login_session_allocation_failures(alloc: Allocator) !void {
     };
     var session = try take_login_session(
         alloc,
-        "https://vercel.com",
+        "http://127.0.0.1:9",
         "client",
         &token,
         &team,
@@ -1370,7 +1282,7 @@ test "legacy Vercel sign-in and team catalog stay local" {
     );
     try std.testing.expectError(
         error.NoTeams,
-        fetchTeams(std.testing.allocator, "token", "https://vercel.com"),
+        fetchTeams(std.testing.allocator, "token", "https://issuer.test"),
     );
 }
 
@@ -1486,9 +1398,9 @@ const LoginPollTestState = struct {
 
 fn testMetadata() oauth.Metadata {
     return .{
-        .issuer = @constCast("https://vercel.test"),
-        .device_authorization_endpoint = @constCast("https://vercel.test/device"),
-        .token_endpoint = @constCast("https://vercel.test/token"),
+        .issuer = @constCast("https://issuer.test"),
+        .device_authorization_endpoint = @constCast("https://issuer.test/device"),
+        .token_endpoint = @constCast("https://issuer.test/token"),
     };
 }
 
@@ -1496,7 +1408,7 @@ fn testDevice() oauth.DeviceAuthorization {
     return .{
         .device_code = @constCast("device"),
         .user_code = @constCast("USER-CODE"),
-        .verification_uri = @constCast("https://vercel.test/oauth/device"),
+        .verification_uri = @constCast("https://issuer.test/oauth/device"),
         .expires_in = 60,
         .interval = 1,
     };
@@ -1510,6 +1422,20 @@ fn testTokenSet(alloc: Allocator) !oauth.TokenSet {
         .scope = try alloc.dupe(u8, oauth.default_scope),
         .token_type = try alloc.dupe(u8, "Bearer"),
     };
+}
+
+fn testGrokCompletion(alloc: Allocator, client_id: []const u8, token: *oauth.TokenSet) !SignInCompletion {
+    const refresh_token = token.refresh_token orelse return LoginError.NoRefreshToken;
+    const completion: SignInCompletion = .{ .grok = .{
+        .access_token = token.access_token,
+        .refresh_token = refresh_token,
+        .expires_at_ms = 0,
+        .client_id = try alloc.dupe(u8, client_id),
+        .origin = .fx,
+    } };
+    token.access_token = &.{};
+    token.refresh_token = null;
+    return completion;
 }
 
 const SignInTestPollMode = enum {
@@ -1563,22 +1489,13 @@ const SignInTestState = struct {
     fn complete(
         raw: ?*anyopaque,
         alloc: Allocator,
-        issuer_url: []const u8,
+        _: []const u8,
         client_id: []const u8,
         token: *oauth.TokenSet,
     ) !SignInCompletion {
         const self = state(raw);
         _ = self.complete_count.fetchAdd(1, .seq_cst);
-        return .{ .vercel = .{
-            .session = try take_login_session(
-                alloc,
-                issuer_url,
-                client_id,
-                token,
-                null,
-                0,
-            ),
-        } };
+        return try testGrokCompletion(alloc, client_id, token);
     }
 
     fn save(raw: ?*anyopaque, _: Allocator, _: SignInCompletion) !void {
@@ -1617,20 +1534,13 @@ const CooperativeSignInTestState = struct {
     fn complete(
         raw: ?*anyopaque,
         alloc: Allocator,
-        issuer_url: []const u8,
+        _: []const u8,
         client_id: []const u8,
         token: *oauth.TokenSet,
     ) !SignInCompletion {
         const self = state(raw);
         self.complete_count += 1;
-        return .{ .vercel = .{ .session = try take_login_session(
-            alloc,
-            issuer_url,
-            client_id,
-            token,
-            null,
-            0,
-        ) } };
+        return try testGrokCompletion(alloc, client_id, token);
     }
 
     fn save(raw: ?*anyopaque, _: Allocator, _: SignInCompletion) !void {
@@ -1647,12 +1557,12 @@ const CooperativeSignInTestState = struct {
 fn makeTestPreparedLogin(alloc: Allocator) !PreparedLogin {
     var metadata = try oauth.parseMetadata(
         alloc,
-        "{\"issuer\":\"https://vercel.test\",\"device_authorization_endpoint\":\"https://vercel.test/device\",\"token_endpoint\":\"https://vercel.test/token\"}",
+        "{\"issuer\":\"https://issuer.test\",\"device_authorization_endpoint\":\"https://issuer.test/device\",\"token_endpoint\":\"https://issuer.test/token\"}",
     );
     errdefer metadata.deinit(alloc);
     var device = try oauth.parseDeviceAuthorization(
         alloc,
-        "{\"device_code\":\"device\",\"user_code\":\"USER-CODE\",\"verification_uri\":\"https://vercel.test/oauth/device\",\"verification_uri_complete\":\"https://vercel.test/oauth/device?code=USER-CODE\",\"expires_in\":60,\"interval\":1}",
+        "{\"device_code\":\"device\",\"user_code\":\"USER-CODE\",\"verification_uri\":\"https://issuer.test/oauth/device\",\"verification_uri_complete\":\"https://issuer.test/oauth/device?code=USER-CODE\",\"expires_in\":60,\"interval\":1}",
     );
     errdefer device.deinit(alloc);
     return .{
@@ -1795,7 +1705,7 @@ fn makeLoopbackPreparedLogin(alloc: Allocator, token_endpoint: []const u8) !Prep
     errdefer alloc.free(owned_token_endpoint);
     var device = try oauth.parseDeviceAuthorization(
         alloc,
-        "{\"device_code\":\"device\",\"user_code\":\"USER-CODE\",\"verification_uri\":\"https://vercel.test/oauth/device\",\"expires_in\":60,\"interval\":1}",
+        "{\"device_code\":\"device\",\"user_code\":\"USER-CODE\",\"verification_uri\":\"https://issuer.test/oauth/device\",\"expires_in\":60,\"interval\":1}",
     );
     errdefer device.deinit(alloc);
     return .{
@@ -2121,7 +2031,7 @@ test "login polling starts before waiting for browser input" {
     const alloc = std.testing.allocator;
     var state = LoginPollTestState.init(alloc, &.{.success});
     defer state.deinit();
-    var prompt = BrowserOpenPrompt{ .url = "https://vercel.test/oauth/device", .enabled = true };
+    var prompt = BrowserOpenPrompt{ .url = "https://issuer.test/oauth/device", .enabled = true };
 
     var token = try pollForTokenWithDeps(alloc, oauth_transport.unavailable_provider, testMetadata(), "client", testDevice(), &prompt, state.deps());
     defer token.deinit(alloc);
@@ -2137,14 +2047,14 @@ test "login polling opens browser once when enter arrives while waiting" {
     var state = LoginPollTestState.init(alloc, &.{ .pending, .pending, .success });
     state.enter_on_wait = 1;
     defer state.deinit();
-    var prompt = BrowserOpenPrompt{ .url = "https://vercel.test/oauth/device", .enabled = true };
+    var prompt = BrowserOpenPrompt{ .url = "https://issuer.test/oauth/device", .enabled = true };
 
     var token = try pollForTokenWithDeps(alloc, oauth_transport.unavailable_provider, testMetadata(), "client", testDevice(), &prompt, state.deps());
     defer token.deinit(alloc);
 
     try std.testing.expectEqual(@as(usize, 3), state.poll_index);
     try std.testing.expectEqual(@as(usize, 1), state.open_count);
-    try std.testing.expectEqualStrings("https://vercel.test/oauth/device", state.opened_url.?);
+    try std.testing.expectEqualStrings("https://issuer.test/oauth/device", state.opened_url.?);
     try std.testing.expectEqual(@as(usize, 1), state.wait_calls.items.len);
     try std.testing.expectEqual(@as(usize, 19), state.sleep_calls.items.len);
     for (state.sleep_calls.items) |sleep_ms| {
@@ -2158,7 +2068,7 @@ test "login polling continues when the URL opener is unavailable" {
     state.enter_on_wait = 1;
     state.open_available = false;
     defer state.deinit();
-    var prompt = BrowserOpenPrompt{ .url = "https://vercel.test/oauth/device", .enabled = true };
+    var prompt = BrowserOpenPrompt{ .url = "https://issuer.test/oauth/device", .enabled = true };
 
     var token = try pollForTokenWithDeps(alloc, oauth_transport.unavailable_provider, testMetadata(), "client", testDevice(), &prompt, state.deps());
     defer token.deinit(alloc);
@@ -2174,7 +2084,7 @@ test "login polling continues when the URL opener fails" {
     state.enter_on_wait = 1;
     state.open_error = true;
     defer state.deinit();
-    var prompt = BrowserOpenPrompt{ .url = "https://vercel.test/oauth/device", .enabled = true };
+    var prompt = BrowserOpenPrompt{ .url = "https://issuer.test/oauth/device", .enabled = true };
 
     var token = try pollForTokenWithDeps(alloc, oauth_transport.unavailable_provider, testMetadata(), "client", testDevice(), &prompt, state.deps());
     defer token.deinit(alloc);
@@ -2188,7 +2098,7 @@ test "login polling slow_down increases the next interval" {
     const alloc = std.testing.allocator;
     var state = LoginPollTestState.init(alloc, &.{ .slow_down, .success });
     defer state.deinit();
-    var prompt = BrowserOpenPrompt{ .url = "https://vercel.test/oauth/device" };
+    var prompt = BrowserOpenPrompt{ .url = "https://issuer.test/oauth/device" };
 
     var token = try pollForTokenWithDeps(alloc, oauth_transport.unavailable_provider, testMetadata(), "client", testDevice(), &prompt, state.deps());
     defer token.deinit(alloc);
@@ -2205,7 +2115,7 @@ test "login polling disabled browser prompt still polls immediately" {
     var state = LoginPollTestState.init(alloc, &.{ .pending, .success });
     state.enter_on_wait = 1;
     defer state.deinit();
-    var prompt = BrowserOpenPrompt{ .url = "https://vercel.test/oauth/device", .enabled = false };
+    var prompt = BrowserOpenPrompt{ .url = "https://issuer.test/oauth/device", .enabled = false };
 
     var token = try pollForTokenWithDeps(alloc, oauth_transport.unavailable_provider, testMetadata(), "client", testDevice(), &prompt, state.deps());
     defer token.deinit(alloc);
@@ -2223,7 +2133,7 @@ test "login polling rejects invalid provider timing values" {
     const alloc = std.testing.allocator;
     var state = LoginPollTestState.init(alloc, &.{});
     defer state.deinit();
-    var prompt = BrowserOpenPrompt{ .url = "https://vercel.test/oauth/device" };
+    var prompt = BrowserOpenPrompt{ .url = "https://issuer.test/oauth/device" };
 
     var device = testDevice();
     device.expires_in = -1;

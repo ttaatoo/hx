@@ -216,7 +216,7 @@ function sideBinary(config: AbConfig, side: AbSide): string {
 }
 
 function sanitizedEnvMetadata(model: string): Record<string, string> {
-  const keys = ["FX_MODEL", "AI_GATEWAY_API_KEY", "VERCEL_OIDC_TOKEN", "NO_COLOR"];
+  const keys = ["FX_MODEL", "ANTHROPIC_API_KEY", "NO_COLOR"];
   const metadata: Record<string, string> = {};
   for (const key of keys) {
     const value = key === "FX_MODEL" ? model : process.env[key];
@@ -285,8 +285,7 @@ export async function runAbTrial(
     HOME: trialHome,
     NO_COLOR: "1",
     FX_MODEL: config.model,
-    AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
-    VERCEL_OIDC_TOKEN: process.env.VERCEL_OIDC_TOKEN,
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
   };
 
   const versionOutput = await versionFor(binaryPath, env);

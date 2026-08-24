@@ -88,10 +88,6 @@ test "context notice body drops legacy markers from every line" {
 }
 
 pub const CredentialSource = enum {
-    vercel_oidc_token,
-    ai_gateway_api_key,
-    fx_login,
-    stored_key,
     chatgpt_subscription,
     custom_provider,
     grok_subscription,
@@ -106,6 +102,10 @@ test "credential source round trips through its persisted name" {
         try std.testing.expectEqual(source, parseCredentialSource(@tagName(source)).?);
     }
     try std.testing.expect(parseCredentialSource("keychain") == null);
+    try std.testing.expect(parseCredentialSource("vercel_oidc_token") == null);
+    try std.testing.expect(parseCredentialSource("ai_gateway_api_key") == null);
+    try std.testing.expect(parseCredentialSource("fx_login") == null);
+    try std.testing.expect(parseCredentialSource("stored_key") == null);
 }
 
 pub const TurnPresentationOutcome = enum {
@@ -1525,7 +1525,6 @@ pub const ContentHash = [std.crypto.hash.sha2.Sha256.digest_length]u8;
 
 pub const BackendKind = enum {
     macos,
-    vercel,
     just_bash,
     none,
     auto,
@@ -1533,7 +1532,6 @@ pub const BackendKind = enum {
     pub fn parse(raw: []const u8) ?BackendKind {
         const trimmed = std.mem.trim(u8, raw, " \t\r\n");
         if (std.ascii.eqlIgnoreCase(trimmed, "macos")) return .macos;
-        if (std.ascii.eqlIgnoreCase(trimmed, "vercel")) return .vercel;
         if (std.ascii.eqlIgnoreCase(trimmed, "just-bash")) return .just_bash;
         if (std.ascii.eqlIgnoreCase(trimmed, "none")) return .none;
         if (std.ascii.eqlIgnoreCase(trimmed, "auto")) return .auto;
@@ -1543,13 +1541,20 @@ pub const BackendKind = enum {
     pub fn label(self: BackendKind) []const u8 {
         return switch (self) {
             .macos => "macos",
-            .vercel => "vercel",
             .just_bash => "just-bash",
             .none => "none",
             .auto => "auto",
         };
     }
 };
+
+test "backend kind parse keeps just-bash and rejects vercel" {
+    try std.testing.expectEqual(BackendKind.just_bash, BackendKind.parse("just-bash").?);
+    try std.testing.expectEqual(BackendKind.macos, BackendKind.parse("macos").?);
+    try std.testing.expectEqual(BackendKind.none, BackendKind.parse("none").?);
+    try std.testing.expectEqual(BackendKind.auto, BackendKind.parse("auto").?);
+    try std.testing.expect(BackendKind.parse("vercel") == null);
+}
 
 pub const ToolChoice = enum {
     auto,

@@ -980,10 +980,9 @@ function gatewayEnv(
 ) {
   return {
     HOME: root.home,
-    AI_GATEWAY_API_KEY: "fake-command-permission-key",
-    VERCEL_OIDC_TOKEN: undefined,
-    FX_GATEWAY_BASE_URL: gateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+    ANTHROPIC_API_KEY: "fake-command-permission-key",
+    ANTHROPIC_BASE_URL: gateway.baseUrl,
+    GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
     FX_MODEL: MODEL,
     FX_AUTO_UPGRADE: "0",
     FX_DIRECT_SECRET: "must-not-be-inherited",
@@ -1773,6 +1772,7 @@ describe("effect-aware command permissions", () => {
       expect(escapes).not.toContain("Trace:");
       expect(escapes).not.toContain("Report issue");
       expect(escapes).not.toContain("fx.sh/feedback");
+      expect(escapes).not.toContain("github.com/ttaatoo/hx/issues/new");
       expect(escapes).not.toContain("github.com");
       const reportPath = latestTraceReportPath(root);
       const report = readFileSync(reportPath, "utf8");
@@ -1796,7 +1796,7 @@ describe("effect-aware command permissions", () => {
   );
 
   test.skipIf(!tmuxAvailable())(
-    "TUI feedback opens fx.sh without creating a trace or touching the clipboard",
+    "TUI feedback opens the GitHub issue form without creating a trace or touching the clipboard",
     async () => {
       const root = createIsolatedRoot();
       const gateway = startFakeGateway([]);
@@ -1828,16 +1828,19 @@ describe("effect-aware command permissions", () => {
       });
       await activeSession.waitForComposer(TIMEOUT);
       await activeSession.sendText("/feedback");
-      await activeSession.waitForText("Opened https://fx.sh/feedback.", TIMEOUT);
+      await activeSession.waitForText("Opened https://github.com/ttaatoo/hx/issues/new.", TIMEOUT);
 
-      expect(readFileSync(openerPath, "utf8")).toBe("https://fx.sh/feedback");
+      expect(readFileSync(openerPath, "utf8")).toBe(
+        "https://github.com/ttaatoo/hx/issues/new",
+      );
       expect(existsSync(clipboardMarker)).toBe(false);
       expect(
         readdirSync(root.root).filter((entry) => entry.startsWith("fx-trace-")),
       ).toHaveLength(0);
       const escapes = await activeSession.capturePaneEscapes();
       expect(escapes).not.toContain("Feedback:");
-      expect(escapes).not.toContain("github.com");
+      expect(escapes).toContain("github.com/ttaatoo/hx/issues/new");
+      expect(escapes).not.toContain("fx.sh");
       expect(readFileSync(stderrPath, "utf8")).toBe("");
 
       await activeSession.sendText("/quit");

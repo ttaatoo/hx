@@ -502,17 +502,7 @@ const test_entry_context_registry = context_contract.Registry{ .default_provider
     .append_transient_fn = appendNoopTransientContextForTest,
 } };
 
-fn unavailableDevboxForTest(
-    _: ?*anyopaque,
-    _: Allocator,
-    _: []const u8,
-    _: []const u8,
-    _: devbox_executor.Control,
-) devbox_executor.ProviderError!devbox_executor.VercelOutcome {
-    return .unavailable;
-}
-
-const test_devbox_provider = devbox_executor.Provider{ .execute_fn = unavailableDevboxForTest };
+const test_devbox_provider = devbox_executor.unavailable_provider;
 
 fn noMcpRuntimeForTest(_: Allocator, _: @import("../mcp/elicitation.zig").Capabilities) !?*mcp_runtime.McpRuntime {
     return null;
@@ -838,7 +828,7 @@ test "app entry returns after handled CLI success without initializing app" {
     try std.testing.expect(capture.seen_config.?.secret_store.load_fn == cfg.secret_store.load_fn);
     try std.testing.expect(capture.seen_config.?.inspect_mcp_profile_config == noMcpConfigInspectionForTest);
     try std.testing.expect(capture.seen_config.?.load_mcp_runtime == noMcpRuntimeForTest);
-    try std.testing.expect(capture.seen_config.?.devbox_provider.?.execute_fn == unavailableDevboxForTest);
+    try std.testing.expect(capture.seen_config.?.devbox_provider.?.execute_fn == devbox_executor.unavailable_provider.execute_fn);
     try std.testing.expectEqual(@as(usize, 0), test_event_count);
 }
 

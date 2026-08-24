@@ -6477,7 +6477,7 @@ test "interactive subagent host resolves current tools rules grants sandbox and 
     try std.testing.expectEqual(types.BackendKind.none, initial.sandbox_backend);
     try std.testing.expectEqual(@as(usize, 0), initial.integrations.len);
 
-    app.permission_state.sandbox_backend = .vercel;
+    app.permission_state.sandbox_backend = .just_bash;
     try app.permission_engine.allow(alloc, "run_command", "zig build test");
     try app.mcp_tool_names.append(alloc, try alloc.dupe(u8, "mcp_fixture_echo"));
     var changed = try host.host_authority.resolve_fn(
@@ -6486,7 +6486,7 @@ test "interactive subagent host resolves current tools rules grants sandbox and 
         root_id,
     );
     defer changed.deinit(alloc);
-    try std.testing.expectEqual(types.BackendKind.vercel, changed.sandbox_backend);
+    try std.testing.expectEqual(types.BackendKind.just_bash, changed.sandbox_backend);
     try std.testing.expectEqualStrings("mcp_fixture_echo", changed.integrations[0]);
     try std.testing.expectEqualStrings("zig build test", changed.grants[0].target_path);
     try std.testing.expect(initial.generation != changed.generation);
@@ -9822,7 +9822,7 @@ test "resumed ChatGPT sessions never start Gateway usage reconciliation" {
     try std.testing.expectEqual(@as(usize, 1), chatgpt.session.usage.cleared);
 
     var gateway = ReconciliationOriginApp{
-        .auth = .{ .source = .ai_gateway_api_key },
+        .auth = .{ .source = .custom_provider },
     };
     Runtime(ReconciliationOriginApp).startResumedSessionReconciliation(&gateway);
     try std.testing.expectEqual(@as(usize, 1), gateway.session.usage.started);

@@ -17,8 +17,8 @@ import { runFx } from "../evals/eval-helpers";
 const TIMEOUT = 60_000;
 const OUTER_MODEL = "anthropic/claude-sonnet-4.6";
 const LIVE_URL = "https://example.com/";
-const LIVE_ROBOTS_URL = "https://vercel.com/robots.txt";
-const LIVE_MODELS_URL = "https://ai-gateway.vercel.sh/coding-agent/v1/models";
+const LIVE_ROBOTS_URL = "https://example.com/robots.txt";
+const LIVE_HTML_URL = "https://example.com/";
 const LIVE_BINARY_URL =
   "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
 
@@ -136,11 +136,10 @@ function fakeGatewayEnv(
 ) {
   return {
     HOME: root.home,
-    AI_GATEWAY_API_KEY: "fake-live-web-fetch-key",
-    VERCEL_OIDC_TOKEN: undefined,
+    ANTHROPIC_API_KEY: "fake-live-web-fetch-key",
     FX_AUTO_UPGRADE: "0",
-    FX_GATEWAY_BASE_URL: gateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+    ANTHROPIC_BASE_URL: gateway.baseUrl,
+    GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
     FX_MODEL: OUTER_MODEL,
   };
 }
@@ -149,8 +148,8 @@ describe.skipIf(process.env.FX_WEB_FETCH_LIVE !== "1")("live web_fetch public UR
   // These mutable endpoints are operational probes, not deterministic HTTP
   // framing proof. The transport/framing contract is covered by Zig fixtures.
   for (const probe of [
-    { url: LIVE_ROBOTS_URL, domain: "vercel.com", label: "robots" },
-    { url: LIVE_MODELS_URL, domain: "ai-gateway.vercel.sh", label: "models" },
+    { url: LIVE_ROBOTS_URL, domain: "example.com", label: "robots" },
+    { url: LIVE_HTML_URL, domain: "example.com", label: "html" },
   ] as const) {
     test(
       `${probe.label} endpoint returns non-empty content through the fresh binary`,

@@ -153,14 +153,14 @@ export function buildEvalProcessEnv(
   home: string,
   model: string,
 ): Record<string, string | undefined> {
-  return {
+  return adaptRetiredGatewayTestEnv({
     ...dotEnvVars,
     ...process.env,
     NO_COLOR: "1",
     HOME: home,
     PATH: process.env.PATH ?? "",
     FX_MODEL: model,
-  };
+  });
 }
 
 export async function runEval(

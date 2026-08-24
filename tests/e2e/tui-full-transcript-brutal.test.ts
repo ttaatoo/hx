@@ -194,10 +194,9 @@ function gatewayEnv(
 ) {
   return {
     HOME: home,
-    AI_GATEWAY_API_KEY: "fake-full-transcript-brutal-key",
-    VERCEL_OIDC_TOKEN: undefined,
-    FX_GATEWAY_BASE_URL: gateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+    ANTHROPIC_API_KEY: "fake-full-transcript-brutal-key",
+    ANTHROPIC_BASE_URL: gateway.baseUrl,
+    GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
     FX_MODEL: SUPERGROK_MODEL,
     FX_PERMISSION_MODE: "yolo",
     FX_AUTO_UPGRADE: "0",

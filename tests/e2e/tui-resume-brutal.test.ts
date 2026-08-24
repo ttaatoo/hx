@@ -123,10 +123,9 @@ function makePaths(label: string): Paths {
 function gatewayEnv(home: string, gateway: ReturnType<typeof startFakeGateway>) {
   return {
     HOME: home,
-    AI_GATEWAY_API_KEY: "fake-resume-brutal-key",
-    VERCEL_OIDC_TOKEN: undefined,
-    FX_GATEWAY_BASE_URL: gateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+    ANTHROPIC_API_KEY: "fake-resume-brutal-key",
+    ANTHROPIC_BASE_URL: gateway.baseUrl,
+    GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
     FX_MODEL: SUPERGROK_MODEL,
     FX_AUTO_UPGRADE: "0",
     NO_COLOR: "1",

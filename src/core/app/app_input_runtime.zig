@@ -3861,7 +3861,7 @@ test "app_input_runtime routes auth picker navigation before composer history" {
     const alloc = std.testing.allocator;
     var app = try RoutingFakeApp.init(alloc);
     defer app.deinit();
-    app.auth.source_inventory = auth_runtime.SourceSet.initMany(&.{ .ai_gateway_api_key, .fx_login });
+    app.auth.source_inventory = auth_runtime.SourceSet.initMany(&.{ .custom_provider, .grok_subscription });
     app.auth.openPicker(alloc);
 
     try Runtime(RoutingFakeApp).routeModifiedHistory(&app, .down, 1);
@@ -3874,7 +3874,7 @@ test "app_input_runtime Tab cycles the active auth picker" {
     const alloc = std.testing.allocator;
     var app = try RoutingFakeApp.init(alloc);
     defer app.deinit();
-    app.auth.source_inventory = auth_runtime.SourceSet.initMany(&.{ .ai_gateway_api_key, .fx_login });
+    app.auth.source_inventory = auth_runtime.SourceSet.initMany(&.{ .custom_provider, .grok_subscription });
     app.auth.openPicker(alloc);
 
     try Runtime(RoutingFakeApp).handleByte(&app, '\t', 4096, 100);
@@ -3961,15 +3961,14 @@ test "app_input_runtime auth picker enter closes before selecting a switched sou
     const alloc = std.testing.allocator;
     var app = try RoutingFakeApp.init(alloc);
     defer app.deinit();
-    app.auth.source_inventory = auth_runtime.SourceSet.initMany(&.{ .ai_gateway_api_key, .fx_login });
+    app.auth.source_inventory = auth_runtime.SourceSet.initMany(&.{ .custom_provider, .grok_subscription });
     app.auth.openPicker(alloc);
     app.auth.openSwitchCredentialPicker(alloc);
-    _ = app.auth.movePicker(1);
 
     try Runtime(RoutingFakeApp).handleByte(&app, '\r', 4096, 100);
 
     try std.testing.expect(!app.auth.pickerView().active);
-    try std.testing.expectEqual(types.CredentialSource.fx_login, app.selected_credential_source.?);
+    try std.testing.expectEqual(types.CredentialSource.custom_provider, app.selected_credential_source.?);
 }
 
 test "app_input_runtime auth picker delegates typed acquisition actions" {
@@ -3989,7 +3988,7 @@ test "app_input_runtime Escape closes auth picker without arming composer clear"
     const alloc = std.testing.allocator;
     var app = try RoutingFakeApp.init(alloc);
     defer app.deinit();
-    app.auth.source_inventory = auth_runtime.SourceSet.initOne(.ai_gateway_api_key);
+    app.auth.source_inventory = auth_runtime.SourceSet.initOne(.custom_provider);
     app.auth.openPicker(alloc);
 
     try Runtime(RoutingFakeApp).resolveEscape(&app, false, 1);
@@ -4185,7 +4184,7 @@ test "app_input_runtime composer editing dismisses auth picker before inserting"
     const alloc = std.testing.allocator;
     var app = try RoutingFakeApp.init(alloc);
     defer app.deinit();
-    app.auth.source_inventory = auth_runtime.SourceSet.initOne(.ai_gateway_api_key);
+    app.auth.source_inventory = auth_runtime.SourceSet.initOne(.custom_provider);
     app.auth.openPicker(alloc);
 
     try Runtime(RoutingFakeApp).handleByte(&app, 'x', 4096, 100);

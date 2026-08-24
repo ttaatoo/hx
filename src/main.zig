@@ -3773,6 +3773,7 @@ test {
     _ = @import("core/app/app_bootstrap_runtime.zig");
     _ = @import("core/app/app_callbacks.zig");
     _ = @import("core/app/app_commands.zig");
+    _ = @import("core/feedback/runtime.zig");
     _ = @import("core/app/app_entry_runtime.zig");
     _ = @import("core/app/app_input_runtime.zig");
     _ = @import("core/app/app_lifecycle.zig");
@@ -3808,6 +3809,7 @@ test {
     _ = @import("core/slash_commands/command_specs.zig");
     _ = @import("core/config/config_runtime.zig");
     _ = @import("core/config/settings_store.zig");
+    _ = @import("ui/footer/picker_presentation.zig");
     _ = @import("ui/footer/appearance_menu_presentation.zig");
     _ = @import("ui/footer/compact_command_menu_presentation.zig");
     _ = @import("ui/footer/settings_menu_presentation.zig");

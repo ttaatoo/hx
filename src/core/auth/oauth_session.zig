@@ -10,10 +10,9 @@ const secret = @import("secret.zig");
 
 const Allocator = std.mem.Allocator;
 
-pub const issuer = "https://vercel.com";
 pub const client_id_env = "FX_OAUTH_CLIENT_ID";
-pub const default_client_id = "cl_zzh5hiOZbwJ9bfqEcYqPIJv3TaPaEYL0";
 const e2e_issuer_url_env = "FX_E2E_OAUTH_ISSUER_URL";
+const test_issuer = "http://127.0.0.1:9";
 pub const auth_file_name = profile_paths.auth_file_name;
 const schema_version: i64 = 1;
 const max_auth_file_bytes: usize = 64 * 1024;
@@ -526,7 +525,7 @@ pub fn configuredClientId() ?[]const u8 {
     if (io_mod.getenv(client_id_env)) |value| {
         if (std.mem.trim(u8, value, " \t\r\n").len > 0) return value;
     }
-    return if (default_client_id.len == 0) null else default_client_id;
+    return null;
 }
 
 pub fn configuredIssuerUrl() ![]const u8 {
@@ -534,7 +533,7 @@ pub fn configuredIssuerUrl() ![]const u8 {
 }
 
 pub fn isLoopbackE2EIssuer(url: []const u8) bool {
-    return !std.mem.eql(u8, url, issuer) and isLoopbackHttpUrl(url, true);
+    return isLoopbackHttpUrl(url, true);
 }
 
 pub fn validateE2EEndpoint(issuer_url: []const u8, endpoint: []const u8) !void {
@@ -544,7 +543,7 @@ pub fn validateE2EEndpoint(issuer_url: []const u8, endpoint: []const u8) !void {
 }
 
 fn selectIssuerUrl(override: ?[]const u8) ![]const u8 {
-    const raw = override orelse return issuer;
+    const raw = override orelse return error.InvalidE2EOAuthIssuer;
     const candidate = std.mem.trimEnd(u8, raw, "/");
     if (!isLoopbackHttpUrl(candidate, true)) return error.InvalidE2EOAuthIssuer;
     return candidate;
@@ -798,7 +797,7 @@ pub fn parse(alloc: Allocator, bytes: []const u8) !Session {
     const version = object.get("version") orelse return error.InvalidAuthSession;
     if (version != .integer or version.integer != schema_version) return error.InvalidAuthSession;
     const saved_issuer = try requiredString(object, "issuer");
-    if (!std.mem.eql(u8, saved_issuer, issuer) and !isLoopbackE2EIssuer(saved_issuer)) {
+    if (!isLoopbackE2EIssuer(saved_issuer)) {
         return error.InvalidAuthSession;
     }
 
@@ -881,7 +880,7 @@ fn requiredInteger(object: std.json.ObjectMap, key: []const u8) !i64 {
     return value.integer;
 }
 
-const test_session_json = "{\"version\":1,\"issuer\":\"https://vercel.com\",\"client_id\":\"client\",\"access_token\":\"access\",\"refresh_token\":\"refresh\",\"expires_at_ms\":1,\"scope\":\"openid offline_access\",\"token_type\":\"Bearer\",\"team_slug\":\"team-slug\",\"team_id\":\"team-id\"}";
+const test_session_json = "{\"version\":1,\"issuer\":\"http://127.0.0.1:9\",\"client_id\":\"client\",\"access_token\":\"access\",\"refresh_token\":\"refresh\",\"expires_at_ms\":1,\"scope\":\"openid offline_access\",\"token_type\":\"Bearer\",\"team_slug\":\"team-slug\",\"team_id\":\"team-id\"}";
 
 const HostStoreTestState = struct {
     record: ?[]const u8 = test_session_json,
@@ -957,7 +956,7 @@ fn check_load_allocation_failures(alloc: Allocator, dir: *std.Io.Dir) !void {
 
 test "oauth session stringifies and parses" {
     var session = Session{
-        .issuer = try std.testing.allocator.dupe(u8, issuer),
+        .issuer = try std.testing.allocator.dupe(u8, test_issuer),
         .client_id = try std.testing.allocator.dupe(u8, "client"),
         .access_token = try std.testing.allocator.dupe(u8, "access"),
         .refresh_token = try std.testing.allocator.dupe(u8, "refresh"),
@@ -973,7 +972,7 @@ test "oauth session stringifies and parses" {
     defer secret.zeroAndFree(std.testing.allocator, text);
     var parsed = try parse(std.testing.allocator, text);
     defer parsed.deinit(std.testing.allocator);
-    try std.testing.expectEqualStrings(issuer, parsed.issuer);
+    try std.testing.expectEqualStrings(test_issuer, parsed.issuer);
     try std.testing.expectEqualStrings("client", parsed.client_id);
     try std.testing.expectEqualStrings("access", parsed.access_token);
     try std.testing.expectEqualStrings("vercel-labs", parsed.team_slug.?);
@@ -1012,7 +1011,7 @@ test "OAuth source resolution covers every file and Keychain state" {
     }
 }
 
-const alternate_test_session_json = "{\"version\":1,\"issuer\":\"https://vercel.com\",\"client_id\":\"client\",\"access_token\":\"keychain-access\",\"refresh_token\":\"keychain-refresh\",\"expires_at_ms\":2,\"scope\":\"openid offline_access\",\"token_type\":\"Bearer\"}";
+const alternate_test_session_json = "{\"version\":1,\"issuer\":\"http://127.0.0.1:9\",\"client_id\":\"client\",\"access_token\":\"keychain-access\",\"refresh_token\":\"keychain-refresh\",\"expires_at_ms\":2,\"scope\":\"openid offline_access\",\"token_type\":\"Bearer\"}";
 
 const FakeOAuthKeychain = struct {
     alloc: Allocator,
@@ -1312,11 +1311,19 @@ test "oauth session rejects invalid saved issuers" {
             "{\"version\":1,\"issuer\":\"https://example.com\",\"client_id\":\"client\",\"access_token\":\"access\",\"refresh_token\":\"refresh\",\"expires_at_ms\":1234,\"scope\":\"openid\",\"token_type\":\"Bearer\"}",
         ),
     );
+    try std.testing.expectError(
+        error.InvalidAuthSession,
+        parse(
+            std.testing.allocator,
+            "{\"version\":1,\"issuer\":\"https://vercel.com\",\"client_id\":\"client\",\"access_token\":\"access\",\"refresh_token\":\"refresh\",\"expires_at_ms\":1234,\"scope\":\"openid\",\"token_type\":\"Bearer\"}",
+        ),
+    );
+    try std.testing.expectError(error.InvalidE2EOAuthIssuer, selectIssuerUrl(null));
 }
 
 test "oauth session treats near-expiry as expired" {
     var session = Session{
-        .issuer = try std.testing.allocator.dupe(u8, issuer),
+        .issuer = try std.testing.allocator.dupe(u8, test_issuer),
         .client_id = try std.testing.allocator.dupe(u8, "client"),
         .access_token = try std.testing.allocator.dupe(u8, "access"),
         .refresh_token = try std.testing.allocator.dupe(u8, "refresh"),

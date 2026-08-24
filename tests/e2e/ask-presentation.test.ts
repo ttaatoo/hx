@@ -83,15 +83,13 @@ function gatewayEnv(
 ): Record<string, string | undefined> {
   return {
     HOME: home,
-    AI_GATEWAY_API_KEY: "fake-ask-presentation-key",
-    VERCEL_OIDC_TOKEN: undefined,
+    ANTHROPIC_API_KEY: "fake-ask-presentation-key",
     FX_DISABLE_KEYCHAIN: "1",
     FX_SKIP_ONBOARDING: "1",
     FX_MODEL: SUPERGROK_MODEL,
     FX_PERMISSION_MODE: "yolo",
-    FX_GATEWAY_BASE_URL: gateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-    FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+    ANTHROPIC_BASE_URL: gateway.baseUrl,
+    GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
   };
 }
 

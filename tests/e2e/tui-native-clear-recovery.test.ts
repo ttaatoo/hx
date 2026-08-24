@@ -58,7 +58,6 @@ tmuxTest("direct native-clear recovery resets the view and replays the held draf
     stderrPath: stderr_path,
     env: {
       AI_GATEWAY_API_KEY: undefined,
-      VERCEL_OIDC_TOKEN: undefined,
       FX_THEME: undefined,
       TMUX: undefined,
       FX_TRACE_LOG: trace_path,
@@ -92,7 +91,6 @@ tmuxTest("direct healthy screens retain an ordinary burst without resetting", as
     stderrPath: stderr_path,
     env: {
       AI_GATEWAY_API_KEY: undefined,
-      VERCEL_OIDC_TOKEN: undefined,
       FX_THEME: undefined,
       TMUX: undefined,
       FX_TRACE_LOG: trace_path,
@@ -123,7 +121,6 @@ tmuxTest("native-clear replay settles a complete paste before the next key", asy
     stderrPath: stderr_path,
     env: {
       AI_GATEWAY_API_KEY: undefined,
-      VERCEL_OIDC_TOKEN: undefined,
       FX_THEME: undefined,
       TMUX: undefined,
       FX_TRACE_LOG: trace_path,
@@ -158,7 +155,6 @@ tmuxTest("tmux leaves native-clear probing disabled and preserves ordinary input
     stderrPath: stderr_path,
     env: {
       AI_GATEWAY_API_KEY: undefined,
-      VERCEL_OIDC_TOKEN: undefined,
       FX_TRACE_LOG: trace_path,
       FX_TRACE_SCOPES: "native_clear",
     },

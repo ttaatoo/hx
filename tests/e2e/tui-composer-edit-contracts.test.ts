@@ -102,10 +102,9 @@ async function startFx(
     cwd: workspace,
     env: {
       HOME: home,
-      AI_GATEWAY_API_KEY: withGateway ? "fake-edit-contract-key" : undefined,
-      VERCEL_OIDC_TOKEN: undefined,
-      FX_GATEWAY_BASE_URL: gateway?.baseUrl,
-      FX_GATEWAY_CHAT_URL: gateway?.chatUrl,
+      ANTHROPIC_API_KEY: withGateway ? "fake-edit-contract-key" : undefined,
+      ANTHROPIC_BASE_URL: gateway?.baseUrl,
+      GROK_CLI_CHAT_PROXY_BASE_URL: gateway?.baseUrl ? `${gateway.baseUrl}/v1` : undefined,
       FX_MODEL: withGateway ? SUPERGROK_MODEL : undefined,
       FX_AUTO_UPGRADE: "0",
       FX_TRACE_LOG: tracePath,

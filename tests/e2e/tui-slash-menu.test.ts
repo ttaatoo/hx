@@ -621,10 +621,9 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         cwd: fixture.workspace,
         env: {
           HOME: fixture.home,
-          AI_GATEWAY_API_KEY: "fake-linked-menu-key",
-          VERCEL_OIDC_TOKEN: undefined,
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          ANTHROPIC_API_KEY: "fake-linked-menu-key",
+          ANTHROPIC_BASE_URL: gateway.baseUrl,
+          GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
           FX_MODEL: SUPERGROK_MODEL,
           FX_AUTO_UPGRADE: "0",
         },
@@ -669,7 +668,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: fixture.home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 120,
@@ -721,10 +719,9 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
 
       const env = {
         HOME: home,
-        AI_GATEWAY_API_KEY: "fake-title-rename-key",
-        VERCEL_OIDC_TOKEN: undefined,
-        FX_GATEWAY_BASE_URL: gateway.baseUrl,
-        FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+        ANTHROPIC_API_KEY: "fake-title-rename-key",
+        ANTHROPIC_BASE_URL: gateway.baseUrl,
+        GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
         FX_MODEL: model,
         FX_AUTO_UPGRADE: "0",
         NO_COLOR: "1",
@@ -775,8 +772,8 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         cwd: workspace,
         env: {
           ...env,
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          ANTHROPIC_BASE_URL: gateway.baseUrl,
+          GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
         },
         stderrPath: resumedStderrPath,
         width: 120,
@@ -817,10 +814,9 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         cwd: workspace,
         env: {
           HOME: home,
-          AI_GATEWAY_API_KEY: "fake-slash-footer-key",
-          VERCEL_OIDC_TOKEN: undefined,
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          ANTHROPIC_API_KEY: "fake-slash-footer-key",
+          ANTHROPIC_BASE_URL: gateway.baseUrl,
+          GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
           FX_MODEL: SUPERGROK_MODEL,
           FX_AUTO_UPGRADE: "0",
           NO_COLOR: "1",
@@ -858,10 +854,9 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         cwd: workspace,
         env: {
           HOME: home,
-          AI_GATEWAY_API_KEY: "fake-slash-footer-key",
-          VERCEL_OIDC_TOKEN: undefined,
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          ANTHROPIC_API_KEY: "fake-slash-footer-key",
+          ANTHROPIC_BASE_URL: gateway.baseUrl,
+          GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
           FX_MODEL: SUPERGROK_MODEL,
           FX_AUTO_UPGRADE: "0",
           FX_RECORD: tapePath,
@@ -1077,7 +1072,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 100,
@@ -1139,7 +1133,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
           env: {
             HOME: home,
             AI_GATEWAY_API_KEY: undefined,
-            VERCEL_OIDC_TOKEN: undefined,
             FX_AUTO_UPGRADE: "0",
           },
           width: 100,
@@ -1230,7 +1223,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         stderrPath,
@@ -1294,7 +1286,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         stderrPath,
@@ -1402,7 +1393,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 100,
@@ -1500,7 +1490,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 100,
@@ -1579,7 +1568,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 100,
@@ -1650,7 +1638,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 60,
@@ -1722,7 +1709,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 100,
@@ -1806,7 +1792,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 100,
@@ -1867,7 +1852,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 100,
@@ -1927,7 +1911,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 100,
@@ -1964,7 +1947,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 100,
@@ -2035,7 +2017,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 100,
@@ -2113,7 +2094,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 100,
@@ -2229,7 +2209,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 120,
@@ -2330,7 +2309,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 120,
@@ -2390,7 +2368,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: fixture.home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 120,
@@ -2634,7 +2611,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: fixture.home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 120,
@@ -2814,7 +2790,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: fixture.home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 120,
@@ -2856,10 +2831,9 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         cwd: fixture.workspace,
         env: {
           HOME: fixture.home,
-          AI_GATEWAY_API_KEY: "fake-active-skills-stream-key",
-          VERCEL_OIDC_TOKEN: undefined,
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          ANTHROPIC_API_KEY: "fake-active-skills-stream-key",
+          ANTHROPIC_BASE_URL: gateway.baseUrl,
+          GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
           FX_MODEL: SUPERGROK_MODEL,
           FX_AUTO_UPGRADE: "0",
         },
@@ -2905,10 +2879,9 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         stderrPath: fixture.stderrPath,
         env: {
           HOME: fixture.home,
-          AI_GATEWAY_API_KEY: "fake-active-slash-stream-key",
-          VERCEL_OIDC_TOKEN: undefined,
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          ANTHROPIC_API_KEY: "fake-active-slash-stream-key",
+          ANTHROPIC_BASE_URL: gateway.baseUrl,
+          GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
           FX_MODEL: SUPERGROK_MODEL,
           FX_AUTO_UPGRADE: "0",
         },
@@ -2968,10 +2941,9 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         stderrPath,
         env: {
           HOME: fixture.home,
-          AI_GATEWAY_API_KEY: "fake-catalog-approval-key",
-          VERCEL_OIDC_TOKEN: undefined,
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          ANTHROPIC_API_KEY: "fake-catalog-approval-key",
+          ANTHROPIC_BASE_URL: gateway.baseUrl,
+          GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
           FX_MODEL: SUPERGROK_MODEL,
           FX_PERMISSION_MODE: "ask",
           FX_AUTO_UPGRADE: "0",
@@ -3018,9 +2990,9 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
           cwd: fixture.workspace,
           env: {
             HOME: fixture.home,
-            AI_GATEWAY_API_KEY: "fake-skill-token-key",
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+            ANTHROPIC_API_KEY: "fake-skill-token-key",
+            ANTHROPIC_BASE_URL: gateway.baseUrl,
+            GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
             FX_MODEL: SUPERGROK_MODEL,
             FX_AUTO_UPGRADE: "0",
           },
@@ -3084,9 +3056,9 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
           cwd: fixture.workspace,
           env: {
             HOME: fixture.home,
-            AI_GATEWAY_API_KEY: "fake-mention-guard-key",
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+            ANTHROPIC_API_KEY: "fake-mention-guard-key",
+            ANTHROPIC_BASE_URL: gateway.baseUrl,
+            GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
             FX_MODEL: SUPERGROK_MODEL,
             FX_AUTO_UPGRADE: "0",
           },
@@ -3133,9 +3105,9 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
           cwd: fixture.workspace,
           env: {
             HOME: fixture.home,
-            AI_GATEWAY_API_KEY: "fake-mention-space-key",
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+            ANTHROPIC_API_KEY: "fake-mention-space-key",
+            ANTHROPIC_BASE_URL: gateway.baseUrl,
+            GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
             FX_MODEL: SUPERGROK_MODEL,
             FX_AUTO_UPGRADE: "0",
           },
@@ -3178,9 +3150,9 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         cwd: fixture.workspace,
         env: {
           HOME: fixture.home,
-          AI_GATEWAY_API_KEY: "fake-exact-picker-key",
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          ANTHROPIC_API_KEY: "fake-exact-picker-key",
+          ANTHROPIC_BASE_URL: gateway.baseUrl,
+          GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
           FX_MODEL: SUPERGROK_MODEL,
           FX_AUTO_UPGRADE: "0",
           FX_TRACE_LOG: tracePath,
@@ -3277,7 +3249,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 100,
@@ -3345,7 +3316,6 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         env: {
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
         },
         width: 42,

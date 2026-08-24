@@ -3620,7 +3620,6 @@ fn takeCorePermissionRules(_: Allocator, startup: *app_lifecycle.StartupState) !
 fn toCoreSandbox(kind: anytype) @import("../permissions/sandbox.zig").BackendKind {
     return switch (kind) {
         .macos => .macos,
-        .vercel => .vercel,
         .just_bash => .just_bash,
         .none => .none,
         .auto => .auto,
@@ -3797,16 +3796,6 @@ const AskAttentionCapture = struct {
     }
 };
 
-fn unavailableDevboxForTest(
-    _: ?*anyopaque,
-    _: Allocator,
-    _: []const u8,
-    _: []const u8,
-    _: devbox_executor.Control,
-) devbox_executor.ProviderError!devbox_executor.VercelOutcome {
-    return .unavailable;
-}
-
 const test_modes = [_]mode_registry.ModeSpec{
     .{
         .id = "inspect",
@@ -3849,7 +3838,7 @@ fn testConfig() Config {
         .max_history_turns = 2,
         .mode_registry = test_mode_registry,
         .load_mcp_runtime = testNoMcpRuntime,
-        .devbox_provider = .{ .execute_fn = unavailableDevboxForTest },
+        .devbox_provider = devbox_executor.unavailable_provider,
     };
 }
 
@@ -3959,7 +3948,7 @@ fn testProcessQueuedPromptChecksTimeout(deps: *const agent_runtime.AgentRuntimeD
     try std.testing.expect(tool_ctx.on_web_fetch_progress != null);
     try std.testing.expect(ctx.web_search_runtime.provider == null);
     try std.testing.expectEqualStrings("/models", tool_ctx.gateway_models_path);
-    try std.testing.expect(tool_ctx.devbox_provider.?.execute_fn == unavailableDevboxForTest);
+    try std.testing.expect(tool_ctx.devbox_provider.?.execute_fn == devbox_executor.unavailable_provider.execute_fn);
     try testPushAssistantText(deps, "assistant text");
 }
 

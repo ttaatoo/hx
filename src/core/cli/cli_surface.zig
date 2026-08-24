@@ -4354,7 +4354,7 @@ test "workflow config does not carry placeholder gateway tools" {
     try std.testing.expectEqualStrings("surface", cfg.mode_registry.default_mode_id);
     try std.testing.expectEqualStrings("skills", cfg.skill_root_policy.workspace_roots[0].path);
     try std.testing.expect(cfg.load_mcp_runtime == noMcpRuntimeForTest);
-    try std.testing.expect(cfg.devbox_provider.?.execute_fn == unavailableDevboxForTest);
+    try std.testing.expect(cfg.devbox_provider.?.execute_fn == devbox_executor.unavailable_provider.execute_fn);
 }
 test "runIfRequested invalid local flags write usage" {
     var capture = CaptureOutput.init(std.testing.allocator);
@@ -4965,16 +4965,6 @@ const test_surface_context_registry = context_contract.Registry{ .default_provid
     .append_transient_fn = appendNoopTransientContextForTest,
 } };
 
-fn unavailableDevboxForTest(
-    _: ?*anyopaque,
-    _: Allocator,
-    _: []const u8,
-    _: []const u8,
-    _: devbox_executor.Control,
-) devbox_executor.ProviderError!devbox_executor.VercelOutcome {
-    return .unavailable;
-}
-
 fn noMcpRuntimeForTest(_: Allocator, _: @import("../mcp/elicitation.zig").Capabilities) !?*mcp_runtime.McpRuntime {
     return null;
 }
@@ -5046,7 +5036,7 @@ fn testConfig() Config {
         .inspect_mcp_profile_config = clearMcpConfigInspectionForTest,
         .load_mcp_runtime = noMcpRuntimeForTest,
         .acp_runner = .{ .run_fn = unexpectedAcpRunForTest },
-        .devbox_provider = .{ .execute_fn = unavailableDevboxForTest },
+        .devbox_provider = devbox_executor.unavailable_provider,
         .tool_set = .{
             .registry = .{ .tools = &.{} },
             .order = &.{},

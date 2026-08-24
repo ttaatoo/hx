@@ -81,7 +81,6 @@ describe.skipIf(SKIP_TMUX)("tui: fresh-session commands", () => {
           env: {
             HOME: home,
             AI_GATEWAY_API_KEY: undefined,
-            VERCEL_OIDC_TOKEN: undefined,
             FX_AUTO_UPGRADE: "0",
             FX_DISABLE_KEYCHAIN: "1",
             FX_SKIP_ONBOARDING: "1",
@@ -189,7 +188,6 @@ describe.skipIf(SKIP_TMUX)("tui: fresh-session commands", () => {
           env: {
             HOME: home,
             AI_GATEWAY_API_KEY: undefined,
-            VERCEL_OIDC_TOKEN: undefined,
             FX_AUTO_UPGRADE: "0",
             FX_DISABLE_KEYCHAIN: "1",
             FX_SKIP_ONBOARDING: "1",
@@ -375,7 +373,6 @@ describe.skipIf(SKIP_TMUX)("tui: credential onboarding", () => {
       session = await TmuxSession.create({
         env: {
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           HOME: home,
           FX_AUTO_UPGRADE: "0",
           FX_DISABLE_KEYCHAIN: "1",
@@ -398,7 +395,6 @@ describe.skipIf(SKIP_TMUX)("tui: credential onboarding", () => {
       const home = realpathSync(mkdtempSync(join(tmpdir(), "fx-e2e-login-onboarding-")));
       const env = {
         AI_GATEWAY_API_KEY: undefined,
-        VERCEL_OIDC_TOKEN: undefined,
         HOME: home,
         USER: "fx-e2e-login-onboarding",
         FX_AUTO_UPGRADE: "0",

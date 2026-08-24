@@ -53,7 +53,7 @@ pub fn Runtime(comptime App: type) type {
                 else if (provider == .anthropic)
                     .custom_provider
                 else
-                    app.auth.credentialSource() orelse .fx_login;
+                    app.auth.credentialSource() orelse .grok_subscription;
                 const route_change = app.auth.selectForProvider(app.alloc, provider) catch |err| switch (err) {
                     error.OutOfMemory => return err,
                     else => return recoverCredentialFailure(app, required_source, err),
@@ -202,10 +202,8 @@ pub fn Runtime(comptime App: type) type {
                 break :inventory app.auth.pickerView().available_sources;
             } else @as(auth_runtime.SourceSet, .empty);
             const chatgpt_is_only_logout_session = provider_inventory.contains(.chatgpt_subscription) and
-                !provider_inventory.contains(.fx_login) and
                 !provider_inventory.contains(.grok_subscription);
             const grok_is_only_logout_session = provider_inventory.contains(.grok_subscription) and
-                !provider_inventory.contains(.fx_login) and
                 !provider_inventory.contains(.chatgpt_subscription);
             const logout_grok = if (requested_provider) |provider|
                 provider == .grok
@@ -302,7 +300,6 @@ pub fn Runtime(comptime App: type) type {
             // A remembered source always wins resolution, so an active hx login
             // is the only way one can be remembered; clearing otherwise is a
             // no-op against a store that holds nothing.
-            if (app.auth.credentialSource() == .fx_login) forgetCredentialSource(app);
             applyCredentialChange(app, try app.auth.reconcileAfterFxLoginLogout(app.alloc));
             try writeAuthNotice(app, if (result.local_durability_failed)
                 .{
@@ -344,11 +341,6 @@ pub fn Runtime(comptime App: type) type {
                 .provider => |provider| try switchProvider(app, provider, true),
                 .source => |source| try applySourceChoice(app, source),
                 .action => |action| switch (action) {
-                    .login => try writeAuthNotice(app, .{
-                        .topic = "auth",
-                        .tone = .warning,
-                        .body = "Use SuperGrok or Codex. Run /login and choose Sign in with SuperGrok or Sign in with Codex.",
-                    }),
                     .chatgpt_login => try beginChatGptSignIn(app),
                     .grok_login => try beginGrokSignIn(app),
                     .setup => try writeAuthNotice(app, .{
@@ -412,7 +404,7 @@ pub fn Runtime(comptime App: type) type {
             const sign_in_source: credentials.Source = if (comptime @hasDecl(@TypeOf(app.auth), "pickerView"))
                 app.auth.pickerView().sign_in_source
             else
-                .fx_login;
+                .grok_subscription;
             const completes_provider_switch = if (comptime @hasDecl(@TypeOf(app.auth), "signInReturnsToRoot"))
                 (sign_in_source == .chatgpt_subscription or sign_in_source == .grok_subscription) and
                     !app.auth.signInReturnsToRoot()
@@ -431,14 +423,6 @@ pub fn Runtime(comptime App: type) type {
                     var owned = completed;
                     defer owned.deinit(app.alloc);
                     switch (owned) {
-                        .vercel => {
-                            app.auth.closePicker(app.alloc);
-                            try writeAuthNotice(app, .{
-                                .topic = "auth",
-                                .tone = .warning,
-                                .body = "That sign-in path is not supported. Run /login and choose SuperGrok or Codex.",
-                            });
-                        },
                         .chatgpt => {
                             try app.auth.refreshSourceInventory(app.alloc);
                             if (completes_provider_switch and comptime provider_runtime.supported(App)) {
@@ -541,7 +525,7 @@ pub fn Runtime(comptime App: type) type {
                 .empty => return,
                 .saved => |changed| {
                     applyCredentialChange(app, changed);
-                    rememberCredentialSource(app, .stored_key);
+                    rememberCredentialSource(app, .custom_provider);
                     const body = try std.fmt.allocPrint(
                         app.alloc,
                         "Saved the API key to {s} and made it active.",
@@ -651,9 +635,9 @@ pub fn Runtime(comptime App: type) type {
         /// leaves the source active for this run rather than refusing a working
         /// credential the user already selected.
         fn rememberCredentialSource(app: *App, source: credentials.Source) void {
-            // ChatGPT is selected by model route, not as a global Gateway
-            // credential preference. Its saved session coexists independently.
-            if (source == .chatgpt_subscription or source == .grok_subscription) return;
+            switch (source) {
+                .chatgpt_subscription, .custom_provider, .grok_subscription => {},
+            }
             if (comptime @hasDecl(App, "persistCredentialSourcePreference")) {
                 app.persistCredentialSourcePreference(source);
                 return;
@@ -1026,9 +1010,9 @@ pub fn Runtime(comptime App: type) type {
         fn recoverPromptCredentialRefreshFailure(app: *App, err: anyerror) !bool {
             const active_source = app.auth.credentialSource();
             const source = if (active_source) |active|
-                if (credentials.sourceRefreshable(active)) active else .fx_login
+                if (credentials.sourceRefreshable(active)) active else .grok_subscription
             else
-                .fx_login;
+                .grok_subscription;
             return recoverCredentialFailure(app, source, err);
         }
 
@@ -1154,8 +1138,8 @@ const TestTeam = struct {
 };
 
 const test_teams = [_]TestTeam{.{
-    .name = "Vercel Labs",
-    .slug = "vercel-labs",
+    .name = "Example Team",
+    .slug = "example-team",
 }};
 
 const TestSelectedTeam = struct {
@@ -1186,7 +1170,7 @@ const TestAuth = struct {
     refresh_changed: bool = false,
     refresh_error: ?anyerror = null,
     selected_source: ?credentials.Source = null,
-    active_source: ?credentials.Source = .ai_gateway_api_key,
+    active_source: ?credentials.Source = .custom_provider,
     refresh_count: usize = 0,
     logout_reconcile_count: usize = 0,
     source_inventory_refresh_count: usize = 0,
@@ -1239,9 +1223,9 @@ const TestAuth = struct {
 
     fn modelCatalogAccess(self: *const TestAuth) credentials.CatalogAccess {
         return if (self.catalog_ready)
-            credentials.catalogAccessForCredential(.fx_login, "refreshed-key", "team_123")
+            credentials.catalogAccessForCredential(.grok_subscription, "refreshed-key", "team_123")
         else
-            .{ .public_only = .fx_login_team_required };
+            .{ .public_only = .no_credential };
     }
 
     fn reconcileAfterFxLoginLogout(self: *TestAuth, _: std.mem.Allocator) !bool {
@@ -1415,35 +1399,35 @@ test "OAuth app gating accepts native auth or JS-host auth and rejects neither" 
 
 test "interactive sign-in opens the owned browser URL through the host" {
     var app: TestApp = .{};
-    app.auth.sign_in_url = "https://vercel.test/verify?code=TEST-CODE";
+    app.auth.sign_in_url = "https://issuer.test/verify?code=TEST-CODE";
 
     try Runtime(TestApp).openSignInBrowser(&app);
 
     try std.testing.expectEqual(@as(usize, 1), app.test_url_opener.calls);
     try std.testing.expectEqualStrings(
-        "https://vercel.test/verify?code=TEST-CODE",
+        "https://issuer.test/verify?code=TEST-CODE",
         app.test_url_opener.openedUrl(),
     );
 }
 
 test "interactive sign-in preserves manual fallback when the host launcher fails" {
     var app: TestApp = .{};
-    app.auth.sign_in_url = "https://vercel.test/verify";
+    app.auth.sign_in_url = "https://issuer.test/verify";
     app.test_url_opener.succeeds = false;
 
     try Runtime(TestApp).openSignInBrowser(&app);
 
     try std.testing.expectEqual(@as(usize, 1), app.test_url_opener.calls);
     try std.testing.expectEqualStrings(
-        "https://vercel.test/verify",
+        "https://issuer.test/verify",
         app.test_url_opener.openedUrl(),
     );
-    try std.testing.expectEqualStrings("https://vercel.test/verify", app.auth.sign_in_url.?);
+    try std.testing.expectEqualStrings("https://issuer.test/verify", app.auth.sign_in_url.?);
 }
 
 test "interactive sign-in frees its browser URL when the host opener errors" {
     var app: TestApp = .{};
-    app.auth.sign_in_url = "https://vercel.test/verify";
+    app.auth.sign_in_url = "https://issuer.test/verify";
     app.test_url_opener.error_on_open = true;
 
     try std.testing.expectError(
@@ -1458,13 +1442,13 @@ test "auth source changes invalidate the catalog and failed selection preserves 
     const runtime = Runtime(TestApp);
 
     app.auth.select_result = true;
-    try std.testing.expect(try runtime.selectCredentialSource(&app, .fx_login));
-    try std.testing.expectEqual(credentials.Source.fx_login, app.auth.selected_source.?);
+    try std.testing.expect(try runtime.selectCredentialSource(&app, .grok_subscription));
+    try std.testing.expectEqual(credentials.Source.grok_subscription, app.auth.selected_source.?);
     try std.testing.expectEqual(@as(usize, 1), app.model_cache.reset_count);
     try std.testing.expectEqual(@as(usize, 1), app.model_cache_warmup_count);
 
-    try std.testing.expect(try runtime.selectCredentialSource(&app, .stored_key));
-    try std.testing.expectEqual(credentials.Source.stored_key, app.auth.selected_source.?);
+    try std.testing.expect(try runtime.selectCredentialSource(&app, .custom_provider));
+    try std.testing.expectEqual(credentials.Source.custom_provider, app.auth.selected_source.?);
     try std.testing.expectEqual(@as(usize, 2), app.model_cache.reset_count);
     try std.testing.expectEqual(@as(usize, 2), app.model_cache_warmup_count);
     try std.testing.expectEqual(@as(usize, 2), app.session.usage.refresh_count);
@@ -1474,8 +1458,8 @@ test "auth source changes invalidate the catalog and failed selection preserves 
     );
 
     app.auth.select_result = null;
-    try std.testing.expect(!try runtime.selectCredentialSource(&app, .ai_gateway_api_key));
-    try std.testing.expectEqual(credentials.Source.stored_key, app.auth.active_source.?);
+    try std.testing.expect(!try runtime.selectCredentialSource(&app, .custom_provider));
+    try std.testing.expectEqual(credentials.Source.custom_provider, app.auth.active_source.?);
     try std.testing.expectEqual(@as(usize, 2), app.model_cache.reset_count);
     try std.testing.expectEqual(@as(usize, 2), app.model_cache_warmup_count);
 }
@@ -1485,9 +1469,9 @@ test "VT-4 unavailable picker source preserves active source and reports unavail
     defer app.deinit();
     app.auth.select_result = null;
 
-    try Runtime(TestApp).applySourceChoice(&app, .stored_key);
+    try Runtime(TestApp).applySourceChoice(&app, .custom_provider);
 
-    try std.testing.expectEqual(credentials.Source.ai_gateway_api_key, app.auth.active_source.?);
+    try std.testing.expectEqual(credentials.Source.custom_provider, app.auth.active_source.?);
     try std.testing.expectEqual(@as(usize, 1), app.notice_write_count);
     try std.testing.expectEqualStrings(
         "That credential is no longer available. The current source is unchanged.\n",
@@ -1500,19 +1484,33 @@ test "completed credential switch emits exactly one transcript line" {
     defer app.deinit();
     app.auth.select_result = true;
 
-    try Runtime(TestApp).applySourceChoice(&app, .stored_key);
+    try Runtime(TestApp).applySourceChoice(&app, .custom_provider);
 
-    try std.testing.expectEqual(credentials.Source.stored_key, app.auth.active_source.?);
+    try std.testing.expectEqual(credentials.Source.custom_provider, app.auth.active_source.?);
     try std.testing.expectEqual(@as(usize, 1), app.preference_write_count);
-    try std.testing.expectEqual(credentials.Source.stored_key, app.last_preference_source.?);
+    try std.testing.expectEqual(credentials.Source.custom_provider, app.last_preference_source.?);
     try std.testing.expectEqual(@as(usize, 1), app.notice_write_count);
     const expected = try std.fmt.allocPrint(
         app.alloc,
         "Switched credential to {s}.\n",
-        .{credentials.sourceLabel(.stored_key)},
+        .{credentials.sourceLabel(.custom_provider)},
     );
     defer app.alloc.free(expected);
     try std.testing.expectEqualStrings(expected, app.transcript.items);
+}
+
+test "remaining credential sources persist a remembered choice" {
+    for (std.meta.tags(credentials.Source)) |source| {
+        var app: TestApp = .{};
+        defer app.deinit();
+        app.auth.select_result = true;
+
+        try Runtime(TestApp).applySourceChoice(&app, source);
+
+        try std.testing.expectEqual(source, app.auth.active_source.?);
+        try std.testing.expectEqual(@as(usize, 1), app.preference_write_count);
+        try std.testing.expectEqual(source, app.last_preference_source.?);
+    }
 }
 
 test "team change stays a local notice and does not activate hx login" {
@@ -1524,7 +1522,7 @@ test "team change stays a local notice and does not activate hx login" {
 
     try std.testing.expectEqual(@as(usize, 0), app.auth.team_selection.select_count);
     try std.testing.expect(!app.auth.selected_team_adopted);
-    try std.testing.expectEqual(credentials.Source.ai_gateway_api_key, app.auth.active_source.?);
+    try std.testing.expectEqual(credentials.Source.custom_provider, app.auth.active_source.?);
     try std.testing.expectEqual(@as(usize, 0), app.preference_write_count);
     try std.testing.expectEqual(@as(usize, 1), app.notice_write_count);
     try std.testing.expect(std.mem.find(u8, app.transcript.items, "Team switching is not supported") != null);
@@ -1533,7 +1531,7 @@ test "team change stays a local notice and does not activate hx login" {
 test "team change on an active hx login does not persist a team" {
     var app: TestApp = .{};
     defer app.deinit();
-    app.auth.active_source = .fx_login;
+    app.auth.active_source = .grok_subscription;
 
     try Runtime(TestApp).applyTeamChoice(&app, 0);
 
@@ -1542,72 +1540,52 @@ test "team change on an active hx login does not persist a team" {
     try std.testing.expect(std.mem.find(u8, app.transcript.items, "Team switching is not supported") != null);
 }
 
-test "successful direct login remembers hx login after activation" {
+fn testGrokSignInCompletion() !login_flow.SignInCompletion {
+    const alloc = std.testing.allocator;
+    return .{ .grok = .{
+        .access_token = try alloc.dupe(u8, "access"),
+        .refresh_token = try alloc.dupe(u8, "refresh"),
+        .expires_at_ms = 0,
+        .client_id = try alloc.dupe(u8, "client"),
+    } };
+}
+
+test "successful SuperGrok login refreshes inventory and closes the picker" {
     var app: TestApp = .{};
     defer app.deinit();
     app.auth.select_result = true;
-    app.auth.sign_in_transition = .{ .succeeded = .{ .vercel = .{} } };
+    app.auth.sign_in_transition = .{ .succeeded = try testGrokSignInCompletion() };
 
     try Runtime(TestApp).collectSignInFacts(&app);
 
-    try std.testing.expectEqual(credentials.Source.ai_gateway_api_key, app.auth.active_source.?);
-    try std.testing.expectEqual(@as(usize, 0), app.preference_write_count);
     try std.testing.expect(app.auth.picker_closed);
+    try std.testing.expectEqual(@as(usize, 1), app.auth.source_inventory_refresh_count);
     try std.testing.expectEqual(@as(usize, 1), app.notice_write_count);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "That sign-in path is not supported") != null);
-}
-
-test "direct login source load failure leaves the environment preference unchanged" {
-    var app: TestApp = .{};
-    defer app.deinit();
-    app.auth.select_result = null;
-    app.auth.sign_in_transition = .{ .succeeded = .{ .vercel = .{} } };
-
-    try Runtime(TestApp).collectSignInFacts(&app);
-
-    try std.testing.expectEqual(credentials.Source.ai_gateway_api_key, app.auth.active_source.?);
-    try std.testing.expectEqual(@as(usize, 0), app.preference_write_count);
-    try std.testing.expect(app.auth.picker_closed);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "That sign-in path is not supported") != null);
-}
-
-test "failed preference persistence keeps a successful direct login active" {
-    var app: TestApp = .{};
-    defer app.deinit();
-    app.auth.select_result = true;
-    app.auth.sign_in_transition = .{ .succeeded = .{ .vercel = .{} } };
-    app.preference_write_succeeds = false;
-
-    try Runtime(TestApp).collectSignInFacts(&app);
-
-    try std.testing.expectEqual(credentials.Source.ai_gateway_api_key, app.auth.active_source.?);
-    try std.testing.expectEqual(@as(usize, 0), app.preference_write_count);
-    try std.testing.expect(app.auth.picker_closed);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "That sign-in path is not supported") != null);
+    try std.testing.expect(std.mem.find(u8, app.transcript.items, "Signed in with SuperGrok") != null);
 }
 
 test "successful API key save persists even when the live credential is unchanged" {
     var app: TestApp = .{};
     defer app.deinit();
-    app.auth.active_source = .stored_key;
+    app.auth.active_source = .custom_provider;
 
     try Runtime(TestApp).applyApiKeySaveResult(&app, .{ .saved = false });
 
-    try std.testing.expectEqual(credentials.Source.stored_key, app.auth.active_source.?);
+    try std.testing.expectEqual(credentials.Source.custom_provider, app.auth.active_source.?);
     try std.testing.expectEqual(@as(usize, 1), app.preference_write_count);
-    try std.testing.expectEqual(credentials.Source.stored_key, app.last_preference_source.?);
+    try std.testing.expectEqual(credentials.Source.custom_provider, app.last_preference_source.?);
 }
 
 test "successful API key save remembers the newly active stored key" {
     var app: TestApp = .{};
     defer app.deinit();
-    app.auth.active_source = .stored_key;
+    app.auth.active_source = .custom_provider;
 
     try Runtime(TestApp).applyApiKeySaveResult(&app, .{ .saved = true });
 
-    try std.testing.expectEqual(credentials.Source.stored_key, app.auth.active_source.?);
+    try std.testing.expectEqual(credentials.Source.custom_provider, app.auth.active_source.?);
     try std.testing.expectEqual(@as(usize, 1), app.preference_write_count);
-    try std.testing.expectEqual(credentials.Source.stored_key, app.last_preference_source.?);
+    try std.testing.expectEqual(credentials.Source.custom_provider, app.last_preference_source.?);
     try std.testing.expectEqual(@as(usize, 1), app.model_cache.reset_count);
     try std.testing.expectEqual(@as(usize, 1), app.model_cache_warmup_count);
 }
@@ -1621,7 +1599,7 @@ test "cancelled login and rejected API key do not persist a source" {
     try Runtime(TestApp).applyApiKeySaveResult(&app, .gateway_refused);
 
     try std.testing.expectEqual(@as(usize, 0), app.preference_write_count);
-    try std.testing.expectEqual(credentials.Source.ai_gateway_api_key, app.auth.active_source.?);
+    try std.testing.expectEqual(credentials.Source.custom_provider, app.auth.active_source.?);
 }
 
 test "team source load failure preserves the environment source and preference" {
@@ -1631,7 +1609,7 @@ test "team source load failure preserves the environment source and preference" 
 
     try Runtime(TestApp).applyTeamChoice(&app, 0);
 
-    try std.testing.expectEqual(credentials.Source.ai_gateway_api_key, app.auth.active_source.?);
+    try std.testing.expectEqual(credentials.Source.custom_provider, app.auth.active_source.?);
     try std.testing.expectEqual(@as(usize, 0), app.preference_write_count);
     try std.testing.expect(std.mem.find(u8, app.transcript.items, "Team switching is not supported") != null);
 }
@@ -1707,7 +1685,7 @@ test "prompt credential refresh failure is recoverable and detail-free" {
     app.auth.refresh_error = error.OAuthRequestFailed;
 
     try std.testing.expect(!try Runtime(TestApp).preparePromptCredential(&app));
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "hx login credential refresh failed.") != null);
+    try std.testing.expect(std.mem.find(u8, app.transcript.items, "SuperGrok subscription credential refresh failed.") != null);
     try std.testing.expect(std.mem.find(u8, app.transcript.items, "Choose another source below.") != null);
     try std.testing.expect(std.mem.find(u8, app.transcript.items, "OAuthRequestFailed") == null);
     try std.testing.expect(app.shell.render_requests.footer_requested);
@@ -1736,7 +1714,7 @@ test "prompt credential admission rejects a credential that remains unavailable"
 
     try std.testing.expect(!try Runtime(TestApp).preparePromptCredential(&app));
     try std.testing.expectEqual(@as(usize, 2), app.auth.refresh_count);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "hx login credential refresh failed.") != null);
+    try std.testing.expect(std.mem.find(u8, app.transcript.items, "SuperGrok subscription credential refresh failed.") != null);
     try std.testing.expect(app.auth.picker_opened);
 }
 

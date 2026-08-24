@@ -3221,56 +3221,6 @@ const CancelTestCommandOnOutput = struct {
     }
 };
 
-const TestCommandOutputCapture = struct {
-    alloc: Allocator,
-    bytes: std.ArrayList(u8) = .empty,
-    stdout_chunks: usize = 0,
-    stderr_chunks: usize = 0,
-
-    fn deinit(self: *@This()) void {
-        self.bytes.deinit(self.alloc);
-    }
-
-    fn onChunk(
-        raw_ctx: *anyopaque,
-        _: ?types.ToolLifecycleId,
-        stream: command_contract.CommandOutputStream,
-        chunk: []const u8,
-    ) !void {
-        const self: *@This() = @ptrCast(@alignCast(raw_ctx));
-        try self.bytes.appendSlice(self.alloc, chunk);
-        switch (stream) {
-            .stdout => self.stdout_chunks += 1,
-            .stderr => self.stderr_chunks += 1,
-        }
-    }
-};
-
-const TestDevboxProvider = struct {
-    calls: usize = 0,
-};
-
-fn executeTestDevboxProvider(
-    raw_ctx: ?*anyopaque,
-    alloc: Allocator,
-    _: []const u8,
-    _: []const u8,
-    control: devbox_executor.Control,
-) devbox_executor.ProviderError!devbox_executor.VercelOutcome {
-    try control.check();
-    const state: *TestDevboxProvider = @ptrCast(@alignCast(raw_ctx.?));
-    state.calls += 1;
-    const stdout = try alloc.dupe(u8, "DEVBOX_COMPACT_ONE\nDEVBOX_COMPACT_TWO\n");
-    errdefer alloc.free(stdout);
-    const stderr = try alloc.dupe(u8, "");
-    return .{ .success = .{
-        .exit_code = 0,
-        .stdout = stdout,
-        .stderr = stderr,
-        .duration_ms = 9,
-    } };
-}
-
 fn runCommandArgsForTest(alloc: Allocator, command: []const u8) ![]u8 {
     var out: std.Io.Writer.Allocating = .init(alloc);
     defer out.deinit();
@@ -6360,48 +6310,6 @@ test "interactive command replay capture allocation fails open" {
         .unavailable => {},
         .available => return error.TestExpectedUnavailableReplay,
     }
-}
-
-test "interactive devbox success emits raw provider output once" {
-    const alloc = std.testing.allocator;
-    var arena_state = std.heap.ArenaAllocator.init(alloc);
-    defer arena_state.deinit();
-    const arena = arena_state.allocator();
-
-    var rt = TestRuntime{
-        .workspace_root = "/tmp",
-        .permission_mode = .auto,
-        .sandbox_backend = .vercel,
-    };
-    defer rt.deinit(alloc);
-    var provider = TestDevboxProvider{};
-    var captured = TestCommandOutputCapture{ .alloc = alloc };
-    defer captured.deinit();
-    var ctx = rt.context();
-    ctx.devbox_provider = .{
-        .ctx = @ptrCast(&provider),
-        .execute_fn = executeTestDevboxProvider,
-    };
-    ctx.output_chunk_ctx = @ptrCast(&captured);
-    ctx.on_output_chunk = TestCommandOutputCapture.onChunk;
-
-    const result = try executeTestRunCommand(ctx, arena, .{
-        .id = "devbox-compact",
-        .name = "terminal",
-        .arguments_json = "{\"action\":\"exec\",\"command\":\"printf remote > provider-output.txt\"}",
-    });
-
-    try std.testing.expectEqual(@as(usize, 1), provider.calls);
-    try std.testing.expectEqualStrings(
-        "DEVBOX_COMPACT_ONE\nDEVBOX_COMPACT_TWO\n",
-        captured.bytes.items,
-    );
-    try std.testing.expectEqual(@as(usize, 1), captured.stdout_chunks);
-    try std.testing.expectEqual(@as(usize, 0), captured.stderr_chunks);
-    try expectContains(result.model_output, "<stdout>\nDEVBOX_COMPACT_ONE\nDEVBOX_COMPACT_TWO\n</stdout>\n");
-    const replay = result.command_replay_capture orelse
-        return error.TestExpectedReplay;
-    try std.testing.expect(replay.hasOutput());
 }
 
 test "run_command reactive sandbox retry timeout retains both attempts" {

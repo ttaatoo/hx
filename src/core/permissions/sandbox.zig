@@ -114,7 +114,7 @@ pub fn publicModeForBackend(requested: BackendKind) PublicMode {
 fn publicModeForBackendForProbe(requested: BackendKind, probe: BackendProbe) PublicMode {
     return switch (resolveBackendForProbe(requested, probe)) {
         .macos => .os,
-        .none, .auto, .vercel, .just_bash => .none,
+        .none, .auto, .just_bash => .none,
     };
 }
 
@@ -522,7 +522,6 @@ pub fn executeCommand(
     debug_trace.logf("core", "sandbox backend resolved requested={s} resolved={s}", .{ requested_public.label(), resolved_public.label() });
     return switch (backend) {
         .macos => executeMacOS(arena, scratch, effective_cfg, command, cwd),
-        .vercel => executeVercel(arena, scratch, effective_cfg, command, cwd),
         .just_bash => executeJustBash(arena, scratch, effective_cfg, "just-bash", command, cwd),
         .none, .auto => executeRawBash(arena, scratch, effective_cfg, command, cwd),
     };
@@ -572,28 +571,17 @@ pub fn executeCommandInEnvironment(
             cwd,
             &invocation,
         ),
-        .vercel, .just_bash => blk: {
+        .just_bash => blk: {
             const projected = try shell_resolver.formatInvocationCommand(scratch, &invocation);
-            break :blk switch (backend) {
-                .vercel => executeVercelWithResultCommand(
-                    arena,
-                    scratch,
-                    effective_cfg,
-                    projected,
-                    command,
-                    cwd,
-                ),
-                .just_bash => executeJustBashWithResultCommand(
-                    arena,
-                    scratch,
-                    effective_cfg,
-                    "just-bash",
-                    projected,
-                    command,
-                    cwd,
-                ),
-                else => unreachable,
-            };
+            break :blk executeJustBashWithResultCommand(
+                arena,
+                scratch,
+                effective_cfg,
+                "just-bash",
+                projected,
+                command,
+                cwd,
+            );
         },
     };
 }
@@ -641,7 +629,7 @@ pub fn spawnPreparedBackground(
             );
             break :blk .{ .macos_profile = profile_path };
         },
-        .vercel, .just_bash, .none, .auto => .none,
+        .just_bash, .none, .auto => .none,
     };
     defer switch (isolation) {
         .macos_profile => |profile_path| std.Io.Dir.deleteFileAbsolute(
@@ -895,88 +883,6 @@ fn cancelRequested(cancel_flag: ?*std.atomic.Value(bool)) bool {
     return if (cancel_flag) |flag| flag.load(.seq_cst) else false;
 }
 
-fn executeVercel(
-    alloc: Allocator,
-    scratch: Allocator,
-    cfg: Config,
-    command: []const u8,
-    cwd: []const u8,
-) !command_contract.RunCommandResult {
-    return executeVercelWithResultCommand(
-        alloc,
-        scratch,
-        cfg,
-        command,
-        command,
-        cwd,
-    );
-}
-
-fn executeVercelWithResultCommand(
-    alloc: Allocator,
-    scratch: Allocator,
-    cfg: Config,
-    execution_command: []const u8,
-    result_command: []const u8,
-    cwd: []const u8,
-) !command_contract.RunCommandResult {
-    const provider = cfg.devbox_provider orelse {
-        debug_trace.logf("core", "vercel sandbox unavailable: no devbox provider, falling back to raw bash", .{});
-        return executeRawBashWithResultCommand(
-            alloc,
-            scratch,
-            cfg,
-            execution_command,
-            result_command,
-            cwd,
-        );
-    };
-    return switch (try provider.execute(
-        alloc,
-        execution_command,
-        cwd,
-        devboxControl(cfg),
-    )) {
-        .success => |remote| blk: {
-            var owned = remote;
-            defer owned.deinit(alloc);
-            try emitProviderOutput(cfg, .stdout, owned.stdout);
-            try emitProviderOutput(cfg, .stderr, owned.stderr);
-            break :blk try formatExitOutput(
-                alloc,
-                result_command,
-                cwd,
-                owned.exit_code,
-                owned.stdout,
-                owned.stderr,
-                owned.duration_ms,
-            );
-        },
-        .unavailable => blk: {
-            debug_trace.logf("core", "vercel sandbox unavailable: no auth token, falling back to raw bash", .{});
-            break :blk try executeRawBashWithResultCommand(
-                alloc,
-                scratch,
-                cfg,
-                execution_command,
-                result_command,
-                cwd,
-            );
-        },
-        .request_failed => blk: {
-            debug_trace.logf("core", "vercel sandbox request failed, falling back to raw bash", .{});
-            break :blk try executeRawBashWithResultCommand(
-                alloc,
-                scratch,
-                cfg,
-                execution_command,
-                result_command,
-                cwd,
-            );
-        },
-    };
-}
-
 fn emitAcceptedOutputChunk(
     cfg: Config,
     stream: CommandOutputStream,
@@ -1012,14 +918,6 @@ fn emitProviderOutput(
         }
         offset = end;
     }
-}
-
-fn devboxControl(cfg: Config) devbox_executor.Control {
-    return .{
-        .cancel_flag = cfg.cancel_flag,
-        .timeout_ms = cfg.timeout_ms,
-        .started_ms = cfg.timeout_started_ms orelse io_mod.milliTimestamp(),
-    };
 }
 
 fn executeJustBash(
@@ -2938,6 +2836,7 @@ test "absent sandbox config selects automatic host resolution" {
     try std.testing.expectEqual(BackendKind.auto, backendFromConfig(null));
     try std.testing.expectEqual(BackendKind.none, backendFromConfig("none"));
     try std.testing.expectEqual(BackendKind.auto, backendFromConfig("bogus"));
+    try std.testing.expectEqual(BackendKind.auto, backendFromConfig("vercel"));
 }
 
 test "os sandbox config maps to the platform backend" {
@@ -2965,7 +2864,6 @@ test "config construction carries explicit output cap" {
 
 test "resolve backend keeps explicit choices" {
     try std.testing.expectEqual(BackendKind.macos, resolveBackend(.macos));
-    try std.testing.expectEqual(BackendKind.vercel, resolveBackend(.vercel));
     try std.testing.expectEqual(BackendKind.just_bash, resolveBackend(.just_bash));
     try std.testing.expectEqual(BackendKind.none, resolveBackend(.none));
 }
@@ -2997,7 +2895,7 @@ test "effective backend is none in yolo without changing configuration" {
 }
 
 test "resolve backend auto and explicit choices are deterministic under probe" {
-    try std.testing.expectEqual(BackendKind.vercel, resolveBackendForProbe(.vercel, .{
+    try std.testing.expectEqual(BackendKind.just_bash, resolveBackendForProbe(.just_bash, .{
         .host_capabilities = host.nativeForOs(.linux),
     }));
     try std.testing.expectEqual(BackendKind.none, resolveBackendForProbe(.none, .{
@@ -3005,6 +2903,9 @@ test "resolve backend auto and explicit choices are deterministic under probe" {
     }));
     try std.testing.expectEqual(BackendKind.macos, resolveBackendForProbe(.auto, .{
         .host_capabilities = host.nativeForOs(.macos),
+    }));
+    try std.testing.expectEqual(BackendKind.none, resolveBackendForProbe(.auto, .{
+        .host_capabilities = host.nativeForOs(.linux),
     }));
 }
 
@@ -4671,137 +4572,6 @@ test "cancel and timeout tie chooses cancellation" {
     }, std.testing.allocator, "sleep 5", "/tmp"));
 }
 
-test "vercel backend checks cancellation and timeout before remote work" {
-    var cancel = std.atomic.Value(bool).init(true);
-    try std.testing.expectError(error.CancelledBeforeExecution, executeCommand(.{
-        .backend = .vercel,
-        .workspace_root = "/tmp",
-        .max_command_output_bytes = 1024,
-        .cancel_flag = &cancel,
-        .timeout_ms = 1000,
-    }, std.testing.allocator, "printf no", "/tmp"));
-
-    try std.testing.expectError(error.TimeoutExpired, executeCommand(.{
-        .backend = .vercel,
-        .workspace_root = "/tmp",
-        .max_command_output_bytes = 1024,
-        .timeout_ms = 0,
-    }, std.testing.allocator, "printf no", "/tmp"));
-}
-
-const FakeDevboxOutcome = enum {
-    success,
-    unavailable,
-    request_failed,
-};
-
-const FakeDevboxProvider = struct {
-    outcome: FakeDevboxOutcome,
-    calls: usize = 0,
-    stdout: ?[]const u8 = null,
-    stderr: ?[]const u8 = null,
-};
-
-fn fakeDevboxExecute(
-    raw_ctx: ?*anyopaque,
-    alloc: Allocator,
-    command: []const u8,
-    cwd: []const u8,
-    control: devbox_executor.Control,
-) devbox_executor.ProviderError!devbox_executor.VercelOutcome {
-    try control.check();
-    const state: *FakeDevboxProvider = @ptrCast(@alignCast(raw_ctx orelse return .request_failed));
-    state.calls += 1;
-    return switch (state.outcome) {
-        .success => blk: {
-            const stdout = if (state.stdout) |value|
-                try alloc.dupe(u8, value)
-            else
-                try std.fmt.allocPrint(alloc, "remote:{s}:{s}", .{ cwd, command });
-            errdefer alloc.free(stdout);
-            const stderr = try alloc.dupe(u8, state.stderr orelse "");
-            break :blk .{ .success = .{
-                .exit_code = 0,
-                .stdout = stdout,
-                .stderr = stderr,
-                .duration_ms = 7,
-            } };
-        },
-        .unavailable => .unavailable,
-        .request_failed => .request_failed,
-    };
-}
-
-test "vercel backend executes through configured devbox provider" {
-    var fake_provider = FakeDevboxProvider{ .outcome = .success };
-    const result = try executeCommand(.{
-        .backend = .vercel,
-        .workspace_root = "/tmp",
-        .max_command_output_bytes = 1024,
-        .devbox_provider = .{
-            .ctx = @ptrCast(&fake_provider),
-            .execute_fn = fakeDevboxExecute,
-        },
-    }, std.testing.allocator, "printf remote", "/tmp");
-    defer std.testing.allocator.free(result.output);
-
-    try std.testing.expectEqual(@as(usize, 1), fake_provider.calls);
-    try std.testing.expect(std.mem.find(u8, result.output, "exit_code=0\n") != null);
-    try std.testing.expect(std.mem.find(u8, result.output, "<stdout>\nremote:/tmp:printf remote\n</stdout>\n") != null);
-    try std.testing.expectEqual(@as(?u64, 7), result.command_result.?.foreground.duration_ms);
-}
-
-test "vercel raw callbacks preserve provider bytes without changing model output" {
-    const stdout = "  provider stdout\n</stdout>\n\x1b[31mred\x1b[0m\n\x00\xff  ";
-    const stderr = "  provider stderr\n</stderr>\n  ";
-
-    var safe_provider = FakeDevboxProvider{
-        .outcome = .success,
-        .stdout = stdout,
-        .stderr = stderr,
-    };
-    const safe_result = try executeCommand(.{
-        .backend = .vercel,
-        .workspace_root = "/tmp",
-        .max_command_output_bytes = 4096,
-        .devbox_provider = .{
-            .ctx = @ptrCast(&safe_provider),
-            .execute_fn = fakeDevboxExecute,
-        },
-    }, std.testing.allocator, "provider command", "/tmp");
-    defer std.testing.allocator.free(safe_result.output);
-
-    var raw_provider = FakeDevboxProvider{
-        .outcome = .success,
-        .stdout = stdout,
-        .stderr = stderr,
-    };
-    var capture = StreamCapture{ .alloc = std.testing.allocator };
-    defer capture.deinit();
-    const raw_result = try executeCommand(.{
-        .backend = .vercel,
-        .workspace_root = "/tmp",
-        .max_command_output_bytes = 4096,
-        .devbox_provider = .{
-            .ctx = @ptrCast(&raw_provider),
-            .execute_fn = fakeDevboxExecute,
-        },
-        .output_chunk_ctx = @ptrCast(&capture),
-        .on_output_chunk = StreamCapture.onChunk,
-        .callback_projection = .raw,
-    }, std.testing.allocator, "provider command", "/tmp");
-    defer std.testing.allocator.free(raw_result.output);
-
-    try std.testing.expectEqual(@as(usize, 1), safe_provider.calls);
-    try std.testing.expectEqual(@as(usize, 1), raw_provider.calls);
-    try std.testing.expectEqual(@as(usize, 2), capture.chunks.items.len);
-    try std.testing.expectEqual(.stdout, capture.streams.items[0]);
-    try std.testing.expectEqualSlices(u8, stdout, capture.chunks.items[0]);
-    try std.testing.expectEqual(.stderr, capture.streams.items[1]);
-    try std.testing.expectEqualSlices(u8, stderr, capture.chunks.items[1]);
-    try std.testing.expectEqualSlices(u8, safe_result.output, raw_result.output);
-}
-
 test "provider accepted callbacks keep replay frames bounded" {
     const bytes = try std.testing.allocator.alloc(u8, 1024 * 1024 + 17);
     defer std.testing.allocator.free(bytes);
@@ -4810,7 +4580,7 @@ test "provider accepted callbacks keep replay frames bounded" {
     var capture = StreamCapture{ .alloc = std.testing.allocator };
     defer capture.deinit();
     try emitProviderOutput(.{
-        .backend = .vercel,
+        .backend = .just_bash,
         .workspace_root = "/tmp",
         .max_command_output_bytes = 4096,
         .accepted_output_chunk_ctx = @ptrCast(&capture),
@@ -4823,24 +4593,6 @@ test "provider accepted callbacks keep replay frames bounded" {
         captured_bytes += chunk.len;
     }
     try std.testing.expectEqual(bytes.len, captured_bytes);
-}
-
-test "vercel backend falls back to raw bash when provider is unavailable" {
-    var fake_provider = FakeDevboxProvider{ .outcome = .unavailable };
-    const result = try executeCommand(.{
-        .backend = .vercel,
-        .workspace_root = "/tmp",
-        .max_command_output_bytes = 1024,
-        .devbox_provider = .{
-            .ctx = @ptrCast(&fake_provider),
-            .execute_fn = fakeDevboxExecute,
-        },
-    }, std.testing.allocator, "printf local", "/tmp");
-    defer std.testing.allocator.free(result.output);
-
-    try std.testing.expectEqual(@as(usize, 1), fake_provider.calls);
-    try std.testing.expect(std.mem.find(u8, result.output, "exit_code=0\n") != null);
-    try std.testing.expect(std.mem.find(u8, result.output, "<stdout>\nlocal\n</stdout>\n") != null);
 }
 
 test "just_bash backend checks cancellation and timeout before spawning" {

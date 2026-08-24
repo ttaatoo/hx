@@ -26,6 +26,7 @@ const TIMEOUT = 15_000;
 const NO_GATEWAY_AUTH = {
   AI_GATEWAY_API_KEY: undefined,
   VERCEL_OIDC_TOKEN: undefined,
+  ANTHROPIC_API_KEY: undefined,
 };
 const MISSING_AUTH_MESSAGE =
   "This model uses SuperGrok / X Premium+. Run hx login grok. This uses subscription quota, not an XAI_API_KEY.";
@@ -1323,8 +1324,7 @@ describe("cli: logout", () => {
       try {
         const env = {
           HOME: realpathSync(home),
-          VERCEL_OIDC_TOKEN: undefined,
-          AI_GATEWAY_API_KEY: apiToken,
+          ANTHROPIC_API_KEY: apiToken,
           FX_DISABLE_KEYCHAIN: "1",
         };
         const logout = await runFx(["logout"], { env });
@@ -1334,7 +1334,7 @@ describe("cli: logout", () => {
         expect(logout.stdout).toBe("No SuperGrok login session found.\n");
         expect(logout.stderr).toBe("");
         expect(JSON.parse(status.stdout)).toMatchObject({
-          auth: "missing",
+          auth: "direct provider API key",
           auth_refreshable: false,
         });
         expect(logout.stdout).not.toContain(apiToken);

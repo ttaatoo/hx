@@ -220,7 +220,7 @@ Two test suites live under `tests/`, both using Bun:
 
 ### `tests/evals/` — LLM Evals
 
-Eval scenarios that exercise the agent through `hx ask --json`. Require `AI_GATEWAY_API_KEY`.
+Eval scenarios that exercise the agent through `hx ask --json`. Live model-backed evals require `ANTHROPIC_API_KEY`. Grok matrix runs also need a SuperGrok session (`hx login grok`).
 
 ```bash
 cd tests/evals && bun install && bun test           # run all evals
@@ -322,7 +322,7 @@ Startup latency benchmarks live in `benchmarks/` and run in CI via `.github/work
 ./benchmarks/startup.sh --quick    # quick run (20 iterations)
 ```
 
-The CI workflow builds a ReleaseSafe binary, measures six CLI paths with hyperfine, and enforces per-command latency budgets. PRs that exceed a budget fail the check. On `main`, results are uploaded to Vercel Blob for historical tracking.
+The CI workflow builds a ReleaseSafe binary, measures six CLI paths with hyperfine, and enforces per-command latency budgets. PRs that exceed a budget fail the check.
 
 The startup benchmark uses `FX_BENCH=1`, an environment variable that runs through arg parsing and CLI dispatch, then exits before TTY initialization. This lives in `src/core/app/app_entry_runtime.zig`.
 

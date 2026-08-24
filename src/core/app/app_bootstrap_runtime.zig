@@ -701,7 +701,7 @@ fn makeStartupState(alloc: Allocator) !app_lifecycle.StartupState {
         errdefer alloc.free(credential_team);
         state.credential = .{
             .token = credential_token,
-            .source = .ai_gateway_api_key,
+            .source = .custom_provider,
             .team_id = credential_team,
         };
     }
@@ -927,7 +927,7 @@ test "app_bootstrap_runtime transfers startup state and starts a fresh session" 
 
     try std.testing.expectEqualStrings("/workspace", app.workspace_root);
     try std.testing.expectEqualStrings("api-key", app.auth.apiKey().?);
-    try std.testing.expectEqual(types.CredentialSource.ai_gateway_api_key, app.auth.credentialSource().?);
+    try std.testing.expectEqual(types.CredentialSource.custom_provider, app.auth.credentialSource().?);
     try std.testing.expectEqualStrings("team_123", app.auth.gatewayTeam().?);
     const auth_view = app.auth.view();
     try std.testing.expectEqual(credentials.StoredKeyReadStatus.not_found, auth_view.stored_key_status);

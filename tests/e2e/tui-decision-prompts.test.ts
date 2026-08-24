@@ -427,9 +427,9 @@ function fakeGatewayEnv(
 ) {
   return {
     HOME: root.home,
-    AI_GATEWAY_API_KEY: "fake-e2e-key",
-    FX_GATEWAY_BASE_URL: gateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+    ANTHROPIC_API_KEY: "fake-e2e-key",
+    ANTHROPIC_BASE_URL: gateway.baseUrl,
+    GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
     FX_MODEL: OUTER_MODEL,
     FX_AUTO_UPGRADE: "0",
     NO_COLOR: "1",

@@ -86,7 +86,7 @@ Bare `hx login` starts SuperGrok. This uses subscriber quota, not an `XAI_API_KE
 
 Or use Anthropic Messages with `ANTHROPIC_API_KEY` and `~/.hx/providers.json`. Optional `ANTHROPIC_BASE_URL` can point at the official API or a Claude Code proxy. See [Providers](docs/direct-providers.md).
 
-Codex (`hx login codex`) is optional and talks to OpenAI directly. There is no Vercel AI Gateway path: `hx login vercel`, `hx setup`, `hx teams`, and Gateway credits are not product commands.
+Codex (`hx login codex`) is optional and talks to OpenAI directly.
 
 Inside hx, `/provider` switches between SuperGrok, Anthropic, and Codex. `/model` lists the active provider's models.
 

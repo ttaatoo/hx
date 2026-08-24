@@ -422,10 +422,9 @@ try {
     cwd: realpathSync(workspace),
     env: {
       HOME: home,
-      AI_GATEWAY_API_KEY: "fake-approval-profile-key",
-      VERCEL_OIDC_TOKEN: undefined,
-      FX_GATEWAY_BASE_URL: gateway.baseUrl,
-      FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+      ANTHROPIC_API_KEY: "fake-approval-profile-key",
+      ANTHROPIC_BASE_URL: gateway.baseUrl,
+      GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
       FX_MODEL: "openai/gpt-5",
       FX_PERMISSION_MODE: "ask",
       FX_AUTO_UPGRADE: "0",

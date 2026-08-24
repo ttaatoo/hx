@@ -340,10 +340,8 @@ fn loadedCatalogStatusText(state: model_cache_runtime.ModelMenuCatalogState) ?[]
         const reason = state.public_only_reason orelse return "Using the public model catalog.";
         return switch (reason) {
             .no_credential => "No SuperGrok or Anthropic credential is configured. Run hx login grok, or set ANTHROPIC_API_KEY.",
-            .fx_login_team_required => "A retired login session is ignored. Run hx login grok.",
-            .fx_login_refresh_required => "A retired login session is ignored. Run hx login grok.",
-            .credential_refresh_failed => "A retired login credential was ignored. Run hx login grok.",
-            .authenticated_credential_rejected => "A retired login credential was ignored. Run hx login grok.",
+            .credential_refresh_failed => "A SuperGrok or Codex credential could not be refreshed. Run hx login grok.",
+            .authenticated_credential_rejected => "A SuperGrok or Codex credential was rejected. Run hx login grok.",
             .chatgpt_subscription => "Codex models require an authenticated Codex catalog.",
             .grok_subscription => "SuperGrok models require an authenticated SuperGrok session.",
         };
@@ -351,7 +349,6 @@ fn loadedCatalogStatusText(state: model_cache_runtime.ModelMenuCatalogState) ?[]
     if (state.access_level == .authenticated) {
         const source = state.source orelse return "Using configured SuperGrok or Anthropic models.";
         return switch (source) {
-            .fx_login, .ai_gateway_api_key, .vercel_oidc_token, .stored_key => "This credential is not used by hx. Run hx login grok.",
             .chatgpt_subscription => "Codex catalog: authenticated with a subscription.",
             .custom_provider => "Direct provider catalog: using ~/.hx/providers.json.",
             .grok_subscription => "SuperGrok catalog: authenticated with a subscription.",
@@ -521,8 +518,8 @@ test "model menu states and navigation budget stay bounded" {
 
 test "model menu status follows provenance and retryable failure precedence" {
     try std.testing.expectEqualStrings(
-        "This credential is not used by hx. Run hx login grok.",
-        loadedCatalogStatusText(.{ .access_level = .authenticated, .source = .fx_login }).?,
+        "SuperGrok catalog: authenticated with a subscription.",
+        loadedCatalogStatusText(.{ .access_level = .authenticated, .source = .grok_subscription }).?,
     );
 
     const cases = [_]struct {
@@ -530,10 +527,8 @@ test "model menu status follows provenance and retryable failure precedence" {
         expected: []const u8,
     }{
         .{ .state = .{ .public_only_reason = .no_credential, .private_models_hidden = true }, .expected = "No SuperGrok or Anthropic credential is configured. Run hx login grok, or set ANTHROPIC_API_KEY." },
-        .{ .state = .{ .public_only_reason = .fx_login_team_required, .private_models_hidden = true }, .expected = "A retired login session is ignored. Run hx login grok." },
-        .{ .state = .{ .public_only_reason = .fx_login_refresh_required, .private_models_hidden = true }, .expected = "A retired login session is ignored. Run hx login grok." },
-        .{ .state = .{ .public_only_reason = .credential_refresh_failed, .private_models_hidden = true }, .expected = "A retired login credential was ignored. Run hx login grok." },
-        .{ .state = .{ .public_only_reason = .authenticated_credential_rejected, .private_models_hidden = true }, .expected = "A retired login credential was ignored. Run hx login grok." },
+        .{ .state = .{ .public_only_reason = .credential_refresh_failed, .private_models_hidden = true }, .expected = "A SuperGrok or Codex credential could not be refreshed. Run hx login grok." },
+        .{ .state = .{ .public_only_reason = .authenticated_credential_rejected, .private_models_hidden = true }, .expected = "A SuperGrok or Codex credential was rejected. Run hx login grok." },
         .{ .state = .{ .failure = .{ .category = .transport, .retryable = true } }, .expected = "Could not load the model catalog; retry /models." },
         .{ .state = .{ .access_level = .public_only, .public_only_reason = .no_credential, .private_models_hidden = true, .failure = .{ .category = .rate_limited, .retryable = true } }, .expected = "Model discovery was rate limited; retry /models." },
         .{ .state = .{ .access_level = .authenticated, .failure = .{ .category = .rate_limited, .retryable = true } }, .expected = "Model discovery was rate limited; retry /models." },
@@ -542,6 +537,8 @@ test "model menu status follows provenance and retryable failure precedence" {
 
     for (cases) |case| {
         try std.testing.expectEqualStrings(case.expected, loadedCatalogStatusText(case.state).?);
+        try std.testing.expect(std.mem.find(u8, case.expected, "Sign in with Vercel") == null);
+        try std.testing.expect(std.mem.find(u8, case.expected, "AI_GATEWAY_API_KEY") == null);
     }
 }
 
