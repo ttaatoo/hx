@@ -3,13 +3,12 @@
 class Hx < Formula
   desc "Unix-like coding agent CLI"
   homepage "https://github.com/ttaatoo/hx"
-  version "0.0.5"
+  version "0.0.6"
   license "Apache-2.0"
-  # GitHub Release tarballs (not bottles, not a Vercel blob CDN). Until a
-  # v0.0.5 release exists, install from git:
-  #   brew install --HEAD ttaatoo/hx/hx
+  # GitHub Release tarballs (not bottles, not a Vercel blob CDN).
   # Keep version + sha256 :no_check after rebuilding the same tag. Pin
-  # sha256 only when bumping version.
+  # sha256 only when bumping version. `brew install --HEAD` builds latest
+  # git with Homebrew's Zig.
   on_macos do
     on_arm do
       url "https://github.com/ttaatoo/hx/releases/download/v#{version}/hx-macos-arm64.tar.gz"
@@ -53,7 +52,12 @@ class Hx < Formula
       official Vercel fx, not Homebrew-core's `fx` JSON viewer, and not
       the Helix editor.
 
-      Until a GitHub Release exists for v#{version}, install from git:
+      Install the stable formula from GitHub Release binaries:
+
+        brew tap ttaatoo/hx https://github.com/ttaatoo/hx
+        brew install ttaatoo/hx/hx
+
+      To build the latest git with Homebrew's Zig:
 
         brew install --HEAD ttaatoo/hx/hx
 

@@ -35,23 +35,23 @@ This tap is `ttaatoo/hx/hx` (coding agent), not the Helix editor.
 
 ```bash
 brew tap ttaatoo/hx https://github.com/ttaatoo/hx
-brew install --HEAD ttaatoo/hx/hx
-```
-
-After a `v*` GitHub Release:
-
-```bash
 brew install ttaatoo/hx/hx
 ```
+
+The stable formula downloads a prebuilt GitHub Release tarball (`hx-*.tar.gz`; no bottles, no Vercel CDN). Pushes to `main` create a tagged GitHub Release when the version in source has no GitHub Release yet.
 
 If this repo is already tapped:
 
 ```bash
 git -C "$(brew --repo ttaatoo/hx)" pull
-brew install --HEAD ttaatoo/hx/hx
+brew install ttaatoo/hx/hx
 ```
 
-`--HEAD` compiles from `main` with Homebrew's Zig 0.16. The stable formula downloads a prebuilt GitHub Release tarball (no bottles, no Vercel CDN). Pushes to `main` create a tagged GitHub Release when the version in source has no tag or GitHub Release yet.
+To build the latest `main` from git with Homebrew's Zig 0.16:
+
+```bash
+brew install --HEAD ttaatoo/hx/hx
+```
 
 Or build from source with [Zig 0.16.0+](https://ziglang.org/download/):
 
