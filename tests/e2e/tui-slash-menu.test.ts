@@ -1413,7 +1413,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.sendText("/help");
       let grid = await waitForHelpMenu(session, 38);
       let pane = grid.join("\n");
-      expect(pane).not.toContain("hx v");
+      expect(pane).not.toMatch(/hx v\d/);
       expect(pane).not.toContain("Run /help for commands");
       expect(pane).toContain("General");
       expect(pane).toContain("/help");
@@ -1511,7 +1511,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.sendText("/settings");
       const grid = await waitForSettingsMenu(session);
       let pane = grid.join("\n");
-      expect(pane).not.toContain("hx v");
+      expect(pane).not.toMatch(/hx v\d/);
       expect(pane).not.toContain("Run /help for commands");
       expect(pane).toContain("Settings");
       expect(pane).toContain("Interface");
@@ -2407,7 +2407,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.sendKeys("Enter");
       grid = await waitForSkillsMenu(session, 4);
       const pane = grid.join("\n");
-      expect(pane).not.toContain("hx v");
+      expect(pane).not.toMatch(/hx v\d/);
       expect(pane).not.toContain("Run /help for commands");
       expect(pane).toContain("[All]");
       expect(pane).toContain("Fx");
@@ -2450,7 +2450,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.sendLiteralText("$work");
       grid = await waitForSkillsMenu(session, 1);
       expect(composerContains(grid.join("\n"), "$work")).toBe(true);
-      expect(grid.join("\n")).not.toContain("hx v");
+      expect(grid.join("\n")).not.toMatch(/hx v\d/);
       await session.sendKeys("C-[");
       await session.waitForPane(
         (current) =>
@@ -2703,7 +2703,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.sendText("/models");
       let grid = await waitForModelsMenu(session, 2);
       let pane = grid.join("\n");
-      expect(pane).not.toContain("hx v");
+      expect(pane).not.toMatch(/hx v\d/);
       expect(pane).toContain(SUPERGROK_MODEL);
       expect(pane).toContain(SUPERGROK_FAST_MODEL);
       expect(pane).not.toContain("no matching models");
