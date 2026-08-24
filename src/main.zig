@@ -20,7 +20,6 @@ comptime {
 const app_lifecycle = @import("core/app/app_lifecycle.zig");
 const provider_runtime = @import("core/app/provider_runtime.zig");
 const auth_runtime = @import("core/auth/auth_runtime.zig");
-const api_key_validator = @import("core/auth/api_key_validator.zig");
 const oauth_transport = @import("core/auth/oauth_transport.zig");
 const js_host_auth = @import("core/auth/js_host_auth.zig");
 const credentials = @import("core/auth/credentials.zig");
@@ -496,7 +495,6 @@ const App = struct {
     terminal: TerminalState = .{},
 
     auth: auth_runtime.Runtime = auth_runtime.Runtime.init(
-        if (host_target.is_wasm) api_key_validator.unavailable_provider else builtin_providers.api_key_validator,
         if (host_profile.js_host_auth)
             js_host_auth.oauth_provider
         else if (host_profile.native_auth)
@@ -2272,7 +2270,6 @@ const App = struct {
             self.terminal_input_runtime.hasPendingTerminalAction() or
             self.question_prompt.isActive() or
             self.approval_prompt.isActive() or
-            self.auth.apiKeyEntryActive() or
             self.subagents.isViewActive() or
             !self.shell.has_committed_frame or
             !self.shell.footer_viewport.has_frame or
@@ -2285,33 +2282,6 @@ const App = struct {
             return false;
         }
         return true;
-    }
-
-    pub fn prepareApiKeyInputBoundary(self: *App) void {
-        if (self.terminal_input_runtime.native_clear_probe.active()) {
-            const discarded = self.terminal_input_runtime.native_clear_probe.settle().len;
-            self.terminal_input_runtime.native_clear_probe.clearSettledInput();
-            debug_trace.logf(
-                "auth",
-                "api key stage discarded native-clear probe input bytes={d}",
-                .{discarded},
-            );
-        }
-
-        self.terminal_input_runtime.terminal_cursor_probe.cancel();
-        var discarded: usize = 0;
-        while (self.terminal_input_runtime.terminal_cursor_probe.takeDeferredByte()) |byte| {
-            _ = byte;
-            std.debug.assert(self.terminal_input_runtime.terminal_cursor_probe.consumeDeferredInputDispatch());
-            discarded += 1;
-        }
-        if (discarded > 0) {
-            debug_trace.logf(
-                "auth",
-                "api key stage discarded cursor-probe input bytes={d}",
-                .{discarded},
-            );
-        }
     }
 
     fn replayNativeClearProbeInput(self: *App) !void {
@@ -2530,7 +2500,6 @@ const App = struct {
             try AuthAppRuntime.collectSignInFacts(self);
         }
         if (comptime host_profile.native_auth) {
-            try AuthAppRuntime.collectApiKeySaveFacts(self);
             try app_terminal_runtime.Runtime(App).collectFacts(self);
         }
         try self.processNextCooperativePrompt();
@@ -2552,7 +2521,7 @@ const App = struct {
                 &resize_interlock,
                 footer_rows,
                 resize_debounce_ms,
-                !InputAppRuntime.terminalPasteActive(self) and !self.auth.apiKeyEntryActive(),
+                !InputAppRuntime.terminalPasteActive(self),
             ) catch |err| {
                 if (err != error.TerminalTooSmall and err != error.UnableToReadTerminalSize) {
                     return err;
@@ -2585,7 +2554,7 @@ const App = struct {
         }
         try WorkerAppRuntime.tick(self, app_callbacks.Bindings(App).onTaskCompletion, app_callbacks.Bindings(App).workerEventHandlers(self));
         const now_ns = io_mod.nanoTimestamp();
-        if (!self.approval_prompt.isActive() and !self.question_prompt.isActive() and !self.auth.apiKeyEntryActive()) {
+        if (!self.approval_prompt.isActive() and !self.question_prompt.isActive()) {
             try self.pacer.tick(self.alloc, now_ns, self.pacerCallbacks());
         } else {
             self.pacer.pause(now_ns);

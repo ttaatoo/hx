@@ -7,7 +7,6 @@ const host = @import("../hosts/host.zig");
 const host_target = @import("../hosts/target.zig");
 const io_mod = @import("../shared/io.zig");
 const oauth = @import("oauth.zig");
-const oauth_session = @import("oauth_session.zig");
 const oauth_transport = @import("oauth_transport.zig");
 const test_oauth_http = if (builtin.is_test)
     @import("oauth_http.zig")
@@ -26,16 +25,6 @@ pub const LoginError = error{
     SessionChanged,
     NoRefreshToken,
     SignInHandlerMissing,
-};
-
-const LogoutError = error{SessionDeleteFailed};
-
-pub const remote_revocation_warning = "Warning: signed out locally, but the remote session could not be revoked.";
-
-pub const LogoutResult = struct {
-    session_deleted: bool = false,
-    local_durability_failed: bool = false,
-    remote_revocation_failed: bool = false,
 };
 
 pub const SignInState = enum {
@@ -398,72 +387,6 @@ fn completeSignIn(
 
 fn saveSignIn(_: ?*anyopaque, _: Allocator, _: SignInCompletion) !void {
     return error.SignInHandlerMissing;
-}
-
-pub fn logout(
-    alloc: Allocator,
-    transport: oauth_transport.Provider,
-) !LogoutResult {
-    var session: ?oauth_session.Session = null;
-    var session_load_failed = false;
-    defer if (session) |*loaded| loaded.deinit(alloc);
-    const delete_result = blk: {
-        var mutation = (oauth_session.beginExistingMutation() catch {
-            return LogoutError.SessionDeleteFailed;
-        }) orelse return .{};
-        defer mutation.deinit();
-        session = mutation.load(alloc) catch load: {
-            session_load_failed = true;
-            break :load null;
-        };
-        break :blk mutation.delete(alloc) catch oauth_session.DeleteResult{
-            .local_cleanup_failed = true,
-        };
-    };
-
-    var remote_revocation_failed = session_load_failed;
-    if (session != null) {
-        const loaded = session.?;
-        revokeLogoutSession(alloc, transport, loaded) catch {
-            remote_revocation_failed = true;
-        };
-    }
-
-    return .{
-        .session_deleted = delete_result.session_deleted,
-        .local_durability_failed = delete_result.local_cleanup_failed,
-        .remote_revocation_failed = remote_revocation_failed,
-    };
-}
-
-fn revokeLogoutSession(
-    alloc: Allocator,
-    transport: oauth_transport.Provider,
-    session: oauth_session.Session,
-) !void {
-    if (!oauth_session.isLoopbackE2EIssuer(session.issuer)) return;
-    var metadata = try oauth.discover(alloc, transport, session.issuer);
-    defer metadata.deinit(alloc);
-    const endpoint = metadata.revocation_endpoint orelse return error.RevocationEndpointMissing;
-    try oauth_session.validateE2EEndpoint(session.issuer, endpoint);
-    const refresh_result = oauth.revokeToken(
-        alloc,
-        transport,
-        endpoint,
-        session.client_id,
-        session.refresh_token,
-        .refresh_token,
-    );
-    const access_result = oauth.revokeToken(
-        alloc,
-        transport,
-        endpoint,
-        session.client_id,
-        session.access_token,
-        .access_token,
-    );
-    try refresh_result;
-    try access_result;
 }
 
 fn pollForTokenWithPrompt(
@@ -1599,6 +1522,9 @@ test "device-code login does not expose retired Gateway team or sign-in paths" {
     try std.testing.expect(!@hasDecl(@This(), "runLogin"));
     try std.testing.expect(!@hasDecl(@This(), "runTeams"));
     try std.testing.expect(!@hasDecl(@This(), "loadTeamSelection"));
+    try std.testing.expect(!@hasDecl(@This(), "logout"));
+    try std.testing.expect(!@hasDecl(@This(), "LogoutResult"));
+    try std.testing.expect(!@hasDecl(@This(), "remote_revocation_warning"));
     try std.testing.expect(!browserOpenSuppressed());
 }
 

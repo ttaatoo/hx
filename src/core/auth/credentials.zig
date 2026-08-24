@@ -142,7 +142,7 @@ pub const missing_grok_credential_message = "This model uses SuperGrok / X Premi
 pub const missing_grok_interactive_credential_message = "SuperGrok needs a subscription login. Run /login and choose Sign in with SuperGrok.";
 pub const missing_credential_message = missing_grok_credential_message;
 pub const missing_interactive_credential_message = missing_grok_interactive_credential_message;
-pub const unreadable_store_message = "hx could not read a stored key from " ++ stored_key_backend_label ++ ". Run hx login grok, or set ANTHROPIC_API_KEY.";
+pub const unreadable_store_message = "hx could not read credentials. Run hx login grok, or set ANTHROPIC_API_KEY.";
 
 pub const MissingSurface = enum { cli, interactive };
 
@@ -196,8 +196,8 @@ pub const Resolution = struct {
     stored_key_status: StoredKeyReadStatus = .not_attempted,
 };
 
-/// The single credential resolution method. Walks source precedence, then falls back to
-/// the stored key, reporting why that store was silent when it produced nothing.
+/// The single credential resolution method. Walks SuperGrok, Anthropic, and Codex
+/// source precedence and reports the first resolvable credential.
 pub fn resolve(
     alloc: std.mem.Allocator,
     transport: oauth_transport.Provider,
@@ -413,8 +413,11 @@ pub fn sourceRefreshable(source: Source) bool {
     return source == .chatgpt_subscription or source == .grok_subscription;
 }
 
-test "unreadable store message names the platform backend" {
-    try std.testing.expect(std.mem.find(u8, unreadable_store_message, stored_key_backend_label) != null);
+test "unreadable store message does not mention a stored key backend" {
+    try std.testing.expect(std.mem.find(u8, unreadable_store_message, "stored key") == null);
+    try std.testing.expect(std.mem.find(u8, unreadable_store_message, stored_key_backend_label) == null);
+    try std.testing.expect(std.mem.find(u8, unreadable_store_message, "Fx") == null);
+    try std.testing.expect(std.mem.find(u8, unreadable_store_message, "hx login grok") != null);
 }
 
 test "missing credential messages ask for SuperGrok login" {
