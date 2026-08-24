@@ -184,7 +184,7 @@ pub const LoadMode = enum { stored, refresh_if_needed };
 
 const FxLoginRefreshMode = enum { if_needed, force };
 
-pub const missing_chatgpt_credential_message = "fx needs a Codex subscription login for this model. Run hx login codex.";
+pub const missing_chatgpt_credential_message = "hx needs a Codex subscription login for this model. Run hx login codex.";
 pub const missing_chatgpt_interactive_credential_message = "Codex needs a subscription login. Run /login and choose Sign in with Codex.";
 pub const missing_direct_credential_message = "This model uses Anthropic. Set its apiKey in ~/.hx/providers.json or ANTHROPIC_API_KEY.";
 pub const missing_direct_interactive_credential_message = "This model uses Anthropic. Set its apiKey in ~/.hx/providers.json or ANTHROPIC_API_KEY.";

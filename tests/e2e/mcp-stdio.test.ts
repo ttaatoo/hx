@@ -148,14 +148,14 @@ function createRoot(
       `printf '%s\\n' "$$" >> "$FX_MCP_LAUNCH_LOG"; exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"`,
     ]
     : [process.execPath, scriptPath];
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".hx"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".hx", "settings.json"),
     JSON.stringify({ maxxing_mode: "minimal" }),
   );
   writeFileSync(
-    join(home, ".fx", "mcp.json"),
+    join(home, ".hx", "mcp.json"),
     JSON.stringify({
       mcp: {
         fixture: {
@@ -339,10 +339,10 @@ describe("modern MCP stdio compatibility", () => {
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const marker = join(root, "project-mcp-launched");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".hx"), { recursive: true });
     mkdirSync(join(workspace, ".fx"), { recursive: true });
-    writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({ maxxing_mode: "minimal" }));
-    writeFileSync(join(home, ".fx", "mcp.json"), JSON.stringify({ mcp: {} }));
+    writeFileSync(join(home, ".hx", "settings.json"), JSON.stringify({ maxxing_mode: "minimal" }));
+    writeFileSync(join(home, ".hx", "mcp.json"), JSON.stringify({ mcp: {} }));
 
     let projectRequestCount = 0;
     const projectEndpoint = Bun.serve({
@@ -426,7 +426,7 @@ describe("modern MCP stdio compatibility", () => {
     initialGateway.stop();
     gateway = null;
 
-    const profilePath = join(root.home, ".fx", "mcp.json");
+    const profilePath = join(root.home, ".hx", "mcp.json");
     const profile = JSON.parse(readFileSync(profilePath, "utf8"));
     profile.mcp.fixture.environment.FX_MCP_INITIAL_TOOL_NAME = "sum";
     profile.mcp.fixture.environment.FX_MCP_RESULT_TEXT = "RESUMED_PROFILE_TOOL_RESULT";
@@ -653,7 +653,7 @@ describe("modern MCP stdio compatibility", () => {
     const marker = childMode === "one_off" ? "ONE_OFF" : "PERSISTENT";
     test(`${label} child with no configured MCP runtime fails closed before transport`, async () => {
       const root = createRoot(`${label}-mcp-disabled`, MODERN_FIXTURE);
-      writeFileSync(join(root.home, ".fx", "mcp.json"), JSON.stringify({ mcp: {} }));
+      writeFileSync(join(root.home, ".hx", "mcp.json"), JSON.stringify({ mcp: {} }));
       const parentPrompt = `CREATE_DISABLED_MCP_${marker}`;
       const childPrompt = `DISABLED_MCP_${marker}_WORK`;
       let releaseParent!: (response: Response) => void;
@@ -721,7 +721,7 @@ describe("modern MCP stdio compatibility", () => {
       });
       const allowedWirePath = join(root.root, "allowed-wire.jsonl");
       const deniedWirePath = join(root.root, "denied-wire.jsonl");
-      const profilePath = join(root.home, ".fx", "mcp.json");
+      const profilePath = join(root.home, ".hx", "mcp.json");
       const profile = JSON.parse(readFileSync(profilePath, "utf8"));
       const base = profile.mcp.fixture;
       profile.mcp = {
@@ -748,7 +748,7 @@ describe("modern MCP stdio compatibility", () => {
       };
       writeFileSync(profilePath, JSON.stringify(profile));
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".hx", "settings.json"),
         JSON.stringify({
           maxxing_mode: "minimal",
           permission: { mcp_denied_blocked: "deny" },
@@ -909,7 +909,7 @@ describe("modern MCP stdio compatibility", () => {
     });
     const maliciousTarget = join(root.workspace, "malicious-resource-write.txt");
     writeFileSync(
-      join(root.home, ".fx", "settings.json"),
+      join(root.home, ".hx", "settings.json"),
       JSON.stringify({
         maxxing_mode: "minimal",
         permission: { edit: { "**": "deny" } },
@@ -3714,7 +3714,7 @@ describe("modern MCP stdio compatibility", () => {
       const originalPid = beforeWire.find((entry) => entry.message.method === "tools/call")?.pid;
       expect(originalPid).toBeDefined();
 
-      writeFileSync(join(root.home, ".fx", "mcp.json"), "{not valid json");
+      writeFileSync(join(root.home, ".hx", "mcp.json"), "{not valid json");
       await tui.sendText("/mcp reload");
       await tui.waitForText("MCP configuration could not be reloaded", 5_000);
       expect(isProcessAlive(originalPid!)).toBe(true);
@@ -3749,7 +3749,7 @@ describe("modern MCP stdio compatibility", () => {
       });
       await tui.waitForComposer(15_000);
 
-      const profilePath = join(root.home, ".fx", "mcp.json");
+      const profilePath = join(root.home, ".hx", "mcp.json");
       const profile = JSON.parse(readFileSync(profilePath, "utf8"));
       profile.mcp.fixture.environment.FX_MCP_MODE = "stall_startup";
       profile.mcp.fixture.startup_timeout_ms = 60_000;
@@ -3799,7 +3799,7 @@ describe("modern MCP stdio compatibility", () => {
 
       await tui.waitForComposer(15_000);
       const originalPid = Number(readFileSync(join(root.root, "mcp.pid"), "utf8"));
-      const profilePath = join(root.home, ".fx", "mcp.json");
+      const profilePath = join(root.home, ".hx", "mcp.json");
       const profile = JSON.parse(readFileSync(profilePath, "utf8"));
       profile.mcp.fixture.command = ["/definitely/missing-required-mcp-command"];
       profile.mcp.fixture.required = true;
@@ -3904,7 +3904,7 @@ describe("modern MCP stdio compatibility", () => {
     "/mcp list renders complete secret-free health after releasing runtime locks",
     async () => {
       const root = createRoot("health-output", MODERN_FIXTURE, { mode: "features" });
-      const profilePath = join(root.home, ".fx", "mcp.json");
+      const profilePath = join(root.home, ".hx", "mcp.json");
       const profile = JSON.parse(readFileSync(profilePath, "utf8"));
       profile.mcp.fixture.environment.S11_SECRET_ENV = "HEALTH_SECRET_SENTINEL";
       writeFileSync(profilePath, JSON.stringify(profile));
@@ -4265,7 +4265,7 @@ describe("modern MCP stdio compatibility", () => {
       const retiredPid = stalledCall!.pid;
       expect(isProcessAlive(retiredPid)).toBe(true);
 
-      const profilePath = join(root.home, ".fx", "mcp.json");
+      const profilePath = join(root.home, ".hx", "mcp.json");
       const profile = JSON.parse(readFileSync(profilePath, "utf8"));
       profile.mcp.fixture.environment.FX_MCP_MODE = "normal";
       profile.mcp.fixture.environment.FX_MCP_INITIAL_TOOL_NAME = "sum";

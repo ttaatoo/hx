@@ -201,13 +201,13 @@ pub const top_level_specs = [_]TopLevelSpec{
         .kind = .usage,
         .token = "usage",
         .usage = "usage [--period <24h|7d|30d>] [--json]",
-        .summary = "Show local fx token usage and spend",
+        .summary = "Show local hx token usage and spend",
         .options = &.{
             .{ .flag = "--period <24h|7d|30d>", .description = "Select a rolling window (default: 30d)" },
             json_option,
         },
         .details = &.{
-            "Reports only usage recorded by fx on this machine.",
+            "Reports only usage recorded by hx on this machine.",
             "This command reads local state and does not query a remote billing API.",
         },
     },
@@ -399,7 +399,7 @@ pub const slash_specs = [_]SlashSpec{
     .{ .kind = .login, .command = "/login", .help_entry = "/login", .completion_description = "sign in with SuperGrok or Codex", .presentation_category = .account },
     .{ .kind = .logout, .command = "/logout", .help_entry = "/logout [grok|codex]", .completion_description = "sign out of SuperGrok or Codex", .presentation_category = .account, .has_args = true, .accepts_payload = true },
     .{ .kind = .stats, .command = "/stats", .help_entry = "/stats", .completion_description = "show token and turn statistics", .presentation_category = .account },
-    .{ .kind = .usage, .command = "/usage", .aliases = &.{"/cost"}, .help_entry = "/usage (/cost)", .completion_description = "show local fx tokens, models, and spend", .presentation_category = .account },
+    .{ .kind = .usage, .command = "/usage", .aliases = &.{"/cost"}, .help_entry = "/usage (/cost)", .completion_description = "show local hx tokens, models, and spend", .presentation_category = .account },
     .{ .kind = .status, .command = "/status", .help_entry = "/status", .completion_description = "show runtime configuration", .presentation_category = .general, .show_in_welcome = true },
     .{ .kind = .background, .command = "/background", .help_entry = "/background [open|logs|stop <id|last>]", .completion_description = "inspect background command history", .presentation_category = .agents, .show_in_welcome = true, .has_args = true },
     .{ .kind = .background_stop, .command = "/background stop", .accepts_payload = true },
@@ -410,7 +410,7 @@ pub const slash_specs = [_]SlashSpec{
     .{ .kind = .model, .command = "/model", .help_entry = "/model <id-or-query>", .completion_description = "choose what model and reasoning effort to use", .presentation_category = .model, .has_args = true, .accepts_payload = true },
     .{ .kind = .models, .command = "/models", .help_entry = "/models", .completion_description = "browse available models", .presentation_category = .model },
     .{ .kind = .provider, .command = "/provider", .help_entry = "/provider [xai|anthropic|codex]", .completion_description = "choose SuperGrok, Anthropic, or Codex", .presentation_category = .model, .has_args = true, .accepts_payload = true },
-    .{ .kind = .permissions, .command = "/permissions", .help_entry = "/permissions [ask|auto|yolo|reset]", .completion_description = "choose what fx is allowed to do", .presentation_category = .security, .show_in_welcome = true, .has_args = true, .accepts_payload = true },
+    .{ .kind = .permissions, .command = "/permissions", .help_entry = "/permissions [ask|auto|yolo|reset]", .completion_description = "choose what hx is allowed to do", .presentation_category = .security, .show_in_welcome = true, .has_args = true, .accepts_payload = true },
     .{ .kind = .allowlist, .command = "/allowlist", .help_entry = "/allowlist [view [effective|local|user]|[local|user] add|remove|reset ...]", .completion_description = "manage trusted commands, tools, and URLs", .presentation_category = .security, .show_in_welcome = true, .has_args = true, .accepts_payload = true },
     .{ .kind = .undo, .command = "/undo", .help_entry = "/undo", .completion_description = "undo the latest tracked file operation", .presentation_category = .session },
     .{ .kind = .mcp, .command = "/mcp", .help_entry = "/mcp [list|resource|prompt|add|remove|path|reload|auth|logout]", .completion_description = "manage MCP servers, resources, and prompts", .presentation_category = .extensions, .has_args = true, .accepts_payload = true },
@@ -428,7 +428,7 @@ pub const slash_specs = [_]SlashSpec{
     .{ .kind = .statusline, .command = "/statusline", .help_entry = "/statusline [sandbox|context|session|workspace]", .completion_description = "toggle status line segments", .presentation_category = .appearance, .has_args = true, .accepts_payload = true },
     .{ .kind = .notifications, .command = "/sound", .help_entry = "/sound [on|off|max]", .completion_description = "toggle sounds and terminal bells", .presentation_category = .appearance, .has_args = true, .accepts_payload = true },
     .{ .kind = .workspace, .command = "/workspace", .help_entry = "/workspace [list|add PATH|remove PATH|clear]", .completion_description = "manage additional workspace directories", .presentation_category = .workspace, .show_in_welcome = true, .has_args = true, .accepts_payload = true },
-    .{ .kind = .version, .command = "/version", .help_entry = "/version", .completion_description = "show the fx version", .presentation_category = .general },
+    .{ .kind = .version, .command = "/version", .help_entry = "/version", .completion_description = "show the hx version", .presentation_category = .general },
     .{ .kind = .quit, .command = "/quit", .aliases = &.{"/exit"}, .help_entry = "/quit", .completion_description = "exit the interactive shell", .presentation_category = .general, .show_in_welcome = true },
 };
 

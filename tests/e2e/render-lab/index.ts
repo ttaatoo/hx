@@ -1088,9 +1088,9 @@ async function runStartupScrollbackOverflow(
   writeReproScript(manifest);
 
   const fixture = createFixture(runId);
-  mkdirSync(join(fixture.home, ".fx"), { recursive: true });
+  mkdirSync(join(fixture.home, ".hx"), { recursive: true });
   writeFileSync(
-    join(fixture.home, ".fx", "settings.json"),
+    join(fixture.home, ".hx", "settings.json"),
     `${JSON.stringify({ startup_scrollback: startupScrollback, maxxing_mode: "legacy" })}\n`,
   );
   const gateway = startLocalGatewayFixture(promptTail);
@@ -2334,12 +2334,12 @@ function createFixture(runId: string): Fixture {
     work: join(root, "w"),
     histfile: join(root, "hist"),
   };
-  mkdirSync(join(fixture.home, ".fx"), { recursive: true });
+  mkdirSync(join(fixture.home, ".hx"), { recursive: true });
   mkdirSync(fixture.zdotdir, { recursive: true });
   mkdirSync(fixture.work, { recursive: true });
   writeE2eGrokAuth(fixture.home);
   writeFileSync(
-    join(fixture.home, ".fx", "settings.json"),
+    join(fixture.home, ".hx", "settings.json"),
     `${JSON.stringify({ maxxing_mode: "legacy" })}\n`,
   );
   writeFileSync(join(fixture.work, "run-id.txt"), `${runId}\n`);

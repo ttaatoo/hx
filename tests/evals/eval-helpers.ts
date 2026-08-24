@@ -125,9 +125,9 @@ export function cleanupIsolatedTestHome(home: string): void {
 
 function createEvalHome(): string {
   const home = mkdtempSync(join(tmpdir(), HOME_PREFIX));
-  mkdirSync(join(home, ".fx"), { recursive: true, mode: 0o700 });
+  mkdirSync(join(home, ".hx"), { recursive: true, mode: 0o700 });
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".hx", "settings.json"),
     JSON.stringify({
       permission_mode: "auto",
       permission: {

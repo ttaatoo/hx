@@ -97,9 +97,9 @@ describe.skipIf(SKIP)("tui: interrupt recovery", () => {
       const workspace = join(root, "workspace");
       const stderrPath = join(root, "stderr.log");
       const tracePath = join(root, "trace.log");
-      mkdirSync(join(home, ".fx"), { recursive: true });
+      mkdirSync(join(home, ".hx"), { recursive: true });
       mkdirSync(workspace, { recursive: true });
-      writeFileSync(join(home, ".fx", "settings.json"), "{}");
+      writeFileSync(join(home, ".hx", "settings.json"), "{}");
 
       const held: HoldState = {
         started: false,
@@ -166,7 +166,7 @@ describe.skipIf(SKIP)("tui: interrupt recovery", () => {
       expect(session.isAlive()).toBe(true);
       expect(session.isPaneAlive()).toBe(true);
 
-      const sessionRoot = join(home, ".fx", "sessions");
+      const sessionRoot = join(home, ".hx", "sessions");
       const eventsPath = readdirSync(sessionRoot, { withFileTypes: true })
         .filter((entry) => entry.isDirectory())
         .map((entry) => join(sessionRoot, entry.name, "events.jsonl"))
@@ -187,10 +187,10 @@ describe.skipIf(SKIP)("tui: interrupt recovery", () => {
       const workspace = join(root, "workspace");
       const stderrPath = join(root, "stderr.log");
       const tracePath = join(root, "trace.log");
-      mkdirSync(join(home, ".fx"), { recursive: true });
+      mkdirSync(join(home, ".hx"), { recursive: true });
       mkdirSync(workspace, { recursive: true });
       writeFileSync(
-        join(home, ".fx", "settings.json"),
+        join(home, ".hx", "settings.json"),
         JSON.stringify({ model: SUPERGROK_MODEL }) + "\n",
       );
 
@@ -289,7 +289,7 @@ describe.skipIf(SKIP)("tui: interrupt recovery", () => {
       expect(quietStderr(readFileSync(stderrPath, "utf8"))).toBe("");
       expect(finalScrollback).not.toContain("HTTP 400");
 
-      const sessionRoot = join(home, ".fx", "sessions");
+      const sessionRoot = join(home, ".hx", "sessions");
       const sessionIds = readdirSync(sessionRoot, { withFileTypes: true })
         .filter((entry) => entry.isDirectory())
         .map((entry) => entry.name)
@@ -323,7 +323,7 @@ describe.skipIf(SKIP)("tui: interrupt recovery", () => {
       const shared = join(root, "shared");
       const stderrPath = join(root, "stderr.log");
       const tracePath = join(root, "trace.log");
-      mkdirSync(join(home, ".fx"), { recursive: true });
+      mkdirSync(join(home, ".hx"), { recursive: true });
       mkdirSync(workspace, { recursive: true });
       mkdirSync(observed, { recursive: true });
       mkdirSync(shared, { recursive: true });
@@ -331,7 +331,7 @@ describe.skipIf(SKIP)("tui: interrupt recovery", () => {
       const observedRoot = realpathSync(observed);
       const sharedRoot = realpathSync(shared);
       writeFileSync(
-        join(home, ".fx", "settings.json"),
+        join(home, ".hx", "settings.json"),
         JSON.stringify({
           sandbox: "none",
           permission_mode: "yolo",
@@ -412,7 +412,7 @@ while :; do sleep 1; done
         TIMEOUT,
       );
       const beforeRetry = JSON.parse(
-        readFileSync(join(home, ".fx", "settings.json"), "utf8"),
+        readFileSync(join(home, ".hx", "settings.json"), "utf8"),
       );
       expect(beforeRetry.workspaces[workspaceRoot].additional_directories).toEqual([
         observedRoot,
@@ -431,7 +431,7 @@ while :; do sleep 1; done
       await session.sendText(command);
       await session.waitForText("runtime_changed=true", TIMEOUT);
 
-      const stored = JSON.parse(readFileSync(join(home, ".fx", "settings.json"), "utf8"));
+      const stored = JSON.parse(readFileSync(join(home, ".hx", "settings.json"), "utf8"));
       expect(stored.workspaces[workspaceRoot].additional_directories).toEqual([
         observedRoot,
         sharedRoot,

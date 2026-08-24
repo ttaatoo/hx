@@ -1718,7 +1718,7 @@ test "saving MCP config refuses a symlinked target" {
     defer alloc.free(external_path);
     try tmp.dir.symLink(io_mod.getIo(), external_path, "home/.hx/mcp.json", .{ .is_directory = false });
 
-    const path = try std.fs.path.join(alloc, &.{ std.fs.path.dirname(external_path).?, ".fx", "mcp.json" });
+    const path = try std.fs.path.join(alloc, &.{ std.fs.path.dirname(external_path).?, ".hx", "mcp.json" });
     defer alloc.free(path);
 
     // The durable helper refuses a target that is not a plain private file, so

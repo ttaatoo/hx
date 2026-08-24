@@ -403,11 +403,11 @@ function createIsolatedRoot(
   const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-decision-e2e-")));
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".hx"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   writeE2eGrokAuth(home);
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".hx", "settings.json"),
     JSON.stringify({ permission_mode: permissionMode, permission, maxxing_mode: "legacy" }),
   );
   roots.push(root);
@@ -971,7 +971,7 @@ describe.skipIf(SKIP)("tui: decision prompt input isolation", () => {
       await ctx.session.sendText("/quit");
       expect(await ctx.session.waitForSessionEnd(TIMEOUT)).toBe(true);
       const trace = readTrace(ctx.tracePath);
-      const sessions = readFilesRecursively(join(ctx.root.home, ".fx", "sessions"));
+      const sessions = readFilesRecursively(join(ctx.root.home, ".hx", "sessions"));
       expect(readFileSync(ctx.stderrPath, "utf8")).toBe("");
       expect(trace).not.toContain(MALFORMED_ARGUMENTS);
       expect(sessions).not.toContain(MALFORMED_ARGUMENTS);
@@ -1044,7 +1044,7 @@ describe.skipIf(SKIP)("tui: decision prompt input isolation", () => {
       await ctx.session.sendText("/quit");
       expect(await ctx.session.waitForSessionEnd(TIMEOUT)).toBe(true);
       const trace = readTrace(ctx.tracePath);
-      const sessions = readFilesRecursively(join(ctx.root.home, ".fx", "sessions"));
+      const sessions = readFilesRecursively(join(ctx.root.home, ".hx", "sessions"));
       expect(readFileSync(ctx.stderrPath, "utf8")).toBe("");
       expect(pane).not.toContain(MALFORMED_STREAMED_ARGUMENTS);
       expect(pane).not.toContain(MALFORMED_LABEL_SENTINEL);

@@ -611,8 +611,8 @@ pub fn parseInteractiveLaunch(
     }
 }
 
-/// Detects `fx <subcommand> --help` / `-h` and returns the subcommand kind so the
-/// caller can render command-specific help. Top-level `fx --help`/`hx help` are
+/// Detects `hx <subcommand> --help` / `-h` and returns the subcommand kind so the
+/// caller can render command-specific help. Top-level `hx --help`/`hx help` are
 /// handled separately and intentionally excluded here.
 fn topLevelHelpRequest(command_catalog: CommandCatalog, args: []const [:0]const u8) ?TopLevelKind {
     if (args.len < 2) return null;
@@ -2452,17 +2452,17 @@ fn writeLookupFailure(
 
     switch (err) {
         error.NoBackgroundRecords => {
-            try writeStderr(deps, "fx ");
+            try writeStderr(deps, "hx ");
             try writeStderr(deps, kind);
             try writeStderr(deps, ": no persisted records for this workspace\n");
         },
         error.BackgroundRecordNotFound => {
-            try writeStderr(deps, "fx ");
+            try writeStderr(deps, "hx ");
             try writeStderr(deps, kind);
             try writeStderr(deps, ": record not found\n");
         },
         error.InvalidBackgroundRecord, error.UnsupportedBackgroundSchema => {
-            try writeStderr(deps, "fx ");
+            try writeStderr(deps, "hx ");
             try writeStderr(deps, kind);
             try writeStderr(deps, ": record is unreadable or from an unsupported version\n");
         },
@@ -2583,7 +2583,7 @@ fn writeLookupFailure(
             try writeStderr(deps, "hx session: durable session store is unavailable\n");
         },
         error.HomeNotSet => {
-            try writeStderr(deps, "fx ");
+            try writeStderr(deps, "hx ");
             try writeStderr(deps, kind);
             try writeStderr(deps, ": HOME is not set\n");
         },

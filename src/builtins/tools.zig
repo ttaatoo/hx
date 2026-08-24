@@ -347,7 +347,7 @@ const terminal_exec_only_gateway_required = blk: {
 const skill_description =
     "Read an installed skill or one of its relative text resources in bounded chunks. Pass the exact advertised location when one is listed, then use next_offset to continue. When to use: the user explicitly invokes a listed skill or the task clearly matches one. When NOT to use: generic exploration, ordinary file edits, guessing from vague words, or installing a missing skill.";
 const install_skill_description =
-    "Install a reusable skill from a supported source into fx managed skill storage. When to use: the user asks to install a skill or pastes a skills install command. When NOT to use: no installation is required, install packages, fetch unrelated repos, or modify project code.";
+    "Install a reusable skill from a supported source into hx managed skill storage. When to use: the user asks to install a skill or pastes a skills install command. When NOT to use: no installation is required, install packages, fetch unrelated repos, or modify project code.";
 const mcp_search_tools_description =
     "Search bounded metadata for configured MCP/dynamic tools without loading every dynamic schema into the main prompt. Include the configured server alias and requested use case in the query; refine the use case when more_available is true. When to use: you need a specialized external/MCP capability but do not know its exact tool name. When NOT to use: the needed capability is already advertised directly, or ordinary local inspection, execution, web, or user interaction can handle the work.";
 const mcp_select_tool_description =

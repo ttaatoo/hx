@@ -67,9 +67,9 @@ async function startFx(
   testHome = mkdtempSync(join(tmpdir(), "fx-tui-input-"));
   stderrPath = join(testHome, "stderr.log");
   writeFileSync(stderrPath, "");
-  mkdirSync(join(testHome, ".fx"), { recursive: true });
+  mkdirSync(join(testHome, ".hx"), { recursive: true });
   writeFileSync(
-    join(testHome, ".fx", "settings.json"),
+    join(testHome, ".hx", "settings.json"),
     JSON.stringify({ maxxing_mode: "legacy", sandbox: "none" }),
   );
   if (withGateway) {
@@ -1602,9 +1602,9 @@ tmuxTest(
   "maxxing minimal connects the composer and submitted prompt rails without changing input appearance",
   async () => {
     testHome = mkdtempSync(join(tmpdir(), "fx-tui-input-"));
-    mkdirSync(join(testHome, ".fx"), { recursive: true });
+    mkdirSync(join(testHome, ".hx"), { recursive: true });
     writeFileSync(
-      join(testHome, ".fx", "settings.json"),
+      join(testHome, ".hx", "settings.json"),
       JSON.stringify({ maxxing_mode: "legacy" }),
     );
     const localGateway = startFakeGateway([

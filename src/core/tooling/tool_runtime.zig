@@ -8004,7 +8004,7 @@ test "memory tool uses isolated HOME and preserves outputs" {
     try expectToolOutput(ctx, "memory", "{\"action\":\"save\",\"fact\":\"likes Zig\"}", "remembered");
     try expectToolOutput(ctx, "memory", "{\"action\":\"list\"}", "- likes Zig\n");
 
-    const memories_path = try std.fs.path.join(alloc, &.{ home, ".fx", "memories.json" });
+    const memories_path = try std.fs.path.join(alloc, &.{ home, ".hx", "memories.json" });
     defer alloc.free(memories_path);
     var file = try std.Io.Dir.openFileAbsolute(io_mod.getIo(), memories_path, .{});
     const content = blk: {

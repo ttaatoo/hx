@@ -1814,10 +1814,10 @@ test "discoverPathsFromHome returns home-backed and workspace paths" {
     defer paths.deinit(std.testing.allocator);
 
     try std.testing.expectEqualStrings("/Users/tester", paths.home_dir.?);
-    try std.testing.expectEqualStrings("/Users/tester/.fx/settings.json", paths.user_settings.?);
+    try std.testing.expectEqualStrings("/Users/tester/.hx/settings.json", paths.user_settings.?);
     try std.testing.expectEqualStrings("/tmp/workspace/.fx.json", paths.workspace_settings);
-    try std.testing.expectEqualStrings("/Users/tester/.fx", paths.home_fx_dir.?);
-    try std.testing.expectEqualStrings("/Users/tester/.fx/sessions", paths.sessions_dir.?);
+    try std.testing.expectEqualStrings("/Users/tester/.hx", paths.home_fx_dir.?);
+    try std.testing.expectEqualStrings("/Users/tester/.hx/sessions", paths.sessions_dir.?);
     try std.testing.expectEqualStrings("/tmp/workspace", paths.workspace_root);
 }
 
@@ -2456,7 +2456,7 @@ test "userSettingsPath follows absent and present HOME" {
 
         const path = (try userSettingsPath(std.testing.allocator)).?;
         defer std.testing.allocator.free(path);
-        try std.testing.expectEqualStrings("/Users/tester/.fx/settings.json", path);
+        try std.testing.expectEqualStrings("/Users/tester/.hx/settings.json", path);
     }
 }
 
@@ -2476,7 +2476,7 @@ test "HOME test helper remains stable across absent A and B states" {
 
         const path = (try userSettingsPath(std.testing.allocator)).?;
         defer std.testing.allocator.free(path);
-        try std.testing.expectEqualStrings("/home/a/.fx/settings.json", path);
+        try std.testing.expectEqualStrings("/home/a/.hx/settings.json", path);
     }
 
     {
@@ -2485,7 +2485,7 @@ test "HOME test helper remains stable across absent A and B states" {
 
         const path = (try userSettingsPath(std.testing.allocator)).?;
         defer std.testing.allocator.free(path);
-        try std.testing.expectEqualStrings("/home/b/.fx/settings.json", path);
+        try std.testing.expectEqualStrings("/home/b/.hx/settings.json", path);
     }
 }
 

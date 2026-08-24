@@ -803,18 +803,18 @@ test "resume handoff uses one row only when the full instruction fits" {
     initTheme(false, null);
     defer initTheme(false, null);
 
-    const single_row = "Continue session with: fx --resume session-123";
+    const single_row = "Continue session with: hx --resume session-123";
     var exact_buffer: [128]u8 = undefined;
     const exact = try formatResumeHandoff(&exact_buffer, "session-123", single_row.len);
     try std.testing.expectEqualStrings(
-        "\x1b[38;5;245mContinue session with: fx --resume session-123\x1b[0m\n",
+        "\x1b[38;5;245mContinue session with: hx --resume session-123\x1b[0m\n",
         exact,
     );
 
     var narrow_buffer: [128]u8 = undefined;
     const narrow = try formatResumeHandoff(&narrow_buffer, "session-123", single_row.len - 1);
     try std.testing.expectEqualStrings(
-        "\x1b[38;5;245mContinue session with:\n  fx --resume session-123\x1b[0m\n",
+        "\x1b[38;5;245mContinue session with:\n  hx --resume session-123\x1b[0m\n",
         narrow,
     );
 }
@@ -826,7 +826,7 @@ test "resume handoff follows the active muted theme shade" {
     var buffer: [128]u8 = undefined;
     const message = try formatResumeHandoff(&buffer, "session-123", 80);
     try std.testing.expectEqualStrings(
-        "\x1b[38;5;247mContinue session with: fx --resume session-123\x1b[0m\n",
+        "\x1b[38;5;247mContinue session with: hx --resume session-123\x1b[0m\n",
         message,
     );
 }

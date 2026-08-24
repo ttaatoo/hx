@@ -857,7 +857,7 @@ pub fn skillSourceShortLabel(source: SkillSource) []const u8 {
         .workspace_claude => "workspace .claude",
         .workspace_agents => "workspace .agents",
         .workspace_claw => "workspace .claw",
-        .global_fx => "global .fx",
+        .global_fx => "global .hx",
         .global_opencode => "global opencode",
         .global_codex => "global .codex",
         .global_claude => "global .claude",
@@ -2569,7 +2569,7 @@ test "loadVisibleSkills deduplicates symlinked workspace and global roots while 
     defer alloc.free(workspace_root);
     const home_root = try io_mod.dirRealpathAlloc(alloc, tmp.dir, "home");
     defer alloc.free(home_root);
-    const unused_managed_root = try std.fs.path.join(alloc, &.{ home_root, ".fx/skills" });
+    const unused_managed_root = try std.fs.path.join(alloc, &.{ home_root, ".hx/skills" });
     defer alloc.free(unused_managed_root);
 
     const workspace_roots = [_]skill_contract.RootSpec{

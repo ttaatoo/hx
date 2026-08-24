@@ -221,11 +221,11 @@ fn runInteractiveWithDeps(comptime App: type, comptime cooperative: bool, alloc:
     var app = App.init(alloc, launch) catch |err| {
         switch (err) {
             error.NotATerminal => {
-                writeStderr(deps, "fx requires an interactive terminal (TTY).\n");
+                writeStderr(deps, "hx requires an interactive terminal (TTY).\n");
                 return .{ .exit = 1 };
             },
             error.TerminalTooSmall => {
-                writeStderr(deps, "fx needs at least 5 terminal rows.\n");
+                writeStderr(deps, "hx needs at least 5 terminal rows.\n");
                 return .returned;
             },
             error.RecordingStartFailed => {
@@ -381,7 +381,7 @@ fn writeUpgradeRelaunchFailure(
     var buffer: [768]u8 = undefined;
     const message = std.fmt.bufPrint(
         &buffer,
-        "hx: upgrade installed, but relaunch failed: {s}\nContinue session with: fx --resume {s}\n",
+        "hx: upgrade installed, but relaunch failed: {s}\nContinue session with: hx --resume {s}\n",
         .{ @errorName(err), session_id },
     ) catch "hx: upgrade installed, but relaunch failed; run `hx doctor`.\n";
     writeStderr(deps, message);
@@ -457,7 +457,7 @@ fn writeRealStdout(_: ?*anyopaque, text: []const u8) !void {
 fn formatResumeHandoff(buffer: []u8, session_id: []const u8) ![]const u8 {
     return std.fmt.bufPrint(
         buffer,
-        "Continue session with: fx --resume {s}\n",
+        "Continue session with: hx --resume {s}\n",
         .{session_id},
     );
 }
@@ -908,7 +908,7 @@ test "app entry writes exact resume handoff after interactive teardown" {
 
     try std.testing.expectEqual(RunOutcome.returned, outcome);
     try std.testing.expectEqualStrings(
-        "Continue session with: fx --resume session-123\n",
+        "Continue session with: hx --resume session-123\n",
         capture.stdout.written(),
     );
     try std.testing.expectEqual(@as(usize, 1), capture.stdout_calls);
@@ -959,7 +959,7 @@ test "app entry relaunches only after teardown with the validated handoff" {
     try std.testing.expect(std.mem.find(
         u8,
         capture.stderr.written(),
-        "fx --resume session-123",
+        "hx --resume session-123",
     ) != null);
     try expectEvents(&.{
         "init:none",
@@ -1181,7 +1181,7 @@ test "app entry maps noninteractive terminal startup to exit one" {
     const outcome = try runWithDeps(TestApp, alloc, &.{}, testConfig(), capture.deps());
 
     try std.testing.expectEqual(@as(u8, 1), outcome.exit);
-    try std.testing.expectEqualStrings("fx requires an interactive terminal (TTY).\n", capture.stderr.written());
+    try std.testing.expectEqualStrings("hx requires an interactive terminal (TTY).\n", capture.stderr.written());
     try expectEvents(&.{"init:none"});
 }
 

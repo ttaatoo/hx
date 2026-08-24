@@ -77,10 +77,10 @@ function writeLegacySession(
     historyLen?: number;
   } = {},
 ): void {
-  const sessionDir = join(home, ".fx", "sessions", sessionId);
+  const sessionDir = join(home, ".hx", "sessions", sessionId);
   mkdirSync(sessionDir, { recursive: true, mode: 0o700 });
-  chmodSync(join(home, ".fx"), 0o700);
-  chmodSync(join(home, ".fx", "sessions"), 0o700);
+  chmodSync(join(home, ".hx"), 0o700);
+  chmodSync(join(home, ".hx", "sessions"), 0o700);
   chmodSync(sessionDir, 0o700);
   const historyLen = opts.historyLen ?? 0;
   writeFileSync(
@@ -325,7 +325,7 @@ describe("cli: status", () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-mcp-config-diagnostic-"));
       const home = join(root, "home");
       const workspace = join(root, "workspace");
-      const fxDir = join(home, ".fx");
+      const fxDir = join(home, ".hx");
       mkdirSync(fxDir, { recursive: true, mode: 0o700 });
       mkdirSync(workspace);
       writeFileSync(join(fxDir, "mcp.json"), "{invalid json", { mode: 0o600 });
@@ -485,10 +485,10 @@ describe("cli: status", () => {
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
-        mkdirSync(join(home, ".fx"), { recursive: true, mode: 0o700 });
+        mkdirSync(join(home, ".hx"), { recursive: true, mode: 0o700 });
         mkdirSync(workspace);
         writeFileSync(
-          join(home, ".fx", "settings.json"),
+          join(home, ".hx", "settings.json"),
           '{"update_channel":"dev"}\n',
           { mode: 0o600 },
         );
@@ -528,10 +528,10 @@ describe("cli: status", () => {
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
-        mkdirSync(join(home, ".fx"), { recursive: true, mode: 0o700 });
+        mkdirSync(join(home, ".hx"), { recursive: true, mode: 0o700 });
         mkdirSync(workspace);
         writeFileSync(
-          join(home, ".fx", "providers.json"),
+          join(home, ".hx", "providers.json"),
           JSON.stringify({
             providers: {
               anthropic: {
@@ -549,7 +549,7 @@ describe("cli: status", () => {
           { mode: 0o600 },
         );
         writeFileSync(
-          join(home, ".fx", "grok-auth.json"),
+          join(home, ".hx", "grok-auth.json"),
           JSON.stringify({
             version: 1,
             access_token: "grok-e2e-access",
@@ -687,7 +687,7 @@ describe("cli: status", () => {
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
-        mkdirSync(join(home, ".fx"), { recursive: true });
+        mkdirSync(join(home, ".hx"), { recursive: true });
         mkdirSync(workspace);
         const homeRoot = realpathSync(home);
         const workspaceRoot = realpathSync(workspace);
@@ -700,7 +700,7 @@ describe("cli: status", () => {
         };
 
         writeFileSync(
-          join(home, ".fx", "settings.json"),
+          join(home, ".hx", "settings.json"),
           JSON.stringify({
             model: "anthropic/claude-sonnet-4.6",
             permission_mode: "auto",
@@ -742,7 +742,7 @@ describe("cli: status", () => {
         expect(status.stderr).not.toContain("danger");
 
         writeFileSync(
-          join(home, ".fx", "settings.json"),
+          join(home, ".hx", "settings.json"),
           JSON.stringify({
             model: "anthropic/claude-sonnet-4.6",
             permission_mode: "auto",
@@ -779,7 +779,7 @@ describe("cli: status", () => {
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
-        const fxDir = join(home, ".fx");
+        const fxDir = join(home, ".hx");
         mkdirSync(fxDir, { recursive: true, mode: 0o700 });
         mkdirSync(workspace);
         chmodSync(fxDir, 0o700);
@@ -827,7 +827,7 @@ describe("cli: usage", () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-usage-"));
       try {
         const home = join(root, "home");
-        const fxDir = join(home, ".fx");
+        const fxDir = join(home, ".hx");
         mkdirSync(fxDir, { recursive: true, mode: 0o700 });
         chmodSync(fxDir, 0o700);
         const now = Date.now();
@@ -928,7 +928,7 @@ describe("cli: usage", () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-usage-incomplete-"));
       try {
         const home = join(root, "home");
-        const fxDir = join(home, ".fx");
+        const fxDir = join(home, ".hx");
         mkdirSync(fxDir, { recursive: true, mode: 0o700 });
         const now = Date.now();
         const records = [
@@ -1002,7 +1002,7 @@ describe("cli: usage", () => {
           coverage: { status: "not_started" },
           totals: null,
         });
-        expect(existsSync(join(home, ".fx"))).toBe(false);
+        expect(existsSync(join(home, ".hx"))).toBe(false);
 
         const invalid = await runFx(
           ["usage", "--period", "session", "--json"],
@@ -1014,7 +1014,7 @@ describe("cli: usage", () => {
           code: "InvalidUsageArgs",
         });
 
-        const fxDir = join(home, ".fx");
+        const fxDir = join(home, ".hx");
         mkdirSync(fxDir, { mode: 0o700 });
         chmodSync(fxDir, 0o700);
         writeFileSync(
@@ -1095,7 +1095,7 @@ describe("cli: usage", () => {
       const root = mkdtempSync(join(tmpdir(), "fx-e2e-usage-recovery-"));
       try {
         const home = join(root, "home");
-        const fxDir = join(home, ".fx");
+        const fxDir = join(home, ".hx");
         mkdirSync(fxDir, { recursive: true, mode: 0o700 });
         chmodSync(fxDir, 0o700);
         writeFileSync(
@@ -1237,7 +1237,7 @@ describe("cli: doctor", () => {
 
         expect(r.code).toBe(0);
         expect(JSON.parse(r.stdout.trim()).kind).toBe("doctor");
-        expect(existsSync(join(home, ".fx"))).toBe(false);
+        expect(existsSync(join(home, ".hx"))).toBe(false);
       } finally {
         rmSync(root, { recursive: true, force: true });
       }
@@ -1266,7 +1266,7 @@ describe("cli: doctor", () => {
           );
         }
 
-        expect(existsSync(join(home, ".fx", "sessions", "summary.json"))).toBe(false);
+        expect(existsSync(join(home, ".hx", "sessions", "summary.json"))).toBe(false);
 
         const r = await runFx(["doctor", "--json"], {
           cwd: workspaceRoot,
@@ -1370,7 +1370,7 @@ describe("cli: stored key file backend", () => {
     "a 0600 key file resolves, and a loosened one is refused rather than reported absent",
     async () => {
       const home = mkdtempSync(join(tmpdir(), "fx-stored-key-file-"));
-      const fxDir = join(home, ".fx");
+      const fxDir = join(home, ".hx");
       mkdirSync(fxDir, { recursive: true, mode: 0o700 });
       chmodSync(fxDir, 0o700);
       const keyPath = join(fxDir, "api-key");
@@ -1450,7 +1450,7 @@ describe("cli: read-only no-create matrix", () => {
             expect(result.stderr).toBe("");
           }
           expect(snapshotTree(home)).toEqual(before);
-          expect(existsSync(join(home, ".fx"))).toBe(false);
+          expect(existsSync(join(home, ".hx"))).toBe(false);
         } finally {
           rmSync(root, { recursive: true, force: true });
         }
@@ -1583,10 +1583,10 @@ describe("cli: sessions", () => {
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
-        const sessionsDir = join(home, ".fx", "sessions");
+        const sessionsDir = join(home, ".hx", "sessions");
         mkdirSync(sessionsDir, { recursive: true, mode: 0o700 });
         mkdirSync(workspace);
-        chmodSync(join(home, ".fx"), 0o700);
+        chmodSync(join(home, ".hx"), 0o700);
         chmodSync(sessionsDir, 0o700);
         const workspaceRoot = realpathSync(workspace);
         const named = {
@@ -1696,10 +1696,10 @@ describe("cli: sessions", () => {
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
-        const sessionsDir = join(home, ".fx", "sessions");
+        const sessionsDir = join(home, ".hx", "sessions");
         mkdirSync(sessionsDir, { recursive: true, mode: 0o700 });
         mkdirSync(workspace);
-        chmodSync(join(home, ".fx"), 0o700);
+        chmodSync(join(home, ".hx"), 0o700);
         chmodSync(sessionsDir, 0o700);
         const workspaceRoot = realpathSync(workspace);
         const sessions = Array.from({ length: 9_001 }, (_, index) => {
@@ -1817,7 +1817,7 @@ describe("cli: sessions", () => {
         );
         expect(fixture.status).toBe(0);
 
-        const before = snapshotTree(join(home, ".fx"));
+        const before = snapshotTree(join(home, ".hx"));
         const listed = await runFx(["sessions", "--json"], {
           cwd: workspaceRoot,
           env: { HOME: home },
@@ -1852,7 +1852,7 @@ describe("cli: sessions", () => {
             },
           ],
         });
-        expect(snapshotTree(join(home, ".fx"))).toEqual(before);
+        expect(snapshotTree(join(home, ".hx"))).toEqual(before);
 
         const latest = await runFx(["session", "last", "--json"], {
           cwd: workspaceRoot,
@@ -1872,7 +1872,7 @@ describe("cli: sessions", () => {
           history_len: 1,
           conversation_language: "en",
         });
-        expect(snapshotTree(join(home, ".fx"))).toEqual(before);
+        expect(snapshotTree(join(home, ".hx"))).toEqual(before);
 
         const detail = await runFx(
           ["session", "--id", "benchmark-session-00", "--json"],
@@ -1884,7 +1884,7 @@ describe("cli: sessions", () => {
         );
         expect(detail.code).not.toBe(0);
         expect(detail.stderr).toContain("AccessDenied");
-        expect(snapshotTree(join(home, ".fx"))).toEqual(before);
+        expect(snapshotTree(join(home, ".hx"))).toEqual(before);
       } finally {
         rmSync(root, { recursive: true, force: true });
       }
@@ -1981,7 +1981,7 @@ describe("cli: sessions", () => {
           ["invalid-json", "{"],
           ["truncated", '{"schema_version":2,"id":"truncated"}'],
         ] as const) {
-          const directory = join(home, ".fx", "sessions", id);
+          const directory = join(home, ".hx", "sessions", id);
           mkdirSync(directory, { recursive: true, mode: 0o700 });
           writeFileSync(join(directory, "session.json"), contents, {
             mode: 0o600,
@@ -2001,7 +2001,7 @@ describe("cli: sessions", () => {
           sessions: [{ id: "readable-session" }],
         });
 
-        rmSync(join(home, ".fx", "sessions", "readable-session"), {
+        rmSync(join(home, ".hx", "sessions", "readable-session"), {
           recursive: true,
           force: true,
         });
@@ -2076,9 +2076,9 @@ describe("cli: sessions", () => {
         try {
           const home = join(root, "home");
           const workspace = join(root, "workspace");
-          mkdirSync(join(home, ".fx", "sessions"), { recursive: true });
+          mkdirSync(join(home, ".hx", "sessions"), { recursive: true });
           mkdirSync(workspace, { recursive: true });
-          writeFileSync(join(home, ".fx", "sessions", "list.json"), cached);
+          writeFileSync(join(home, ".hx", "sessions", "list.json"), cached);
 
           const r = await runFx(["sessions", "--json"], {
             cwd: realpathSync(workspace),
@@ -2210,7 +2210,7 @@ describe("cli: removed delegated-task commands", () => {
         mkdirSync(workspace, { recursive: true });
         const workspaceRoot = realpathSync(workspace);
         writeLegacySession(home, workspaceRoot, "legacy-tasks-session");
-        const tasksDir = join(home, ".fx", "sessions", "legacy-tasks-session", "tasks");
+        const tasksDir = join(home, ".hx", "sessions", "legacy-tasks-session", "tasks");
         mkdirSync(tasksDir, { recursive: true });
         writeFileSync(join(tasksDir, "unreadable-legacy-shape.json"), "not json\n");
 
@@ -2370,7 +2370,7 @@ describe("cli: background", () => {
         });
         const recordPath = join(
           home,
-          ".fx",
+          ".hx",
           "sessions",
           "background-corrupt",
           "background",
@@ -2419,7 +2419,7 @@ function writeBackgroundSession(args: {
     state: string;
   };
 }): void {
-  const sessionDir = join(args.home, ".fx", "sessions", args.sessionId);
+  const sessionDir = join(args.home, ".hx", "sessions", args.sessionId);
   const backgroundDir = join(sessionDir, "background");
   mkdirSync(backgroundDir, { recursive: true, mode: 0o700 });
   chmodSync(sessionDir, 0o700);
@@ -2517,7 +2517,7 @@ describe("cli: ask input validation", () => {
           exit_code: 1,
           error: "InvalidPromptText",
         });
-        expect(existsSync(join(home, ".fx"))).toBe(false);
+        expect(existsSync(join(home, ".hx"))).toBe(false);
       } finally {
         rmSync(root, { recursive: true, force: true });
       }
@@ -2585,7 +2585,7 @@ describe("cli: interactive startup", () => {
           const r = await runFx(args, { env: { HOME: home } });
           expect(r.code).toBe(1);
           expect(r.stdout).toBe("");
-          expect(r.stderr).toBe("fx requires an interactive terminal (TTY).\n");
+          expect(r.stderr).toBe("hx requires an interactive terminal (TTY).\n");
           expect(readdirSync(home)).toEqual([]);
         } finally {
           rmSync(home, { recursive: true, force: true });
@@ -2735,8 +2735,8 @@ describe("cli: workspace access", () => {
         const shared = join(root, "shared");
         const unknown = join(root, "unknown");
         const missing = join(root, "missing");
-        mkdirSync(join(home, ".fx"), { recursive: true, mode: 0o700 });
-        chmodSync(join(home, ".fx"), 0o700);
+        mkdirSync(join(home, ".hx"), { recursive: true, mode: 0o700 });
+        chmodSync(join(home, ".hx"), 0o700);
         mkdirSync(workspace);
         mkdirSync(shared);
         mkdirSync(unknown);
@@ -2772,7 +2772,7 @@ describe("cli: workspace access", () => {
         ]);
 
         const stored = JSON.parse(
-          readFileSync(join(home, ".fx", "settings.json"), "utf8"),
+          readFileSync(join(home, ".hx", "settings.json"), "utf8"),
         );
         expect(stored.workspaces[workspaceRoot].additional_directories).toEqual([
           sharedRoot,
@@ -2851,7 +2851,7 @@ describe("cli: workspace access", () => {
           additional_directories: [],
         });
         const removedSettings = JSON.parse(
-          readFileSync(join(home, ".fx", "settings.json"), "utf8"),
+          readFileSync(join(home, ".hx", "settings.json"), "utf8"),
         );
         expect(
           removedSettings.workspaces?.[workspaceRoot]?.additional_directories,
@@ -2893,8 +2893,8 @@ describe("cli: workspace access", () => {
         const missing = join(root, "missing");
         const realParent = join(root, "real-parent");
         const parentLink = join(root, "parent-link");
-        mkdirSync(join(home, ".fx"), { recursive: true, mode: 0o700 });
-        chmodSync(join(home, ".fx"), 0o700);
+        mkdirSync(join(home, ".hx"), { recursive: true, mode: 0o700 });
+        chmodSync(join(home, ".hx"), 0o700);
         mkdirSync(workspace);
         mkdirSync(shared);
         mkdirSync(realParent);
@@ -2902,7 +2902,7 @@ describe("cli: workspace access", () => {
         symlinkSync(realParent, parentLink, "dir");
         const workspaceRoot = realpathSync(workspace);
         const sharedRoot = realpathSync(shared);
-        const settingsPath = join(home, ".fx", "settings.json");
+        const settingsPath = join(home, ".hx", "settings.json");
         const baseEnv = {
           ...NO_GATEWAY_AUTH,
           HOME: realpathSync(home),

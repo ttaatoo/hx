@@ -2283,7 +2283,7 @@ fn writeBlockedActionGuidance(
     try ctx.writeLine(headline);
     try ctx.writeStderr("hx ask: blocked action: ");
     try ctx.writeStderr(label);
-    try ctx.writeStderr("\nfx ask: reason=");
+    try ctx.writeStderr("\nhx ask: reason=");
     try ctx.writeStderr(reason);
     try ctx.writeStderr("\n");
     try ctx.writeStderr(hint);

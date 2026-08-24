@@ -145,9 +145,9 @@ Subagent children are ordinary sessions with their own `~/.hx/sessions/<child-id
 
 ## Skills
 
-There are two distinct skill categories in `fx`:
+There are two distinct skill categories in `hx`:
 
-* `fx` roots that belong to the product itself: `.fx/skills`, `skills/`, `~/.hx/skills`
+* `hx` roots that belong to the product itself: `.fx/skills`, `skills/`, `~/.hx/skills`
 
 * compatibility roots discovered for other agent installs: `.opencode/skills`, `.codex/skills`, `.claude/skills`, `.agents/skills`, `.claw/skills`, plus their global equivalents
 

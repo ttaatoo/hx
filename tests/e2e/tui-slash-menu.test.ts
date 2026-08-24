@@ -372,12 +372,12 @@ function createSkillsMenuFixture() {
   const home = join(root, "home");
   const workspace = join(root, "workspace");
   const stderrPath = join(root, "stderr.log");
-  mkdirSync(join(home, ".fx", "skills", "managed-menu"), { recursive: true });
+  mkdirSync(join(home, ".hx", "skills", "managed-menu"), { recursive: true });
   mkdirSync(join(home, ".codex", "skills", "codex-menu"), { recursive: true });
   mkdirSync(join(home, ".agents", "skills", "compat-menu"), { recursive: true });
   mkdirSync(join(workspace, "skills", "workspace-menu"), { recursive: true });
   writeFileSync(
-    join(home, ".fx", "skills", "managed-menu", "SKILL.md"),
+    join(home, ".hx", "skills", "managed-menu", "SKILL.md"),
     "---\nname: managed-menu\ndescription: |\n  managed menu first line\n  managed menu second line\n---\n\nManaged body\n",
   );
   writeFileSync(
@@ -402,11 +402,11 @@ function createSkillRankingFixture() {
   const home = join(root, "home");
   const workspace = join(root, "workspace");
   const stderrPath = join(root, "stderr.log");
-  mkdirSync(join(home, ".fx", "skills", "workflow-helper"), { recursive: true });
+  mkdirSync(join(home, ".hx", "skills", "workflow-helper"), { recursive: true });
   mkdirSync(join(home, ".codex", "skills", "zig-best-practices"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   writeFileSync(
-    join(home, ".fx", "skills", "workflow-helper", "SKILL.md"),
+    join(home, ".hx", "skills", "workflow-helper", "SKILL.md"),
     "---\nname: workflow-helper\ndescription: simplify Zig workflows\n---\n\nWorkflow body\n",
   );
   writeFileSync(
@@ -425,10 +425,10 @@ function createLinkedSkillsMenuFixture() {
   const source = join(workspace, "skill-source", "linked-menu");
   const skillsRoot = join(workspace, ".codex", "skills");
   const stderrPath = join(root, "stderr.log");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".hx"), { recursive: true });
   mkdirSync(source, { recursive: true });
   mkdirSync(skillsRoot, { recursive: true });
-  writeFileSync(join(home, ".fx", "settings.json"), "{}\n");
+  writeFileSync(join(home, ".hx", "settings.json"), "{}\n");
   writeFileSync(
     join(source, "SKILL.md"),
     "---\nname: linked-menu\ndescription: linked menu skill\n---\n\nLINKED_MENU_BODY\n",
@@ -447,10 +447,10 @@ function createModelsMenuFixture() {
   workDirs.push(root);
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  const settingsPath = join(home, ".fx", "settings.json");
+  const settingsPath = join(home, ".hx", "settings.json");
   const tapePath = join(root, "models-menu.fxtape");
   const stderrPath = join(root, "stderr.log");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".hx"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   writeE2eXaiProviders(home);
   writeE2eGrokAuth(home);
@@ -467,10 +467,10 @@ function createMentionGuardFixture() {
   workDirs.push(root);
   const home = join(root, "hq");
   const workspace = join(root, "workspace");
-  mkdirSync(join(home, ".fx", "skills", "managed-menu"), { recursive: true });
+  mkdirSync(join(home, ".hx", "skills", "managed-menu"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   writeFileSync(
-    join(home, ".fx", "skills", "managed-menu", "SKILL.md"),
+    join(home, ".hx", "skills", "managed-menu", "SKILL.md"),
     "---\nname: managed-menu\ndescription: managed menu skill\n---\n\nManaged body\n",
   );
   if (home.toLowerCase().includes("home")) {
@@ -484,7 +484,7 @@ function createExactSkillsMenuFixture() {
   workDirs.push(root);
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  const managed = join(home, ".fx", "skills", "exact-picker-managed");
+  const managed = join(home, ".hx", "skills", "exact-picker-managed");
   const workspaceSkill = join(workspace, "skills", "exact-picker-workspace");
   const malformed = join(home, ".agents", "skills", "malformed-picker");
   const bodyA = "EXACT_PICKER_MANAGED_BODY";
@@ -526,9 +526,9 @@ function createManySkillsMenuFixture(count: number) {
   const stderrPath = join(root, "stderr.log");
   for (let i = 0; i < count; i += 1) {
     const name = `skill-${String(i).padStart(3, "0")}`;
-    mkdirSync(join(home, ".fx", "skills", name), { recursive: true });
+    mkdirSync(join(home, ".hx", "skills", name), { recursive: true });
     writeFileSync(
-      join(home, ".fx", "skills", name, "SKILL.md"),
+      join(home, ".hx", "skills", name, "SKILL.md"),
       `---\nname: ${name}\ndescription: generated skill ${i}\n---\n\nGenerated body\n`,
     );
   }
@@ -707,10 +707,10 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       workDirs.push(workDir);
       const home = join(workDir, "home");
       const workspace = join(workDir, "workspace");
-      mkdirSync(join(home, ".fx"), { recursive: true });
+      mkdirSync(join(home, ".hx"), { recursive: true });
       mkdirSync(workspace, { recursive: true });
       writeFileSync(
-        join(home, ".fx", "settings.json"),
+        join(home, ".hx", "settings.json"),
         JSON.stringify({ sandbox: "none", permission: {} }),
       );
 
@@ -760,7 +760,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       session = null;
       expect(readFileSync(stderrPath, "utf8")).toBe("");
 
-      const sessionIds = readdirSync(join(home, ".fx", "sessions"), {
+      const sessionIds = readdirSync(join(home, ".hx", "sessions"), {
         withFileTypes: true,
       })
         .filter((entry) => entry.name !== "latest" && entry.isDirectory())
@@ -802,9 +802,9 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       workDirs.push(workDir);
       const home = join(workDir, "home");
       const workspace = join(workDir, "workspace");
-      mkdirSync(join(home, ".fx"), { recursive: true });
+      mkdirSync(join(home, ".hx"), { recursive: true });
       mkdirSync(workspace, { recursive: true });
-      writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({ sandbox: "none", permission: {} }));
+      writeFileSync(join(home, ".hx", "settings.json"), JSON.stringify({ sandbox: "none", permission: {} }));
 
       const tracePath = join(workDir, "trace.log");
       const tapePath = join(workDir, "resumed.fxtape");
@@ -845,7 +845,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       session = null;
       expect(readFileSync(stderrPath, "utf8")).toBe("");
 
-      const sessionIds = readdirSync(join(home, ".fx", "sessions"), {
+      const sessionIds = readdirSync(join(home, ".hx", "sessions"), {
         withFileTypes: true,
       })
         .filter((entry) => entry.name !== "latest" && entry.isDirectory())
@@ -1131,7 +1131,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
     "settings can hide slash menu metadata and persist the choice",
     async () => {
       const { home, workspace } = createSkillsMenuFixture();
-      const settingsPath = join(home, ".fx", "settings.json");
+      const settingsPath = join(home, ".hx", "settings.json");
 
       const launch = () =>
         TmuxSession.create({
@@ -1184,7 +1184,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       grid = await session.capturePaneGrid();
       const skillRow = grid.find((line) => line.includes("managed menu first line"));
       expect(skillRow).toContain("managed-menu");
-      expect(skillRow).not.toContain("global .fx");
+      expect(skillRow).not.toContain("global .hx");
 
       await session.sendKeys("C-u");
       await session.sendText("/quit");
@@ -1280,7 +1280,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       workDirs.push(root);
       const home = join(root, "home");
       const workspace = join(root, "workspace");
-      const skillDir = join(home, ".fx", "skills", "resume-helper");
+      const skillDir = join(home, ".hx", "skills", "resume-helper");
       const stderrPath = join(root, "stderr.log");
       mkdirSync(skillDir, { recursive: true });
       mkdirSync(workspace, { recursive: true });
@@ -1484,8 +1484,8 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       workDirs.push(root);
       const home = join(root, "home");
       const workspace = join(root, "workspace-statusline-visible");
-      const settingsPath = join(home, ".fx", "settings.json");
-      mkdirSync(join(home, ".fx"), { recursive: true });
+      const settingsPath = join(home, ".hx", "settings.json");
+      mkdirSync(join(home, ".hx"), { recursive: true });
       mkdirSync(workspace, { recursive: true });
       writeFileSync(
         settingsPath,
@@ -1563,8 +1563,8 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       workDirs.push(root);
       const home = join(root, "home");
       const workspace = join(root, "workspace");
-      const settingsPath = join(home, ".fx", "settings.json");
-      mkdirSync(join(home, ".fx"), { recursive: true });
+      const settingsPath = join(home, ".hx", "settings.json");
+      mkdirSync(join(home, ".hx"), { recursive: true });
       mkdirSync(workspace, { recursive: true });
       writeFileSync(
         settingsPath,
@@ -1640,8 +1640,8 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       workDirs.push(root);
       const home = join(root, "home");
       const workspace = join(root, "workspace");
-      const settingsPath = join(home, ".fx", "settings.json");
-      mkdirSync(join(home, ".fx"), { recursive: true });
+      const settingsPath = join(home, ".hx", "settings.json");
+      mkdirSync(join(home, ".hx"), { recursive: true });
       mkdirSync(workspace, { recursive: true });
       writeFileSync(settingsPath, `${JSON.stringify({ input_appearance: "tint" })}\n`);
 
@@ -1707,8 +1707,8 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       workDirs.push(root);
       const home = join(root, "home");
       const workspace = join(root, "compact-statusline-workspace");
-      const settingsPath = join(home, ".fx", "settings.json");
-      mkdirSync(join(home, ".fx"), { recursive: true });
+      const settingsPath = join(home, ".hx", "settings.json");
+      mkdirSync(join(home, ".hx"), { recursive: true });
       mkdirSync(workspace, { recursive: true });
       writeFileSync(
         settingsPath,
@@ -1796,8 +1796,8 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       workDirs.push(root);
       const home = join(root, "home");
       const workspace = join(root, "workspace");
-      const settingsPath = join(home, ".fx", "settings.json");
-      mkdirSync(join(home, ".fx"), { recursive: true });
+      const settingsPath = join(home, ".hx", "settings.json");
+      mkdirSync(join(home, ".hx"), { recursive: true });
       mkdirSync(workspace, { recursive: true });
       writeFileSync(settingsPath, `${JSON.stringify({ sandbox: "none" })}\n`);
 
@@ -1859,7 +1859,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       workDirs.push(root);
       const home = join(root, "home");
       const workspace = join(root, "workspace");
-      mkdirSync(join(home, ".fx"), { recursive: true });
+      mkdirSync(join(home, ".hx"), { recursive: true });
       mkdirSync(workspace, { recursive: true });
 
       session = await TmuxSession.create({
@@ -1904,7 +1904,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       workDirs.push(root);
       const home = join(root, "home");
       const workspace = join(root, "workspace");
-      const fxDir = join(home, ".fx");
+      const fxDir = join(home, ".hx");
       mkdirSync(fxDir, { recursive: true, mode: 0o700 });
       mkdirSync(workspace, { recursive: true });
       const now = Date.now();
@@ -1974,7 +1974,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       await session.sendText("/usage");
       await session.waitForText("Tracking has not started", TIMEOUT);
 
-      const fxDir = join(home, ".fx");
+      const fxDir = join(home, ".hx");
       const now = Date.now();
       writeFileSync(
         join(fxDir, "usage.jsonl"),
@@ -2028,7 +2028,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       mkdirSync(workspace, { recursive: true });
       const unsafeTarget = join(root, "unsafe-profile");
       mkdirSync(unsafeTarget, { mode: 0o700 });
-      symlinkSync(unsafeTarget, join(home, ".fx"));
+      symlinkSync(unsafeTarget, join(home, ".hx"));
 
       session = await TmuxSession.create({
         cwd: workspace,
@@ -2048,8 +2048,8 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         TIMEOUT,
       );
 
-      rmSync(join(home, ".fx"));
-      const fxDir = join(home, ".fx");
+      rmSync(join(home, ".hx"));
+      const fxDir = join(home, ".hx");
       mkdirSync(fxDir, { mode: 0o700 });
       const now = Date.now();
       writeFileSync(
@@ -2100,7 +2100,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       workDirs.push(root);
       const home = join(root, "home");
       const workspace = join(root, "workspace");
-      const fxDir = join(home, ".fx");
+      const fxDir = join(home, ".hx");
       mkdirSync(fxDir, { recursive: true, mode: 0o700 });
       mkdirSync(workspace, { recursive: true });
       writeFileSync(join(fxDir, "usage.jsonl"), "{\"broken\":true}\n", {
@@ -2154,7 +2154,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       workDirs.push(root);
       const home = join(root, "home");
       const workspace = join(root, "workspace");
-      const fxDir = join(home, ".fx");
+      const fxDir = join(home, ".hx");
       mkdirSync(fxDir, { recursive: true, mode: 0o700 });
       mkdirSync(workspace, { recursive: true });
       const now = Date.now();
@@ -2309,13 +2309,13 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
       const home = join(root, "home");
       const workspace = join(root, "workspace");
       const shared = join(root, "shared");
-      mkdirSync(join(home, ".fx"), { recursive: true });
+      mkdirSync(join(home, ".hx"), { recursive: true });
       mkdirSync(workspace, { recursive: true });
       mkdirSync(shared, { recursive: true });
       const workspaceRoot = realpathSync(workspace);
       const sharedRoot = realpathSync(shared);
       writeFileSync(
-        join(home, ".fx", "settings.json"),
+        join(home, ".hx", "settings.json"),
         `${JSON.stringify({
           workspaces: {
             [workspaceRoot]: {
@@ -3044,7 +3044,7 @@ describe.skipIf(SKIP)("tui: slash menu", () => {
         expect(gateway.requests).toHaveLength(1);
         expect(gateway.requests[0]!.body).toContain("$managed-menu please");
         expect(gateway.requests[0]!.body).toContain(
-          join(fixture.home, ".fx", "skills", "managed-menu"),
+          join(fixture.home, ".hx", "skills", "managed-menu"),
         );
 
         let history = capturePaneHistory(session, -200);

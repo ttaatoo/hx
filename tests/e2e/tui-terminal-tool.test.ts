@@ -52,7 +52,7 @@ afterEach(async () => {
 });
 
 async function waitForTerminalHostExit(home: string): Promise<void> {
-  const identityPath = join(home, ".fx", "terminal-host", "host.json");
+  const identityPath = join(home, ".hx", "terminal-host", "host.json");
   const deadline = Date.now() + 5_000;
   while (Date.now() < deadline) {
     if (!existsSync(identityPath)) return;
@@ -62,7 +62,7 @@ async function waitForTerminalHostExit(home: string): Promise<void> {
 }
 
 function terminalHostPid(home: string): number | null {
-  const identityPath = join(home, ".fx", "terminal-host", "host.json");
+  const identityPath = join(home, ".hx", "terminal-host", "host.json");
   try {
     const identity = JSON.parse(readFileSync(identityPath, "utf8")) as { pid?: unknown };
     const pid = Number(identity.pid);
@@ -73,7 +73,7 @@ function terminalHostPid(home: string): number | null {
 }
 
 async function cleanupTerminalHost(home: string): Promise<void> {
-  const identityPath = join(home, ".fx", "terminal-host", "host.json");
+  const identityPath = join(home, ".hx", "terminal-host", "host.json");
   const naturalDeadline = Date.now() + 3_000;
   while (Date.now() < naturalDeadline) {
     if (!existsSync(identityPath)) return;
@@ -174,7 +174,7 @@ async function cleanupNarrowReturn(
   active: TmuxSession,
   childStarted: boolean,
 ): Promise<void> {
-  const identityPath = join(fixture.home, ".fx", "terminal-host", "host.json");
+  const identityPath = join(fixture.home, ".hx", "terminal-host", "host.json");
   const identity = JSON.parse(
     await waitForTrace(identityPath, '"pid"'),
   ) as { pid: string };
@@ -320,7 +320,7 @@ function holdUntilCleanup(root: string): string {
 }
 
 function terminalTransportPaths(home: string) {
-  const durableDir = join(home, ".fx", "terminal-host");
+  const durableDir = join(home, ".hx", "terminal-host");
   const durableSocket = join(durableDir, "host.sock");
   const capacity = process.platform === "darwin" ? 104 : 108;
   if (Buffer.byteLength(durableSocket) < capacity) {
@@ -353,11 +353,11 @@ function createFixture(prefix: string, endpointBytes?: number) {
   const workspace = join(root, "workspace");
   const tracePath = join(root, "trace.log");
   const stderrPath = join(root, "stderr.log");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".hx"), { recursive: true });
   mkdirSync(workspace);
   writeE2eGrokAuth(home);
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".hx", "settings.json"),
     JSON.stringify({
       permission_mode: "yolo",
       sandbox: "os",
@@ -375,7 +375,7 @@ function createFixture(prefix: string, endpointBytes?: number) {
   roots.push(root);
   fixtureHomes.push(home);
   const transport = terminalTransportPaths(home);
-  if (transport.dir !== join(home, ".fx", "terminal-host")) {
+  if (transport.dir !== join(home, ".hx", "terminal-host")) {
     transportRoots.add(transport.dir);
   }
   return {
@@ -465,7 +465,7 @@ function activeTaskId(home: string): string {
 }
 
 function terminalRecords(home: string): Array<Record<string, unknown>> {
-  const sessionsRoot = join(home, ".fx", "sessions");
+  const sessionsRoot = join(home, ".hx", "sessions");
   if (!existsSync(sessionsRoot)) return [];
   return readdirSync(sessionsRoot).flatMap((sessionId) => {
     const terminalRoot = join(sessionsRoot, sessionId, "terminal", "state");
@@ -623,7 +623,7 @@ async function waitForTrace(path: string, needle: string): Promise<string> {
 }
 
 function sessionRecords(home: string): Array<Record<string, unknown>> {
-  const sessionsRoot = join(home, ".fx", "sessions");
+  const sessionsRoot = join(home, ".hx", "sessions");
   if (!existsSync(sessionsRoot)) return [];
   return readdirSync(sessionsRoot).flatMap((name) => {
     const path = join(sessionsRoot, name, "session.json");
@@ -634,7 +634,7 @@ function sessionRecords(home: string): Array<Record<string, unknown>> {
 }
 
 function sessionEventLogs(home: string): string {
-  const sessionsRoot = join(home, ".fx", "sessions");
+  const sessionsRoot = join(home, ".hx", "sessions");
   if (!existsSync(sessionsRoot)) return "";
   return readdirSync(sessionsRoot).map((name) => {
     const path = join(sessionsRoot, name, "events.jsonl");
@@ -1253,7 +1253,7 @@ test.skipIf(!tmuxAvailable())(
 
     const identityPath = join(
       fixture.home,
-      ".fx",
+      ".hx",
       "terminal-host",
       "host.json",
     );
@@ -1744,7 +1744,7 @@ test.skipIf(!tmuxAvailable())(
         expect(sessionEventLogs(fixture.home)).toContain("path_outside_workspace");
         const identity = JSON.parse(
           readFileSync(
-            join(fixture.home, ".fx", "terminal-host", "host.json"),
+            join(fixture.home, ".hx", "terminal-host", "host.json"),
             "utf8",
           ),
         ) as { pid: string };
@@ -2579,7 +2579,7 @@ test.skipIf(!tmuxAvailable())(
   "long HOME executes public native terminal start inspect read and close",
   async () => {
     const fixture = createFixture("fx-tui-terminal-long-home-", 141);
-    const durableDir = join(fixture.home, ".fx", "terminal-host");
+    const durableDir = join(fixture.home, ".hx", "terminal-host");
     const durableSocket = join(durableDir, "host.sock");
     const transport = terminalTransportPaths(fixture.home);
     expect(Buffer.byteLength(durableSocket)).toBe(141);
@@ -2772,7 +2772,7 @@ test.skipIf(!tmuxAvailable())(
       expect(record.history_len).toBe(0);
     }
     const promptHistory = readFileSync(
-      join(fixture.home, ".fx", "history.jsonl"),
+      join(fixture.home, ".hx", "history.jsonl"),
       "utf8",
     );
     expect(promptHistory).toContain("/image ");
@@ -2834,7 +2834,7 @@ test.skipIf(!tmuxAvailable())(
       expect(record.history_len).toBe(0);
     }
     expect(
-      readFileSync(join(fixture.home, ".fx", "history.jsonl"), "utf8"),
+      readFileSync(join(fixture.home, ".hx", "history.jsonl"), "utf8"),
     ).toContain("/quit");
     expect(readFileSync(fixture.stderrPath, "utf8")).toBe("");
 
@@ -2962,7 +2962,7 @@ test.skipIf(!tmuxAvailable() || loginProfileName === null)(
     for (const record of sessionRecords(fixture.home)) {
       expect(record.history_len).toBe(0);
     }
-    expect(existsSync(join(fixture.home, ".fx", "history.jsonl"))).toBe(false);
+    expect(existsSync(join(fixture.home, ".hx", "history.jsonl"))).toBe(false);
     expect(readFileSync(fixture.stderrPath, "utf8")).toBe("");
 
     const profilePid = Number(readFileSync(profilePidPath, "utf8"));
@@ -2973,7 +2973,7 @@ test.skipIf(!tmuxAvailable() || loginProfileName === null)(
     sessions.splice(sessions.indexOf(active), 1);
     await waitForTerminalHostExit(fixture.home);
     expect(
-      existsSync(join(fixture.home, ".fx", "terminal-host", "host.json")),
+      existsSync(join(fixture.home, ".hx", "terminal-host", "host.json")),
     ).toBe(false);
 
     gateway.stop();

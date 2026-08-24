@@ -47,7 +47,7 @@ function createFixture(prefix: string) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".hx"), { recursive: true });
   mkdirSync(workspace);
   writeE2eGrokAuth(home);
   tempRoots.push(root);
@@ -55,7 +55,7 @@ function createFixture(prefix: string) {
     root,
     home,
     workspace: realpathSync(workspace),
-    settingsPath: join(home, ".fx", "settings.json"),
+    settingsPath: join(home, ".hx", "settings.json"),
   };
 }
 

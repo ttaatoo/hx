@@ -9,11 +9,11 @@ pub const version = "0.0.5";
 comptime {
     switch (builtin.os.tag) {
         .linux, .macos => {},
-        else => @compileError("fx supports Linux and macOS only"),
+        else => @compileError("hx supports Linux and macOS only"),
     }
     switch (builtin.cpu.arch) {
         .x86_64, .aarch64 => {},
-        else => @compileError("fx supports x86_64 and aarch64 only"),
+        else => @compileError("hx supports x86_64 and aarch64 only"),
     }
 }
 

@@ -206,7 +206,7 @@ function twoEffectfulCommandBatch(first: string, second: string) {
 }
 
 function sessionIdFromHome(root: IsolatedRoot): string {
-  const sessions = join(root.home, ".fx", "sessions");
+  const sessions = join(root.home, ".hx", "sessions");
   const ids = readdirSync(sessions, { withFileTypes: true })
     .filter((entry) => entry.name !== "latest" && entry.isDirectory())
     .map((entry) => entry.name);
@@ -381,7 +381,7 @@ function findPersistedDeliveryIds(
   childId: string,
   payload: string,
 ): string[] {
-  const path = join(root.home, ".fx", "sessions", childId, "subagent", "communication.json");
+  const path = join(root.home, ".hx", "sessions", childId, "subagent", "communication.json");
   if (!existsSync(path)) return [];
   const record = JSON.parse(readFileSync(
     path,
@@ -454,7 +454,7 @@ async function waitForPendingSubagentApproval(
   );
   const communicationPath = join(
     root.home,
-    ".fx",
+    ".hx",
     "sessions",
     childId,
     "subagent",
@@ -493,7 +493,7 @@ async function waitForTraceSlice(
 }
 
 function subagentState(root: IsolatedRoot, childId: string): string | null {
-  const path = join(root.home, ".fx", "sessions", childId, "subagent", "control.json");
+  const path = join(root.home, ".hx", "sessions", childId, "subagent", "control.json");
   if (!existsSync(path)) return null;
   const record = JSON.parse(readFileSync(path, "utf8")) as { state?: string };
   return record.state ?? null;
@@ -628,7 +628,7 @@ function parentMessagePart(
 }
 
 function sessionIds(root: IsolatedRoot): string[] {
-  const sessions = join(root.home, ".fx", "sessions");
+  const sessions = join(root.home, ".hx", "sessions");
   return readdirSync(sessions)
     .filter((id) =>
       id !== "latest" &&
@@ -649,7 +649,7 @@ function expectParentHistoryClean(
   parentSessionId: string,
   forbidden: string[],
 ) {
-  const sessionDir = join(root.home, ".fx", "sessions", parentSessionId);
+  const sessionDir = join(root.home, ".hx", "sessions", parentSessionId);
   for (const name of ["session.json", "events.jsonl"]) {
     const path = join(sessionDir, name);
     if (!existsSync(path)) continue;
@@ -665,7 +665,7 @@ function expectHumanUnreadIndependent(
   eventId: string,
 ) {
   const record = JSON.parse(readFileSync(
-    join(root.home, ".fx", "sessions", childId, "subagent", "communication.json"),
+    join(root.home, ".hx", "sessions", childId, "subagent", "communication.json"),
     "utf8",
   )) as {
     ledger: {
@@ -920,12 +920,12 @@ function createIsolatedRoot(baseDir = tmpdir()): IsolatedRoot {
   const hostileBin = join(root, "hostile-bin");
   const profileMarker = join(root, "hostile-profile-used");
   const commandMarkers: Record<string, string> = {};
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".hx"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   mkdirSync(hostileBin, { recursive: true });
   writeE2eGrokAuth(home);
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".hx", "settings.json"),
     JSON.stringify({ sandbox: "none", permission: {}, maxxing_mode: "legacy" }),
   );
   writeFileSync(join(home, ".profile"), `printf profile > ${JSON.stringify(profileMarker)}\n`);
@@ -1001,7 +1001,7 @@ function definedEnv(env: Record<string, string | undefined>) {
 
 async function launchPermissionResumeHarness(initialResponses: Response[]) {
   const root = createIsolatedRoot();
-  const settingsPath = join(root.home, ".fx", "settings.json");
+  const settingsPath = join(root.home, ".hx", "settings.json");
   const markerPath = join(root.workspace, "must-not-exist");
   const initialStderrPath = join(root.root, "permission-resume-initial-stderr.log");
   const resumedStderrPath = join(root.root, "permission-resume-resumed-stderr.log");
@@ -1061,7 +1061,7 @@ function expectUserProfileTrace(tracePath: string) {
 }
 
 function expectNoCommandArtifacts(root: IsolatedRoot) {
-  const sessions = join(root.home, ".fx", "sessions");
+  const sessions = join(root.home, ".hx", "sessions");
   if (!existsSync(sessions)) return;
   const files = Bun.spawnSync(["find", sessions, "-type", "f"], {
     stdout: "pipe",
@@ -1074,7 +1074,7 @@ function expectNoCommandArtifacts(root: IsolatedRoot) {
 }
 
 function commandReplayFiles(root: IsolatedRoot): string[] {
-  const sessions = join(root.home, ".fx", "sessions");
+  const sessions = join(root.home, ".hx", "sessions");
   if (!existsSync(sessions)) return [];
   const result = Bun.spawnSync(
     ["find", sessions, "-type", "f", "-name", "fx-command-replay-*"],
@@ -1235,7 +1235,7 @@ describe("effect-aware command permissions", () => {
       const stderrPath = join(root.root, "minimal-command-output-stderr.log");
       const resumedStderrPath = join(root.root, "minimal-command-output-resumed-stderr.log");
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".hx", "settings.json"),
         JSON.stringify({
           sandbox: "none",
           permission_mode: "yolo",
@@ -1609,7 +1609,7 @@ describe("effect-aware command permissions", () => {
         toolCall(command, {}, "fxc29_compact_output"),
         finalText(responseRows.join("\n")),
       ]);
-      const settingsPath = join(root.home, ".fx", "settings.json");
+      const settingsPath = join(root.home, ".hx", "settings.json");
       writeFileSync(
         settingsPath,
         JSON.stringify({
@@ -2149,7 +2149,7 @@ describe("effect-aware command permissions", () => {
     async () => {
       const root = createIsolatedRoot();
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".hx", "settings.json"),
         JSON.stringify({
           sandbox: "none",
           permission: { bash: { pwd: "allow" } },

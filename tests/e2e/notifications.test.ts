@@ -30,7 +30,7 @@ function createNotificationRoot(
   const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-notifications-")));
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  const profile = join(home, ".fx");
+  const profile = join(home, ".hx");
   mkdirSync(profile, { recursive: true, mode: 0o700 });
   mkdirSync(workspace, { recursive: true });
   chmodSync(profile, 0o700);
@@ -134,7 +134,7 @@ test.skipIf(!tmuxAvailable())(
     ]);
     const tracePath = join(fixture.root, "trace.log");
     const stderrPath = join(fixture.root, "stderr.log");
-    const settingsPath = join(fixture.home, ".fx", "settings.json");
+    const settingsPath = join(fixture.home, ".hx", "settings.json");
     writeFileSync(stderrPath, "");
     let session: TmuxSession | null = null;
     try {

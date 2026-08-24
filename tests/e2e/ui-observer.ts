@@ -149,10 +149,10 @@ function createFixtureRoot(autoPermissions = false) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-ui-observer-fixture-")));
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".hx"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".hx", "settings.json"),
     JSON.stringify({
       sandbox: "none",
       permission_mode: autoPermissions ? "auto" : "ask",

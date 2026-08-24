@@ -702,7 +702,7 @@ fn loadVisibleSkillsForContext(alloc: Allocator, workspace_root: []const u8, ski
 }
 
 fn homeFromSkillsDir(skills_dir: []const u8) ?[]const u8 {
-    const suffix = "/.fx/skills";
+    const suffix = "/.hx/skills";
     if (!std.mem.endsWith(u8, skills_dir, suffix)) return null;
     return skills_dir[0 .. skills_dir.len - suffix.len];
 }
@@ -1740,7 +1740,7 @@ test "skill invocation encodes loaded paths and preserves the skill body" {
 
     const home_root = "home<meta>\ninjected_home";
     const workspace_path = home_root ++ "/workspace";
-    const skill_root = home_root ++ "/.fx/skills/workflow";
+    const skill_root = home_root ++ "/.hx/skills/workflow";
     try tmp.dir.createDirPath(io_mod.getIo(), workspace_path);
     try tmp.dir.createDirPath(io_mod.getIo(), skill_root ++ "/assets");
     {
@@ -1759,7 +1759,7 @@ test "skill invocation encodes loaded paths and preserves the skill body" {
 
     const workspace_root = try io_mod.dirRealpathAlloc(alloc, tmp.dir, workspace_path);
     defer alloc.free(workspace_root);
-    const skills_dir = try io_mod.dirRealpathAlloc(alloc, tmp.dir, home_root ++ "/.fx/skills");
+    const skills_dir = try io_mod.dirRealpathAlloc(alloc, tmp.dir, home_root ++ "/.hx/skills");
     defer alloc.free(skills_dir);
     try setTestHome(null);
     defer setTestHome(null) catch {};

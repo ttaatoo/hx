@@ -12463,7 +12463,7 @@ test "missing home is empty for reads and bootstrapped privately for writes" {
     const home_stat = try home_dir.stat(io_mod.getIo());
     try std.testing.expectEqual(std.Io.File.Kind.directory, home_stat.kind);
     try std.testing.expectEqual(@as(u32, 0o700), home_stat.permissions.toMode() & 0o777);
-    const sessions_path = try std.fs.path.join(alloc, &.{ missing_home, ".fx", "sessions" });
+    const sessions_path = try std.fs.path.join(alloc, &.{ missing_home, ".hx", "sessions" });
     defer alloc.free(sessions_path);
     try std.Io.Dir.accessAbsolute(io_mod.getIo(), sessions_path, .{});
 }
@@ -12547,10 +12547,10 @@ test "first write creates only the private session layout" {
     var home_iter = home_dir.iterate();
     const durable_entry = (try home_iter.next(io_mod.getIo())) orelse
         return error.TestExpectedEqual;
-    try std.testing.expectEqualStrings(".fx", durable_entry.name);
+    try std.testing.expectEqualStrings(".hx", durable_entry.name);
     try std.testing.expect((try home_iter.next(io_mod.getIo())) == null);
 
-    var durable_dir = try home_dir.openDir(io_mod.getIo(), ".fx", .{
+    var durable_dir = try home_dir.openDir(io_mod.getIo(), ".hx", .{
         .iterate = true,
     });
     defer durable_dir.close(io_mod.getIo());
@@ -12618,7 +12618,7 @@ test "malformed settings do not block legacy detail or migration" {
     defer tmp.cleanup();
     var ctx = try initTempStore(alloc, &tmp);
     defer ctx.deinit(alloc);
-    const settings_path = try std.fs.path.join(alloc, &.{ ctx.home, ".fx", "settings.json" });
+    const settings_path = try std.fs.path.join(alloc, &.{ ctx.home, ".hx", "settings.json" });
     defer alloc.free(settings_path);
     try writeRawFile(settings_path, "{broken");
     try writeLegacyFixture(alloc, ctx.store, "legacy-with-bad-settings", ctx.workspace, 20);
