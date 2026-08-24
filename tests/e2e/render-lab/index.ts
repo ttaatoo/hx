@@ -1633,13 +1633,14 @@ async function launchFx(
   options: FxLaunchOptions = {},
 ): Promise<void> {
   const environment = [
-    options.gatewayApiKey ? `AI_GATEWAY_API_KEY=${shQuote(options.gatewayApiKey)}` : null,
-    options.gatewayChatUrl ? `FX_E2E_GATEWAY_CHAT_URL=${shQuote(options.gatewayChatUrl)}` : null,
+    options.gatewayApiKey ? `ANTHROPIC_API_KEY=${shQuote(options.gatewayApiKey)}` : null,
+    options.gatewayChatUrl
+      ? `ANTHROPIC_BASE_URL=${shQuote(new URL(options.gatewayChatUrl).origin)}`
+      : null,
     options.gatewayChatUrl
       ? `GROK_CLI_CHAT_PROXY_BASE_URL=${shQuote(`${new URL(options.gatewayChatUrl).origin}/v1`)}`
       : null,
     options.gatewayChatUrl ? `FX_MODEL=${shQuote(SUPERGROK_MODEL)}` : null,
-    options.gatewayModelsUrl ? `FX_E2E_GATEWAY_MODELS_URL=${shQuote(options.gatewayModelsUrl)}` : null,
     options.permissionMode ? `FX_PERMISSION_MODE=${shQuote(options.permissionMode)}` : null,
   ].filter((entry): entry is string => entry !== null).join(" ");
   const environmentPrefix = environment.length > 0 ? `${environment} ` : "";

@@ -147,8 +147,7 @@ try {
   const env = adaptRetiredGatewayTestEnv({
     ...process.env,
     HOME: home,
-    AI_GATEWAY_API_KEY: "mcp-conformance-placeholder",
-    VERCEL_OIDC_TOKEN: undefined,
+    ANTHROPIC_API_KEY: "mcp-conformance-placeholder",
     FX_AUTO_UPGRADE: "0",
     FX_DISABLE_KEYCHAIN: "1",
     FX_E2E_MCP_AUTH_AUTOMATE: "1",
@@ -158,9 +157,8 @@ try {
           FX_MCP_CONFORMANCE_CLIENT_SECRET: scenarioContext.client_secret,
         }
       : {}),
-    FX_GATEWAY_BASE_URL: gateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-    FX_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
+    ANTHROPIC_BASE_URL: gateway.baseUrl,
+    GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
     FX_MODEL: SUPERGROK_MODEL,
     FX_SKIP_ONBOARDING: "1",
     FX_SOUND: "0",

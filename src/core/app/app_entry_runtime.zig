@@ -26,8 +26,8 @@ const mcp_contract = @import("../mcp/mcp_contract.zig");
 const mcp_runtime = @import("../mcp/mcp_runtime.zig");
 const tool_set_contract = @import("../tooling/tool_set.zig");
 const update_target = @import("../upgrade/update_target.zig");
-const test_builtin_gateway = if (builtin.is_test)
-    @import("../../builtins/gateway.zig")
+const test_builtin_providers = if (builtin.is_test)
+    @import("../../builtins/providers.zig")
 else
     struct {};
 const test_builtin_commands = if (builtin.is_test)
@@ -502,17 +502,7 @@ const test_entry_context_registry = context_contract.Registry{ .default_provider
     .append_transient_fn = appendNoopTransientContextForTest,
 } };
 
-fn unavailableDevboxForTest(
-    _: ?*anyopaque,
-    _: Allocator,
-    _: []const u8,
-    _: []const u8,
-    _: devbox_executor.Control,
-) devbox_executor.ProviderError!devbox_executor.VercelOutcome {
-    return .unavailable;
-}
-
-const test_devbox_provider = devbox_executor.Provider{ .execute_fn = unavailableDevboxForTest };
+const test_devbox_provider = devbox_executor.unavailable_provider;
 
 fn noMcpRuntimeForTest(_: Allocator, _: @import("../mcp/elicitation.zig").Capabilities) !?*mcp_runtime.McpRuntime {
     return null;
@@ -537,7 +527,7 @@ fn testConfig() Config {
         .models_path = "/models",
         .gateway_retry_count = 2,
         .gateway_chat_url = "https://gateway/chat",
-        .gateway_provider = test_builtin_gateway.provider,
+        .gateway_provider = test_builtin_providers.provider,
         .url_opener = host.unavailable_url_opener,
         .secret_store = host.unavailable_secret_store,
         .prompt_policy = .{ .system_prompt = "system" },
@@ -825,9 +815,9 @@ test "app entry returns after handled CLI success without initializing app" {
     try std.testing.expectEqualStrings("entry", capture.seen_config.?.mode_registry.default_mode_id);
     try std.testing.expectEqualStrings("entry_test_tool", capture.seen_config.?.tool_set.order[0]);
     try std.testing.expectEqualStrings("skills", capture.seen_config.?.skill_root_policy.workspace_roots[0].path);
-    try std.testing.expect(capture.seen_config.?.gateway_provider.oauth_transport.execute_fn == test_builtin_gateway.oauth_transport_provider.execute_fn);
-    try std.testing.expect(capture.seen_config.?.gateway_provider.cli_model_catalog.fetch_fn == test_builtin_gateway.provider.cli_model_catalog.fetch_fn);
-    try std.testing.expect(capture.seen_config.?.gateway_provider.model_catalog.fetch_fn == test_builtin_gateway.provider.model_catalog.fetch_fn);
+    try std.testing.expect(capture.seen_config.?.gateway_provider.oauth_transport.execute_fn == test_builtin_providers.oauth_transport_provider.execute_fn);
+    try std.testing.expect(capture.seen_config.?.gateway_provider.cli_model_catalog.fetch_fn == test_builtin_providers.provider.cli_model_catalog.fetch_fn);
+    try std.testing.expect(capture.seen_config.?.gateway_provider.model_catalog.fetch_fn == test_builtin_providers.provider.model_catalog.fetch_fn);
     try std.testing.expect(
         capture.seen_config.?.background_process_provider.spawn_prepared_fn ==
             cfg.background_process_provider.spawn_prepared_fn,
@@ -838,7 +828,7 @@ test "app entry returns after handled CLI success without initializing app" {
     try std.testing.expect(capture.seen_config.?.secret_store.load_fn == cfg.secret_store.load_fn);
     try std.testing.expect(capture.seen_config.?.inspect_mcp_profile_config == noMcpConfigInspectionForTest);
     try std.testing.expect(capture.seen_config.?.load_mcp_runtime == noMcpRuntimeForTest);
-    try std.testing.expect(capture.seen_config.?.devbox_provider.?.execute_fn == unavailableDevboxForTest);
+    try std.testing.expect(capture.seen_config.?.devbox_provider.?.execute_fn == devbox_executor.unavailable_provider.execute_fn);
     try std.testing.expectEqual(@as(usize, 0), test_event_count);
 }
 

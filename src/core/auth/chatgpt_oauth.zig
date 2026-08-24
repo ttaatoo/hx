@@ -367,7 +367,7 @@ fn completeSignIn(
 fn saveSignIn(_: ?*anyopaque, alloc: Allocator, completion: login_flow.SignInCompletion) !void {
     const session = switch (completion) {
         .chatgpt => |session| session,
-        .vercel, .grok => return error.InvalidSignInCompletion,
+        .grok => return error.InvalidSignInCompletion,
     };
     try chatgpt_session.saveNewSession(alloc, session);
 }
@@ -387,7 +387,7 @@ pub fn runLogin(
     try writeStdout("Open this URL to sign in with Codex:\n");
     try writeStdout(authorization_url);
     try writeStdout("\n\nWaiting for browser authorization...\n");
-    if (io_mod.getenv("FX_NO_OPEN_BROWSER") == null) {
+    if (!login_flow.browserOpenSuppressed()) {
         _ = url_opener.open(alloc, authorization_url) catch false;
     }
 

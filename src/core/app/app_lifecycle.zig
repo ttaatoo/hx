@@ -192,10 +192,8 @@ pub const StartupState = struct {
         return credentials.catalogAccessAt(self.credential, io_mod.milliTimestamp());
     }
 
-    pub fn gatewayTeam(self: *const StartupState) ?[]const u8 {
-        const credential = self.credential orelse return null;
-        if (credential.needsRefreshAt(io_mod.milliTimestamp())) return null;
-        return credential.gatewayTeam();
+    pub fn gatewayTeam(_: *const StartupState) ?[]const u8 {
+        return null;
     }
 
     pub fn takeCredential(self: *StartupState) ?credentials.Credential {
@@ -349,7 +347,6 @@ pub fn loadStartupStatus(
         .update_channel = settings.update_channel orelse .stable,
         .config_diagnostics = detailed.diagnostics,
     };
-    auth_status.owned_team = null;
     detailed.diagnostics = &.{};
     return result;
 }

@@ -84,8 +84,7 @@ function startAcp(cwd: string, home: string, extraEnv: Record<string, string> = 
   const env = adaptRetiredGatewayTestEnv({
     ...process.env,
     HOME: home,
-    AI_GATEWAY_API_KEY: "e2e-placeholder",
-    VERCEL_OIDC_TOKEN: undefined,
+    ANTHROPIC_API_KEY: "e2e-placeholder",
     FX_MODEL: SUPERGROK_MODEL,
     FX_DISABLE_KEYCHAIN: "1",
     FX_SKIP_ONBOARDING: "1",
@@ -368,10 +367,9 @@ describe("session recovery", () => {
             cwd: workspaceRoot,
             env: {
               HOME: home,
-              AI_GATEWAY_API_KEY: "e2e-placeholder",
-              VERCEL_OIDC_TOKEN: "",
-              FX_GATEWAY_BASE_URL: gateway.baseUrl,
-              FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+              ANTHROPIC_API_KEY: "e2e-placeholder",
+              ANTHROPIC_BASE_URL: gateway.baseUrl,
+              GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
             },
           },
         );
@@ -446,10 +444,9 @@ describe("session recovery", () => {
       ]);
       const resumeEnv = {
         HOME: home,
-        AI_GATEWAY_API_KEY: "e2e-placeholder",
-        VERCEL_OIDC_TOKEN: "",
-        FX_GATEWAY_BASE_URL: gateway.baseUrl,
-        FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+        ANTHROPIC_API_KEY: "e2e-placeholder",
+        ANTHROPIC_BASE_URL: gateway.baseUrl,
+        GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
       };
       try {
         const resumedA = await runFx(

@@ -78,6 +78,32 @@ export function maybeWriteE2eGrokAuth(
   if (!existsSync(path)) writeE2eGrokAuthIfPossible(env.HOME);
 }
 
+export const RETIRED_GATEWAY_ENV_KEYS = [
+  "AI_GATEWAY_API_KEY",
+  "VERCEL_OIDC_TOKEN",
+  "FX_E2E_GATEWAY_CHAT_URL",
+  "FX_E2E_GATEWAY_MODELS_URL",
+  "FX_E2E_GATEWAY_CREDITS_URL",
+  "FX_GATEWAY_CHAT_URL",
+  "FX_GATEWAY_BASE_URL",
+] as const;
+
+export function loopbackDirectProviderEnv(input: {
+  home?: string;
+  baseUrl: string;
+  apiKey?: string;
+  model?: string;
+}): Record<string, string | undefined> {
+  const origin = originOf(input.baseUrl);
+  return {
+    ...(input.home !== undefined ? { HOME: input.home } : {}),
+    ANTHROPIC_API_KEY: input.apiKey ?? "e2e-placeholder",
+    ANTHROPIC_BASE_URL: origin,
+    GROK_CLI_CHAT_PROXY_BASE_URL: `${origin}/v1`,
+    ...(input.model !== undefined ? { FX_MODEL: input.model } : {}),
+  };
+}
+
 export function ensureTuiSupergrokHome(
   home: string | undefined,
   env: Record<string, string | undefined> = {},
@@ -86,8 +112,7 @@ export function ensureTuiSupergrokHome(
     return;
   }
   const wantsLoopbackChat = isLoopbackUrl(env.GROK_CLI_CHAT_PROXY_BASE_URL) ||
-    isLoopbackUrl(env.FX_E2E_GATEWAY_CHAT_URL) ||
-    isLoopbackUrl(env.FX_GATEWAY_CHAT_URL);
+    isLoopbackUrl(env.ANTHROPIC_BASE_URL);
   if (!wantsLoopbackChat) return;
   if (!writeE2eGrokAuthIfPossible(home)) return;
   if (!existsSync(join(home, ".hx", "providers.json"))) {
@@ -170,27 +195,9 @@ export function adaptRetiredGatewayTestEnv(
   env: Record<string, string | undefined>,
 ): Record<string, string | undefined> {
   const next: Record<string, string | undefined> = { ...env };
-  const chatUrl = next.FX_E2E_GATEWAY_CHAT_URL ?? next.FX_GATEWAY_CHAT_URL;
-  const loopback = isLoopbackUrl(chatUrl) || isLoopbackUrl(next.FX_E2E_GATEWAY_MODELS_URL);
-  const remapping = loopback || !!(next.AI_GATEWAY_API_KEY && chatUrl);
-  if (remapping) {
-    if (!next.ANTHROPIC_API_KEY && next.AI_GATEWAY_API_KEY) {
-      next.ANTHROPIC_API_KEY = next.AI_GATEWAY_API_KEY;
-    }
-    if (chatUrl && !next.ANTHROPIC_BASE_URL) {
-      next.ANTHROPIC_BASE_URL = originOf(chatUrl);
-    }
-    if (chatUrl && !next.GROK_CLI_CHAT_PROXY_BASE_URL) {
-      next.GROK_CLI_CHAT_PROXY_BASE_URL = `${originOf(chatUrl)}/v1`;
-    }
+  for (const key of RETIRED_GATEWAY_ENV_KEYS) {
+    delete next[key];
   }
-  delete next.AI_GATEWAY_API_KEY;
-  delete next.VERCEL_OIDC_TOKEN;
-  delete next.FX_E2E_GATEWAY_CHAT_URL;
-  delete next.FX_E2E_GATEWAY_MODELS_URL;
-  delete next.FX_E2E_GATEWAY_CREDITS_URL;
-  delete next.FX_GATEWAY_CHAT_URL;
-  delete next.FX_GATEWAY_BASE_URL;
   const model = next.FX_MODEL?.trim() ?? "";
   const wantsAnthropicCatalog =
     model === FAKE_DIRECT_MODEL ||
@@ -205,6 +212,8 @@ export function adaptRetiredGatewayTestEnv(
   ) {
     writeE2eAnthropicProviders(next.HOME, next.ANTHROPIC_BASE_URL, model);
   }
-  if (remapping) maybeWriteE2eGrokAuth(next);
+  const wantsLoopbackChat = isLoopbackUrl(next.GROK_CLI_CHAT_PROXY_BASE_URL) ||
+    isLoopbackUrl(next.ANTHROPIC_BASE_URL);
+  if (wantsLoopbackChat) maybeWriteE2eGrokAuth(next);
   return next;
 }

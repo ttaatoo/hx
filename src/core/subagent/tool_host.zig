@@ -6619,7 +6619,7 @@ test "nested children resolve the same current controlling authority" {
         .target_path = @constCast("src/new.zig"),
     }};
     test_authority.tools = &.{ "write_file", "subagent" };
-    test_authority.sandbox_backend = .vercel;
+    test_authority.sandbox_backend = .just_bash;
     test_authority.integrations = &.{"mcp_new"};
     test_authority.rules = .{ .rules = &next_rules };
     test_authority.grants = &next_grants;
@@ -6628,7 +6628,7 @@ test "nested children resolve the same current controlling authority" {
     var current_nested = try host.authority_resolver.resolve(alloc, nested_id);
     defer current_nested.deinit(alloc);
     for ([_]authority.Snapshot{ current_parent, current_nested }) |snapshot| {
-        try std.testing.expectEqual(types.BackendKind.vercel, snapshot.sandbox_backend);
+        try std.testing.expectEqual(types.BackendKind.just_bash, snapshot.sandbox_backend);
         try std.testing.expectEqual(@as(usize, 2), snapshot.tools.len);
         try std.testing.expectEqualStrings("write_file", snapshot.tools[0]);
         try std.testing.expectEqual(@as(usize, 1), snapshot.integrations.len);

@@ -58,7 +58,6 @@ async function launchNoKeyAndWait(): Promise<{
       FX_DISABLE_KEYCHAIN: "1",
       FX_PERMISSION_MODE: undefined,
       FX_SKIP_ONBOARDING: "1",
-      VERCEL_OIDC_TOKEN: undefined,
     },
   });
   await terminal.waitForComposer(10_000);
@@ -122,13 +121,12 @@ describe.skipIf(TMUX_SKIP)("tui: no-key slash commands", () => {
         minimumHistoryLines: 2000,
         env: {
           HOME: home,
-          AI_GATEWAY_API_KEY: "status-compact-key",
+          ANTHROPIC_API_KEY: "status-compact-key",
           FX_AUTO_UPGRADE: "0",
           FX_DISABLE_KEYCHAIN: "1",
           FX_PERMISSION_MODE: "yolo",
           FX_RECORD: tapePath,
           FX_RECORD_INPUT: "1",
-          VERCEL_OIDC_TOKEN: undefined,
           NO_COLOR: "1",
         },
       });

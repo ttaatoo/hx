@@ -4180,7 +4180,7 @@ test "processQueuedPrompt refreshes hx login credential before gateway request" 
     defer hooks.deinit();
     var fixture = PromptFixture{};
     var job = fixture.job();
-    job.credential_source = .fx_login;
+    job.credential_source = .grok_subscription;
 
     try runFakePrompt(&gateway, &hooks, fixture.config(), job);
 
@@ -4206,7 +4206,7 @@ test "processQueuedPrompt refreshes and retries once after hx login 401" {
     defer hooks.deinit();
     var fixture = PromptFixture{};
     var job = fixture.job();
-    job.credential_source = .fx_login;
+    job.credential_source = .grok_subscription;
 
     try runFakePrompt(&gateway, &hooks, fixture.config(), job);
 
@@ -4239,7 +4239,7 @@ test "processQueuedPrompt does not retry a second hx login 401" {
     defer hooks.deinit();
     var fixture = PromptFixture{};
     var job = fixture.job();
-    job.credential_source = .fx_login;
+    job.credential_source = .grok_subscription;
 
     try runFakePrompt(&gateway, &hooks, fixture.config(), job);
 
@@ -4322,7 +4322,7 @@ test "processQueuedPrompt keeps the selected hx login credential when forced ref
     defer hooks.deinit();
     var fixture = PromptFixture{};
     var job = fixture.job();
-    job.credential_source = .fx_login;
+    job.credential_source = .grok_subscription;
 
     try runFakePrompt(&gateway, &hooks, fixture.config(), job);
 
@@ -4331,7 +4331,7 @@ test "processQueuedPrompt keeps the selected hx login credential when forced ref
     try std.testing.expectEqual(@as(usize, 2), hooks.credential_refresh_modes.items.len);
     try std.testing.expectEqual(runtime_deps.CredentialRefreshMode.force, hooks.credential_refresh_modes.items[1]);
     try std.testing.expectEqual(std.http.Status.unauthorized, hooks.http_status.?);
-    try std.testing.expectEqual(types.CredentialSource.fx_login, hooks.http_credential_source.?);
+    try std.testing.expectEqual(types.CredentialSource.grok_subscription, hooks.http_credential_source.?);
     try std.testing.expectEqual(types.TurnPresentationOutcome.failed, hooks.finalized_outcome.?);
 }
 
@@ -4351,7 +4351,7 @@ test "processQueuedPrompt reports the selected login after refresh failure witho
     defer hooks.deinit();
     var fixture = PromptFixture{};
     var job = fixture.job();
-    job.credential_source = .fx_login;
+    job.credential_source = .grok_subscription;
 
     try runFakePrompt(&gateway, &hooks, fixture.config(), job);
 
@@ -4361,16 +4361,16 @@ test "processQueuedPrompt reports the selected login after refresh failure witho
     try std.testing.expectEqual(runtime_deps.CredentialRefreshMode.if_needed, hooks.credential_refresh_modes.items[0]);
     try std.testing.expectEqual(runtime_deps.CredentialRefreshMode.force, hooks.credential_refresh_modes.items[1]);
     try std.testing.expectEqual(std.http.Status.unauthorized, hooks.http_status.?);
-    try std.testing.expectEqual(types.CredentialSource.fx_login, hooks.http_credential_source.?);
+    try std.testing.expectEqual(types.CredentialSource.grok_subscription, hooks.http_credential_source.?);
     try std.testing.expectEqual(types.TurnPresentationOutcome.failed, hooks.finalized_outcome.?);
 }
 
 test "processQueuedPrompt does not refresh or retry non-refreshable credential sources" {
     const alloc = std.testing.allocator;
     const sources = [_]types.CredentialSource{
-        .vercel_oidc_token,
-        .ai_gateway_api_key,
-        .stored_key,
+        .custom_provider,
+        .custom_provider,
+        .custom_provider,
     };
 
     for (sources) |source| {

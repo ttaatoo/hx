@@ -23,8 +23,8 @@ const subagent_resume_admission = @import("../core/subagent/resume_admission.zig
 const types = @import("../core/shared/types.zig");
 const context_contract = @import("../core/workspace/context_contract.zig");
 const command_specs = @import("../core/slash_commands/command_specs.zig");
-const test_builtin_gateway = if (builtin.is_test)
-    @import("../builtins/gateway.zig")
+const test_builtin_providers = if (builtin.is_test)
+    @import("../builtins/providers.zig")
 else
     struct {};
 
@@ -1448,7 +1448,7 @@ fn acpSessionTestConfig() server.Config {
         .gateway_retry_count = 0,
         .gateway_chat_url = "http://127.0.0.1/unused",
         .gateway_models_path = "/v1/models",
-        .gateway_provider = test_builtin_gateway.provider,
+        .gateway_provider = test_builtin_providers.provider,
         .secret_store = host.unavailable_secret_store,
         .prompt_policy = .{ .system_prompt = "test" },
         .ignored_list_entries = &.{},

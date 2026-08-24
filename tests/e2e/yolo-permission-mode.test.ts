@@ -91,11 +91,10 @@ describe("yolo permission mode", () => {
           cwd: fixture.workspace,
           env: {
             HOME: fixture.home,
-            AI_GATEWAY_API_KEY: "fake-yolo-key",
-            VERCEL_OIDC_TOKEN: undefined,
+            ANTHROPIC_API_KEY: "fake-yolo-key",
             FX_AUTO_UPGRADE: "0",
-            FX_GATEWAY_BASE_URL: fake.baseUrl,
-            FX_GATEWAY_CHAT_URL: fake.chatUrl,
+            ANTHROPIC_BASE_URL: fake.baseUrl,
+            GROK_CLI_CHAT_PROXY_BASE_URL: `${fake.baseUrl}/v1`,
             FX_MODEL: SUPERGROK_MODEL,
             FX_TRACE_LOG: tracePath,
             FX_TRACE_SCOPES: "permission",
@@ -153,7 +152,6 @@ describe("yolo permission mode", () => {
         env: {
           HOME: fixture.home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_PERMISSION_MODE: undefined,
         },
       });
@@ -195,7 +193,6 @@ describe.skipIf(!tmuxAvailable())("yolo interactive mode", () => {
         env: {
           HOME: fixture.home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
           FX_PERMISSION_MODE: undefined,
         },
@@ -274,7 +271,6 @@ describe.skipIf(!tmuxAvailable())("yolo interactive mode", () => {
         env: {
           HOME: fixture.home,
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           FX_AUTO_UPGRADE: "0",
           FX_PERMISSION_MODE: undefined,
         },

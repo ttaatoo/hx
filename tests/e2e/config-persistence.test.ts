@@ -32,8 +32,7 @@ import {
 
 const TIMEOUT = 20_000;
 const NO_AUTH = {
-  AI_GATEWAY_API_KEY: "",
-  VERCEL_OIDC_TOKEN: "",
+  ANTHROPIC_API_KEY: "",
   FX_MODEL: undefined,
   NO_COLOR: "1",
 };
@@ -1911,12 +1910,10 @@ describe.skipIf(!tmuxAvailable())("config persistence", () => {
             cwd: workspaceRoot,
             env: {
               HOME: home,
-              AI_GATEWAY_API_KEY: "fake-restored-root-key",
-              VERCEL_OIDC_TOKEN: undefined,
+              ANTHROPIC_API_KEY: "fake-restored-root-key",
               FX_AUTO_UPGRADE: "0",
-              FX_GATEWAY_BASE_URL: gateway.baseUrl,
-              FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-              FX_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
+              ANTHROPIC_BASE_URL: gateway.baseUrl,
+              GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
               FX_MODEL: FAKE_GATEWAY_MODEL,
             },
             stderrPath,

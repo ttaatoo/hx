@@ -94,13 +94,11 @@ function fixtureEnv(
 ) {
   return {
     HOME: root.home,
-    AI_GATEWAY_API_KEY: "fake-mcp-http-key",
-    VERCEL_OIDC_TOKEN: undefined,
+    ANTHROPIC_API_KEY: "fake-mcp-http-key",
     FX_AUTO_UPGRADE: "0",
     FX_PERMISSION_MODE: "yolo",
-    FX_GATEWAY_BASE_URL: activeGateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: activeGateway.chatUrl,
-    FX_E2E_GATEWAY_CHAT_URL: activeGateway.chatUrl,
+    ANTHROPIC_BASE_URL: activeGateway.baseUrl,
+    GROK_CLI_CHAT_PROXY_BASE_URL: `${activeGateway.baseUrl}/v1`,
     FX_MODEL: MODEL,
     FX_TRACE_LOG: root.traceLogPath,
     FX_TRACE_SCOPES: "mcp",

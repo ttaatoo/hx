@@ -107,7 +107,7 @@ pub const GatewayObservation = struct {
         self: GatewayObservation,
         alloc: Allocator,
         status: std.http.Status,
-        completion: types.GatewayCompletion,
+        completion: types.ProviderCompletion,
         origin: []const u8,
         team: ?[]const u8,
     ) !void {
@@ -161,7 +161,7 @@ pub const GatewayObservation = struct {
             .{ self.sequence, id },
         );
         if (completion.billing) |billing| {
-            ledger.applyGatewayBilling(alloc, id, billing) catch |err| {
+            ledger.applyProviderBilling(alloc, id, billing) catch |err| {
                 debug_trace.logf(
                     "session",
                     "usage stream billing apply failed id={s} reason={s}",
@@ -728,11 +728,11 @@ pub const Usage = struct {
         if (publication == .failed) self.flushProfilePublications();
     }
 
-    fn applyGatewayBilling(
+    fn applyProviderBilling(
         self: *Usage,
         alloc: Allocator,
         generation_id: []const u8,
-        billing: types.GatewayBilling,
+        billing: types.ProviderBilling,
     ) !void {
         try self.applyGeneration(alloc, .{
             .id = generation_id,
@@ -2731,7 +2731,7 @@ pub fn dupeSnapshotOwned(alloc: Allocator, source: Snapshot) !Snapshot {
 }
 
 fn validateGenerationId(id: []const u8) !void {
-    if (!types.validGatewayGenerationId(id)) return error.InvalidGenerationId;
+    if (!types.validGenerationId(id)) return error.InvalidGenerationId;
 }
 
 fn validateModel(model: []const u8) !void {

@@ -22,6 +22,7 @@ import {
 
 const tmuxTest = test.skipIf(!tmuxAvailable());
 const ISOLATED_KEYS = [
+  "ANTHROPIC_API_KEY",
   "AI_GATEWAY_API_KEY",
   "VERCEL_OIDC_TOKEN",
   "FX_E2E_GATEWAY_CHAT_URL",
@@ -160,7 +161,7 @@ tmuxTest.skip("tmux launch scrubs stale overrides without storing explicit crede
       startupWaitMs: 200,
       socketName,
       env: {
-        AI_GATEWAY_API_KEY: explicitCredential,
+        ANTHROPIC_API_KEY: explicitCredential,
       },
     });
 
@@ -170,7 +171,8 @@ tmuxTest.skip("tmux launch scrubs stale overrides without storing explicit crede
     }
     expect(existsSync(resultPath)).toBe(true);
     const observed = JSON.parse(readFileSync(resultPath, "utf8"));
-    expect(observed.AI_GATEWAY_API_KEY).toBe(explicitCredential);
+    expect(observed.ANTHROPIC_API_KEY).toBe(explicitCredential);
+    expect(observed.AI_GATEWAY_API_KEY).toBeNull();
     expect(observed.VERCEL_OIDC_TOKEN).toBeNull();
     expect(observed.FX_E2E_GATEWAY_CHAT_URL).toBeNull();
     expect(observed.FX_E2E_GATEWAY_MODELS_URL).toBeNull();
@@ -198,7 +200,7 @@ tmuxTest.skip("tmux launch scrubs stale overrides without storing explicit crede
       ["-L", socketName, "show-environment", "-t", session.name],
       { encoding: "utf8" },
     );
-    expect(sessionEnvironment).not.toContain("AI_GATEWAY_API_KEY=");
+    expect(sessionEnvironment).not.toContain("ANTHROPIC_API_KEY=");
     expect(sessionEnvironment).not.toContain(explicitCredential);
   } finally {
     await session?.kill();

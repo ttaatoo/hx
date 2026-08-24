@@ -1,5 +1,23 @@
 .DS_Store
 
+# Python bytecode from scripts/pgso and local pytest/unittest
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# LLVM/PGSO profile dumps (default.profraw appears in the repo root when
+# a profiled binary runs without LLVM_PROFILE_FILE)
+*.profraw
+*.profdata
+
+# Scratch files (local only)
+tmp/
+.fx/
+
 # Dependencies
 node_modules/
 bun.lock
@@ -55,3 +73,4 @@ benchmarks/baseline.json
 .vibe/
 .windsurf/
 .zencoder/
+.grok

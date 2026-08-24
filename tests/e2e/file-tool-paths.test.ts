@@ -107,12 +107,9 @@ function gatewayEnv(
 ) {
   return {
     HOME: home,
-    AI_GATEWAY_API_KEY: "fake-file-paths-key",
-    VERCEL_OIDC_TOKEN: undefined,
-    FX_GATEWAY_BASE_URL: gateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-    FX_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
-    FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+    ANTHROPIC_API_KEY: "fake-file-paths-key",
+    ANTHROPIC_BASE_URL: gateway.baseUrl,
+    GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
     FX_MODEL: MODEL,
     FX_AUTO_UPGRADE: "0",
     ...extra,
@@ -576,8 +573,6 @@ describe("filesystem path handling", () => {
             env: {
               HOME: root.home,
               FX_AUTO_UPGRADE: "0",
-              FX_GATEWAY_BASE_URL: undefined,
-              FX_GATEWAY_CHAT_URL: undefined,
               FX_MODEL: process.env.FX_WORKSPACE_ACCESS_LIVE_MODEL ?? EVAL_MODEL,
             },
             timeoutMs: 120_000,

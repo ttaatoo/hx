@@ -22,8 +22,7 @@ import {
 
 const TIMEOUT = 20_000;
 const REJECTED_GATEWAY_AUTH = {
-  AI_GATEWAY_API_KEY: "e2e-placeholder",
-  VERCEL_OIDC_TOKEN: "",
+  ANTHROPIC_API_KEY: "e2e-placeholder",
   NO_COLOR: "1",
 };
 
@@ -36,8 +35,8 @@ function rejectedGatewayEnv(
   return {
     ...REJECTED_GATEWAY_AUTH,
     HOME: home,
-    FX_GATEWAY_BASE_URL: gateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+    ANTHROPIC_BASE_URL: gateway.baseUrl,
+    GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
     FX_MODEL: FAKE_GATEWAY_MODEL,
   };
 }

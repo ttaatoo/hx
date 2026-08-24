@@ -4263,7 +4263,7 @@ const FakeExecution = struct {
             .source_id = request.source_id,
             .model = request.preferences.model,
             .effort = request.preferences.effort,
-            .sandbox_backend = if (current == 0) .macos else .vercel,
+            .sandbox_backend = if (current == 0) .macos else .just_bash,
             .tool_names = if (current == 0) &.{"read_file"} else &.{"write_file"},
             .rules = .{ .rules = &rules },
             .grants = &grants,
@@ -5794,7 +5794,7 @@ test "authority snapshots isolate siblings and refresh only at turn admission" {
     try std.testing.expectEqualStrings("/tmp/old.txt", first.grant_target);
     try std.testing.expectEqualStrings("mcp:old", first.integration_name);
     for ([_]Observation{ second, sibling }) |observation| {
-        try std.testing.expectEqual(types.BackendKind.vercel, observation.sandbox_backend);
+        try std.testing.expectEqual(types.BackendKind.just_bash, observation.sandbox_backend);
         try std.testing.expectEqualStrings("write_file", observation.tool_name);
         try std.testing.expectEqualStrings("new.txt", observation.rule_pattern);
         try std.testing.expectEqualStrings("/tmp/new.txt", observation.grant_target);

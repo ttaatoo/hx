@@ -922,6 +922,23 @@ pub fn validateMaxxingMode(mode: []const u8) !void {
     if (!presentation_mode.MaxxingMode.isPersistedLabel(mode)) return error.InvalidDurableField;
 }
 
+fn persistableCredentialSource(source: types.CredentialSource) bool {
+    return switch (source) {
+        .chatgpt_subscription, .custom_provider, .grok_subscription => true,
+    };
+}
+
+fn stripUnpersistableCredentialSource(application: *PatchApplication, root: *std.json.Value) void {
+    const value = root.object.get("credential_source") orelse return;
+    if (value == .string) {
+        if (types.parseCredentialSource(value.string)) |source| {
+            if (persistableCredentialSource(source)) return;
+        }
+    }
+    _ = root.object.orderedRemove("credential_source");
+    application.changed = true;
+}
+
 test "clearing the credential choice removes the key rather than blanking it" {
     const alloc = std.testing.allocator;
     var arena = std.heap.ArenaAllocator.init(alloc);
@@ -930,7 +947,7 @@ test "clearing the credential choice removes the key rather than blanking it" {
     var root = try std.json.parseFromSliceLeaky(
         std.json.Value,
         arena.allocator(),
-        "{\"model\":\"m\",\"credential_source\":\"fx_login\"}",
+        "{\"model\":\"m\",\"credential_source\":\"grok_subscription\"}",
         .{},
     );
     var application = try applyUserPatchToRoot(arena.allocator(), &root, .{ .clear_credential_source = true });
@@ -940,6 +957,35 @@ test "clearing the credential choice removes the key rather than blanking it" {
 
     application = try applyUserPatchToRoot(arena.allocator(), &root, .{ .clear_credential_source = true });
     try std.testing.expect(!application.changed);
+}
+
+test "user patch persists remaining credential sources and strips retired names" {
+    const alloc = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(alloc);
+    defer arena.deinit();
+
+    for (std.meta.tags(types.CredentialSource)) |source| {
+        var root = try std.json.parseFromSliceLeaky(
+            std.json.Value,
+            arena.allocator(),
+            "{}",
+            .{},
+        );
+        const application = try applyUserPatchToRoot(arena.allocator(), &root, .{ .credential_source = source });
+        try std.testing.expect(application.changed);
+        try std.testing.expectEqualStrings(@tagName(source), root.object.get("credential_source").?.string);
+    }
+
+    var retired = try std.json.parseFromSliceLeaky(
+        std.json.Value,
+        arena.allocator(),
+        "{\"model\":\"m\",\"credential_source\":\"fx_login\"}",
+        .{},
+    );
+    const stripped = try applyUserPatchToRoot(arena.allocator(), &retired, .{ .model = "m" });
+    try std.testing.expect(stripped.changed);
+    try std.testing.expect(!retired.object.contains("credential_source"));
+    try std.testing.expectEqualStrings("m", retired.object.get("model").?.string);
 }
 
 test "provider patch keeps independent Gateway and Codex models" {
@@ -1008,11 +1054,16 @@ fn applyUserPatchToRoot(
     if (patch.provider) |value| application.changed = try putString(arena, &root.object, "provider", @tagName(value)) or application.changed;
     if (patch.codex_model) |value| application.changed = try putString(arena, &root.object, "codex_model", value) or application.changed;
     if (patch.permission_mode) |value| application.changed = try putString(arena, &root.object, "permission_mode", @tagName(value)) or application.changed;
-    if (patch.credential_source) |value| application.changed = try putString(arena, &root.object, "credential_source", @tagName(value)) or application.changed;
+    if (patch.credential_source) |value| {
+        if (persistableCredentialSource(value)) {
+            application.changed = try putString(arena, &root.object, "credential_source", @tagName(value)) or application.changed;
+        }
+    }
     if (patch.clear_credential_source and root.object.contains("credential_source")) {
         _ = root.object.orderedRemove("credential_source");
         application.changed = true;
     }
+    stripUnpersistableCredentialSource(&application, root);
     if (patch.yolo_acknowledged) |value| application.changed = try putBool(arena, &root.object, "yolo_acknowledged", value) or application.changed;
     if (patch.effort) |value| application.changed = try putString(arena, &root.object, "effort", value.label()) or application.changed;
     if (patch.fast_mode) |value| application.changed = try putBool(arena, &root.object, "fast_mode", value) or application.changed;
@@ -1708,9 +1759,8 @@ fn validateKnownSettingsObject(
         }
     }
     if (object.get("credential_source")) |value| {
-        if (value != .string or types.parseCredentialSource(value.string) == null) {
-            return error.InvalidSettingsFormat;
-        }
+        if (value != .string) return error.InvalidSettingsFormat;
+        // Remaining sources persist. Retired names stay until a user patch strips them.
     }
     if (object.get("max_agent_steps")) |value| {
         if (value != .integer or value.integer < 0) return error.InvalidSettingsFormat;

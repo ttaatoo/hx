@@ -40,8 +40,8 @@ const usage_report = @import("../session/usage_report.zig");
 const skill_contract = @import("../skills/skill_contract.zig");
 const types = @import("../shared/types.zig");
 const update_target = @import("../upgrade/update_target.zig");
-const test_builtin_gateway = if (builtin.is_test)
-    @import("../../builtins/gateway.zig")
+const test_builtin_providers = if (builtin.is_test)
+    @import("../../builtins/providers.zig")
 else
     struct {};
 const context_contract = @import("../workspace/context_contract.zig");
@@ -4354,7 +4354,7 @@ test "workflow config does not carry placeholder gateway tools" {
     try std.testing.expectEqualStrings("surface", cfg.mode_registry.default_mode_id);
     try std.testing.expectEqualStrings("skills", cfg.skill_root_policy.workspace_roots[0].path);
     try std.testing.expect(cfg.load_mcp_runtime == noMcpRuntimeForTest);
-    try std.testing.expect(cfg.devbox_provider.?.execute_fn == unavailableDevboxForTest);
+    try std.testing.expect(cfg.devbox_provider.?.execute_fn == devbox_executor.unavailable_provider.execute_fn);
 }
 test "runIfRequested invalid local flags write usage" {
     var capture = CaptureOutput.init(std.testing.allocator);
@@ -4965,16 +4965,6 @@ const test_surface_context_registry = context_contract.Registry{ .default_provid
     .append_transient_fn = appendNoopTransientContextForTest,
 } };
 
-fn unavailableDevboxForTest(
-    _: ?*anyopaque,
-    _: Allocator,
-    _: []const u8,
-    _: []const u8,
-    _: devbox_executor.Control,
-) devbox_executor.ProviderError!devbox_executor.VercelOutcome {
-    return .unavailable;
-}
-
 fn noMcpRuntimeForTest(_: Allocator, _: @import("../mcp/elicitation.zig").Capabilities) !?*mcp_runtime.McpRuntime {
     return null;
 }
@@ -5028,7 +5018,7 @@ fn testConfig() Config {
         .models_path = "/v1/models",
         .gateway_retry_count = 1,
         .gateway_chat_url = "https://example.test/chat",
-        .gateway_provider = test_builtin_gateway.provider,
+        .gateway_provider = test_builtin_providers.provider,
         .url_opener = host.unavailable_url_opener,
         .secret_store = host.unavailable_secret_store,
         .prompt_policy = .{ .system_prompt = "system" },
@@ -5046,7 +5036,7 @@ fn testConfig() Config {
         .inspect_mcp_profile_config = clearMcpConfigInspectionForTest,
         .load_mcp_runtime = noMcpRuntimeForTest,
         .acp_runner = .{ .run_fn = unexpectedAcpRunForTest },
-        .devbox_provider = .{ .execute_fn = unavailableDevboxForTest },
+        .devbox_provider = devbox_executor.unavailable_provider,
         .tool_set = .{
             .registry = .{ .tools = &.{} },
             .order = &.{},

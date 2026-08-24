@@ -437,14 +437,14 @@ pub fn Handlers(comptime App: type) type {
                 try app.writeDomainNotice(.{
                     .topic = "",
                     .tone = .neutral,
-                    .body = "Opened https://fx.sh/feedback.",
+                    .body = "Opened " ++ feedback_runtime.url ++ ".",
                 }, true);
                 return;
             }
             try app.writeDomainNotice(.{
                 .topic = "",
                 .tone = .@"error",
-                .body = "Could not open https://fx.sh/feedback. Open it manually.",
+                .body = "Could not open " ++ feedback_runtime.url ++ ". Open it manually.",
             }, true);
         }
 
@@ -2036,11 +2036,10 @@ fn writeAuthStateSummary(writer: *std.Io.Writer, app: anytype) !void {
 
     const auth_view = app.auth.view();
     try writer.print(
-        "auth: source={s} refreshable={s} gateway_team={s}\n",
+        "auth: source={s} refreshable={s}\n",
         .{
             auth_view.activeSourceLabel(),
             boolLabel(auth_view.refreshable),
-            auth_view.gatewayTeamStatus().label(),
         },
     );
 }
@@ -4079,13 +4078,13 @@ test "trace auth summary preserves missing and loaded status text" {
     defer missing.deinit();
     try writeAuthStateSummary(&missing.writer, &app);
     try std.testing.expectEqualStrings(
-        "auth: source=missing refreshable=false gateway_team=unknown\n",
+        "auth: source=missing refreshable=false\n",
         missing.written(),
     );
 
     var credential = credentials.Credential{
         .token = try alloc.dupe(u8, "token"),
-        .source = .fx_login,
+        .source = .grok_subscription,
     };
     defer credential.deinit(alloc);
     _ = app.auth.adoptCredential(alloc, &credential);
@@ -4093,7 +4092,7 @@ test "trace auth summary preserves missing and loaded status text" {
     defer loaded.deinit();
     try writeAuthStateSummary(&loaded.writer, &app);
     try std.testing.expectEqualStrings(
-        "auth: source=hx login refreshable=true gateway_team=unset\n",
+        "auth: source=SuperGrok subscription refreshable=true\n",
         loaded.written(),
     );
 }
@@ -4111,7 +4110,7 @@ test "trace tool calls print errors first and mask obvious secrets" {
 
     var failed: diagnostics.ToolCallMetric = .{ .started_at_ms = 2000, .duration_ms = 9, .ok = false, .subagent_id = 3 };
     failed.setName("run_command");
-    failed.setArgs("{\"command\":\"AI_GATEWAY_API_KEY=abcdefghijklmnop zig build\"}");
+    failed.setArgs("{\"command\":\"ANTHROPIC_API_KEY=abcdefghijklmnop zig build\"}");
     failed.setResult("failed with PASSWORD=abcdefghijklmnop");
     diagnostics.recordToolCall(failed);
 
@@ -4125,7 +4124,7 @@ test "trace tool calls print errors first and mask obvious secrets" {
     try std.testing.expect(error_pos < success_pos);
     try std.testing.expect(std.mem.find(u8, text, "source=subagent#3") != null);
     try std.testing.expect(std.mem.find(u8, text, "abcdefghijklmnop") == null);
-    try std.testing.expect(std.mem.find(u8, text, "AI_GATEWAY_API_KEY=[redacted]") != null);
+    try std.testing.expect(std.mem.find(u8, text, "ANTHROPIC_API_KEY=[redacted]") != null);
     try std.testing.expect(std.mem.find(u8, text, "PASSWORD=[redacted]") != null);
 }
 

@@ -51,7 +51,7 @@ pub const Control = struct {
     }
 };
 
-pub const VercelOutcome = union(enum) {
+pub const Outcome = union(enum) {
     success: CommandResult,
     unavailable,
     request_failed,
@@ -69,7 +69,7 @@ pub const ProviderFn = *const fn (
     []const u8,
     []const u8,
     Control,
-) ProviderError!VercelOutcome;
+) ProviderError!Outcome;
 
 pub const Provider = struct {
     ctx: ?*anyopaque = null,
@@ -81,7 +81,54 @@ pub const Provider = struct {
         command: []const u8,
         cwd: []const u8,
         control: Control,
-    ) ProviderError!VercelOutcome {
+    ) ProviderError!Outcome {
         return self.execute_fn(self.ctx, alloc, command, cwd, control);
     }
 };
+
+fn executeUnavailable(
+    _: ?*anyopaque,
+    _: Allocator,
+    _: []const u8,
+    _: []const u8,
+    control: Control,
+) ProviderError!Outcome {
+    try control.check();
+    return .unavailable;
+}
+
+pub const unavailable_provider = Provider{ .execute_fn = executeUnavailable };
+
+test "unavailable provider returns unavailable without remote work" {
+    const outcome = try unavailable_provider.execute(
+        std.testing.allocator,
+        "printf no",
+        "/tmp",
+        .{ .started_ms = io_mod.milliTimestamp() },
+    );
+    try std.testing.expect(outcome == .unavailable);
+}
+
+test "unavailable provider checks cancellation and timeout first" {
+    var cancel = std.atomic.Value(bool).init(true);
+    try std.testing.expectError(error.Cancelled, unavailable_provider.execute(
+        std.testing.allocator,
+        "printf no",
+        "/tmp",
+        .{
+            .cancel_flag = &cancel,
+            .timeout_ms = 1000,
+            .started_ms = io_mod.milliTimestamp(),
+        },
+    ));
+
+    try std.testing.expectError(error.TimeoutExpired, unavailable_provider.execute(
+        std.testing.allocator,
+        "printf no",
+        "/tmp",
+        .{
+            .timeout_ms = 0,
+            .started_ms = io_mod.milliTimestamp(),
+        },
+    ));
+}

@@ -8,8 +8,6 @@ ttaatoo/hx is based on vercel-labs/fx and talks to SuperGrok and Anthropic direc
 2. Anthropic, when `~/.hx/providers.json` (or `providers` in `~/.hx/settings.json`) is ready with a key.
 3. Otherwise hx asks you to run `hx login grok`.
 
-`hx login vercel`, `hx setup`, `hx teams`, and `hx credits` are not product commands. `AI_GATEWAY_API_KEY` and `VERCEL_OIDC_TOKEN` are ignored.
-
 ## SuperGrok / X Premium+
 
 SuperGrok uses a subscriber OAuth session, not an `XAI_API_KEY` and not console.x.ai pay-per-token credits. Inference uses SuperGrok or X Premium+ quota.
@@ -109,7 +107,4 @@ Or set `ANTHROPIC_BASE_URL` and leave `baseUrl` empty in the config. Official An
 
 ## What this repository removed
 
-- Vercel AI Gateway chat, catalog, credits, teams, and OIDC
-- `hx login vercel`, `hx setup`, `hx teams`, and Gateway credits as product commands
-- Gateway web search and Gateway auto-review
-- Docs and help that tell you Gateway login is required
+Providers are SuperGrok, Anthropic, and Codex only. Vercel AI Gateway is not part of this product.

@@ -1275,7 +1275,6 @@ test "planner preserves quoted shell metacharacters as literal argv" {
 
 test "planner enforces background backend and platform boundaries" {
     try expectApproval("pwd", true, .none, .macos, .background_process);
-    try expectApproval("pwd", false, .vercel, .macos, .unsupported_backend);
     try expectApproval("pwd", false, .just_bash, .macos, .unsupported_backend);
     try expectApproval("pwd", false, .none, .windows, .unsupported_platform);
 }

@@ -62,8 +62,8 @@ const subagent_resume_admission = @import("../subagent/resume_admission.zig");
 const parent_delivery_projector = @import("../subagent/parent_delivery_projector.zig");
 const subagent_tool_host = @import("../subagent/tool_host.zig");
 const text_utils = @import("../shared/text_utils.zig");
-const test_builtin_gateway = if (std_builtin.is_test)
-    @import("../../builtins/gateway.zig")
+const test_builtin_providers = if (std_builtin.is_test)
+    @import("../../builtins/providers.zig")
 else
     struct {};
 const builtin_tools = @import("../../builtins/tools.zig");
@@ -1544,10 +1544,10 @@ fn runPromptInternal(alloc: Allocator, prompt: []const u8, permission_override: 
     };
     const api_key = credential.token;
     ctx.api_key = api_key;
-    ctx.gateway_team = credential.gatewayTeam();
+    ctx.gateway_team = null;
     ctx.credential_source = credential.source;
     ctx.account_id = credential.accountId();
-    ctx.model_catalog_access = credentials.catalogAccessForCredential(credential.source, api_key, credential.gatewayTeam());
+    ctx.model_catalog_access = credentials.catalogAccessForCredential(credential.source, api_key);
 
     const restored_image_catalog = try ctx.session.snapshotImageCatalog(alloc, &.{});
     defer types.freeImageAttachmentSlice(alloc, restored_image_catalog);
@@ -1673,7 +1673,7 @@ fn runPromptInternal(alloc: Allocator, prompt: []const u8, permission_override: 
         .authorized_image_catalog = authorized_image_catalog,
         .model = @constCast(ctx.model),
         .api_key = api_key,
-        .gateway_team = if (credential.gatewayTeam()) |team| @constCast(team) else null,
+        .gateway_team = null,
         .credential_source = credential.source,
         .account_id = if (credential.accountId()) |account_id| @constCast(account_id) else null,
         .provider = ctx.provider,
@@ -3620,7 +3620,6 @@ fn takeCorePermissionRules(_: Allocator, startup: *app_lifecycle.StartupState) !
 fn toCoreSandbox(kind: anytype) @import("../permissions/sandbox.zig").BackendKind {
     return switch (kind) {
         .macos => .macos,
-        .vercel => .vercel,
         .just_bash => .just_bash,
         .none => .none,
         .auto => .auto,
@@ -3797,16 +3796,6 @@ const AskAttentionCapture = struct {
     }
 };
 
-fn unavailableDevboxForTest(
-    _: ?*anyopaque,
-    _: Allocator,
-    _: []const u8,
-    _: []const u8,
-    _: devbox_executor.Control,
-) devbox_executor.ProviderError!devbox_executor.VercelOutcome {
-    return .unavailable;
-}
-
 const test_modes = [_]mode_registry.ModeSpec{
     .{
         .id = "inspect",
@@ -3832,7 +3821,7 @@ fn testConfig() Config {
         .gateway_retry_count = 1,
         .gateway_chat_url = "https://example.invalid/chat",
         .gateway_models_path = "/models",
-        .gateway_provider = test_builtin_gateway.provider,
+        .gateway_provider = test_builtin_providers.provider,
         .secret_store = host.unavailable_secret_store,
         .prompt_policy = .{
             .system_prompt = "system",
@@ -3849,7 +3838,7 @@ fn testConfig() Config {
         .max_history_turns = 2,
         .mode_registry = test_mode_registry,
         .load_mcp_runtime = testNoMcpRuntime,
-        .devbox_provider = .{ .execute_fn = unavailableDevboxForTest },
+        .devbox_provider = devbox_executor.unavailable_provider,
     };
 }
 
@@ -3959,7 +3948,7 @@ fn testProcessQueuedPromptChecksTimeout(deps: *const agent_runtime.AgentRuntimeD
     try std.testing.expect(tool_ctx.on_web_fetch_progress != null);
     try std.testing.expect(ctx.web_search_runtime.provider == null);
     try std.testing.expectEqualStrings("/models", tool_ctx.gateway_models_path);
-    try std.testing.expect(tool_ctx.devbox_provider.?.execute_fn == unavailableDevboxForTest);
+    try std.testing.expect(tool_ctx.devbox_provider.?.execute_fn == devbox_executor.unavailable_provider.execute_fn);
     try testPushAssistantText(deps, "assistant text");
 }
 

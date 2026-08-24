@@ -433,13 +433,12 @@ async function launch(
     env: {
       HOME: fixture.home,
       SHELL: TERMINAL_FIXTURE_SHELL,
-      AI_GATEWAY_API_KEY: "fake-terminal-tool-key",
-      VERCEL_OIDC_TOKEN: undefined,
+      ANTHROPIC_API_KEY: "fake-terminal-tool-key",
       FX_AUTO_UPGRADE: "0",
       FX_PERMISSION_MODE: "yolo",
       FX_MODEL: SUPERGROK_MODEL,
-      FX_GATEWAY_BASE_URL: gateway.baseUrl,
-      FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+      ANTHROPIC_BASE_URL: gateway.baseUrl,
+      GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
       FX_TRACE_LOG: fixture.tracePath,
       FX_TRACE_SCOPES:
         "input,terminal,terminal_client,terminal_store,terminal_host,agent,worker,gateway",

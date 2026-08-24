@@ -482,7 +482,7 @@ fn consumeSse(
     on_tool_input_chunk: ?stream_provider.StreamCallback,
     cancel_flag: *std.atomic.Value(bool),
     content_capture_limit: ?usize,
-) !types.GatewayCompletion {
+) !types.ProviderCompletion {
     var content: std.ArrayList(u8) = .empty;
     errdefer content.deinit(alloc);
     var provider_state: std.Io.Writer.Allocating = .init(alloc);
@@ -812,7 +812,7 @@ test "OpenAI Codex rejects a wrong-origin credential before network I/O" {
         error.CodexSubscriptionCredentialRequired,
         agent_stream_provider.stream(std.testing.allocator, .{
             .api_key = "gateway-key",
-            .credential_source = .ai_gateway_api_key,
+            .credential_source = .custom_provider,
             .team = null,
             .model = "gpt-5.6-sol",
             .retry_count = 1,

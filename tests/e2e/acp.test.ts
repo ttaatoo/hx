@@ -145,10 +145,9 @@ function fakeGatewayEnv(
 ) {
   return {
     HOME: root.home,
-    AI_GATEWAY_API_KEY: "fake-acp-file-key",
-    VERCEL_OIDC_TOKEN: "",
-    FX_GATEWAY_BASE_URL: gateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+    ANTHROPIC_API_KEY: "fake-acp-file-key",
+    ANTHROPIC_BASE_URL: gateway.baseUrl,
+    GROK_CLI_CHAT_PROXY_BASE_URL: `${gateway.baseUrl}/v1`,
     FX_MODEL: SUPERGROK_MODEL,
     FX_PERMISSION_MODE: "yolo",
     FX_AUTO_UPGRADE: "0",
@@ -1584,7 +1583,6 @@ describe("acp: model-independent", () => {
           cwd: root.workspace,
           env: {
             HOME: root.home,
-            VERCEL_OIDC_TOKEN: "",
           },
           timeoutMs: TIMEOUT,
         });
@@ -1595,8 +1593,7 @@ describe("acp: model-independent", () => {
           cwd: root.workspace,
           env: {
             HOME: root.home,
-            AI_GATEWAY_API_KEY: "e2e-placeholder",
-            VERCEL_OIDC_TOKEN: "",
+            ANTHROPIC_API_KEY: "e2e-placeholder",
           },
         });
         const resp = await client.request(
@@ -3866,8 +3863,7 @@ describe("acp: model-independent", () => {
           cwd: root.workspace,
           env: {
             HOME: root.home,
-            AI_GATEWAY_API_KEY: "e2e-placeholder",
-            VERCEL_OIDC_TOKEN: "",
+            ANTHROPIC_API_KEY: "e2e-placeholder",
           },
         });
 
@@ -3915,8 +3911,7 @@ describe("acp: model-independent", () => {
           cwd: root.workspace,
           env: {
             HOME: root.home,
-            AI_GATEWAY_API_KEY: "e2e-placeholder",
-            VERCEL_OIDC_TOKEN: "",
+            ANTHROPIC_API_KEY: "e2e-placeholder",
           },
         });
         expect(
@@ -4332,7 +4327,7 @@ describe("acp: model-independent", () => {
     "invalid JSON returns parse error without stderr",
     async () => {
       client = await AcpClient.create({
-        env: { AI_GATEWAY_API_KEY: "", VERCEL_OIDC_TOKEN: "" },
+        env: { ANTHROPIC_API_KEY: "" },
       });
       (client as any).proc.stdin!.write("this is not json\n");
       const resp = await client.readLine() as any;
@@ -4347,7 +4342,7 @@ describe("acp: model-independent", () => {
     "exact and oversized request frames preserve the ACP connection boundary",
     async () => {
       client = await AcpClient.create({
-        env: { AI_GATEWAY_API_KEY: "", VERCEL_OIDC_TOKEN: "" },
+        env: { ANTHROPIC_API_KEY: "" },
       });
       const stdin = (client as any).proc.stdin!;
       const frameLimit = 8 * 1024 * 1024;
@@ -4398,7 +4393,7 @@ describe("acp: model-independent", () => {
     "method before initialize returns error -32600",
     async () => {
       client = await AcpClient.create({
-        env: { AI_GATEWAY_API_KEY: "", VERCEL_OIDC_TOKEN: "" },
+        env: { ANTHROPIC_API_KEY: "" },
       });
       const resp = await client.request("session/new", {}, 1) as any;
       expect(resp.error).toBeDefined();
@@ -4425,7 +4420,6 @@ describe("acp: model-independent", () => {
             ANTHROPIC_API_KEY: "e2e-placeholder",
             FX_MODEL: "claude-opus-4-6",
             FX_E2E_NO_GROK_AUTH: "1",
-            VERCEL_OIDC_TOKEN: "",
             FX_E2E_FAIL_ON_DURABLE_MUTATION: "1",
           },
         });
@@ -4574,7 +4568,6 @@ describe("acp: model-independent", () => {
             ANTHROPIC_API_KEY: "e2e-placeholder",
             FX_MODEL: "claude-opus-4-6",
             FX_E2E_NO_GROK_AUTH: "1",
-            VERCEL_OIDC_TOKEN: "",
             FX_E2E_FAIL_ON_DURABLE_MUTATION: "1",
           },
         });
@@ -4603,7 +4596,6 @@ describe("acp: model-independent", () => {
           ANTHROPIC_API_KEY: "e2e-placeholder",
           FX_MODEL: "claude-opus-4-6",
           FX_E2E_NO_GROK_AUTH: "1",
-          VERCEL_OIDC_TOKEN: "",
         },
       });
       expect(

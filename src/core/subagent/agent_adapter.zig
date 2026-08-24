@@ -203,7 +203,7 @@ pub fn run(
             return error.ProviderFailed;
         };
         routed_config.tool_context.api_key = credential.token;
-        routed_config.tool_context.gateway_team = credential.gatewayTeam();
+        routed_config.tool_context.gateway_team = null;
         routed_config.tool_context.credential_source = credential.source;
         routed_config.tool_context.account_id = credential.accountId();
     }

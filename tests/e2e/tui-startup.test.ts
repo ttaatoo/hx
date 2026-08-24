@@ -81,7 +81,6 @@ describe.skipIf(SKIP_TMUX)("tui: fresh-session commands", () => {
           env: {
             HOME: home,
             AI_GATEWAY_API_KEY: undefined,
-            VERCEL_OIDC_TOKEN: undefined,
             FX_AUTO_UPGRADE: "0",
             FX_DISABLE_KEYCHAIN: "1",
             FX_SKIP_ONBOARDING: "1",
@@ -189,7 +188,6 @@ describe.skipIf(SKIP_TMUX)("tui: fresh-session commands", () => {
           env: {
             HOME: home,
             AI_GATEWAY_API_KEY: undefined,
-            VERCEL_OIDC_TOKEN: undefined,
             FX_AUTO_UPGRADE: "0",
             FX_DISABLE_KEYCHAIN: "1",
             FX_SKIP_ONBOARDING: "1",
@@ -375,7 +373,6 @@ describe.skipIf(SKIP_TMUX)("tui: credential onboarding", () => {
       session = await TmuxSession.create({
         env: {
           AI_GATEWAY_API_KEY: undefined,
-          VERCEL_OIDC_TOKEN: undefined,
           HOME: home,
           FX_AUTO_UPGRADE: "0",
           FX_DISABLE_KEYCHAIN: "1",
@@ -398,7 +395,6 @@ describe.skipIf(SKIP_TMUX)("tui: credential onboarding", () => {
       const home = realpathSync(mkdtempSync(join(tmpdir(), "fx-e2e-login-onboarding-")));
       const env = {
         AI_GATEWAY_API_KEY: undefined,
-        VERCEL_OIDC_TOKEN: undefined,
         HOME: home,
         USER: "fx-e2e-login-onboarding",
         FX_AUTO_UPGRADE: "0",
@@ -409,7 +405,7 @@ describe.skipIf(SKIP_TMUX)("tui: credential onboarding", () => {
 
       session = await TmuxSession.create({ env });
 
-      const initial = await session.waitForText("Welcome to fx", TIMEOUT);
+      const initial = await session.waitForText("Welcome to hx", TIMEOUT);
       expect(initial).toContain("Sign in with SuperGrok");
       expect(initial).toContain("Sign in with Codex");
       expect(initial).toContain("Esc to set up later");
@@ -421,14 +417,14 @@ describe.skipIf(SKIP_TMUX)("tui: credential onboarding", () => {
 
       await session.sendKeys("Escape");
       const skipped = await session.waitForPane(
-        (pane) => !pane.includes("Welcome to fx") && !pane.includes("Sign in with SuperGrok"),
+        (pane) => !pane.includes("Welcome to hx") && !pane.includes("Sign in with SuperGrok"),
         TIMEOUT,
       );
       expect(skipped).not.toContain("Add an API key");
 
       await session.kill();
       session = await TmuxSession.create({ env });
-      const restarted = await session.waitForText("Welcome to fx", TIMEOUT);
+      const restarted = await session.waitForText("Welcome to hx", TIMEOUT);
       expect(restarted).toContain("Sign in with SuperGrok");
       expect(restarted).toContain("Sign in with Codex");
       expect(restarted).not.toContain("Sign in with Vercel");

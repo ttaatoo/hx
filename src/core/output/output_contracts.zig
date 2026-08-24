@@ -434,9 +434,6 @@ pub const StatusSnapshot = struct {
         if (self.auth_help) |help| {
             try out.writer.print("[status] auth_help={s}\n", .{help});
         }
-        if (self.auth.team) |team| {
-            try out.writer.print("[status] team={s}\n", .{team});
-        }
         try out.writer.print("[status] permission_mode={s}\n", .{permissionModeLabel(self.permission_mode)});
         try out.writer.print("[status] sandbox={s}\n", .{sandbox.publicModeForBackend(self.sandbox_backend).label()});
         try out.writer.print("[status] workspace={s}\n", .{self.workspace_root});
@@ -468,7 +465,6 @@ pub const StatusSnapshot = struct {
         try out.writer.print("auth_refreshable={}\n", .{self.auth.refreshable()});
         if (self.auth.expired) try out.writer.writeAll("auth_expired=true\n");
         if (self.auth_help) |help| try out.writer.print("auth_help={s}\n", .{help});
-        if (self.auth.team) |team| try out.writer.print("team={s}\n", .{team});
         try out.writer.print("permission_mode={s}\n", .{permissionModeLabel(self.permission_mode)});
         try out.writer.print("sandbox={s}\n", .{sandbox.publicModeForBackend(self.sandbox_backend).label()});
         try out.writer.print("workspace={s}\n", .{self.workspace_root});
@@ -528,10 +524,6 @@ pub const StatusSnapshot = struct {
         if (self.auth_help) |help| {
             try writer.writeAll(",\"auth_help\":");
             try std.json.Stringify.value(help, .{}, writer);
-        }
-        if (self.auth.team) |team| {
-            try writer.writeAll(",\"team\":");
-            try std.json.Stringify.value(team, .{}, writer);
         }
         try writer.writeAll(",\"permission_mode\":");
         try std.json.Stringify.value(permissionModeLabel(self.permission_mode), .{}, writer);
@@ -753,10 +745,8 @@ pub const ModelListSnapshot = struct {
         const reason = self.public_only_reason orelse return "Using the public model catalog.";
         return switch (reason) {
             .no_credential => "No SuperGrok or Anthropic credential is configured. Run hx login grok, or set ANTHROPIC_API_KEY.",
-            .fx_login_team_required => "A retired login session is ignored. Run hx login grok.",
-            .fx_login_refresh_required => "A retired login session is ignored. Run hx login grok.",
-            .credential_refresh_failed => "A retired login credential was ignored. Run hx login grok.",
-            .authenticated_credential_rejected => "A retired login credential was ignored. Run hx login grok.",
+            .credential_refresh_failed => "A SuperGrok or Codex credential could not be refreshed. Run hx login grok.",
+            .authenticated_credential_rejected => "A SuperGrok or Codex credential was rejected. Run hx login grok.",
             .chatgpt_subscription => "Codex models require an authenticated Codex catalog.",
             .grok_subscription => "SuperGrok models require an authenticated SuperGrok session.",
         };
@@ -1228,9 +1218,6 @@ pub const DoctorSnapshot = struct {
         try out.writer.print("[doctor] auth={s}\n", .{self.auth.activeSourceLabel()});
         try out.writer.print("[doctor] auth_refreshable={}\n", .{self.auth.refreshable()});
         if (self.auth.expired) try out.writer.writeAll("[doctor] auth_expired=true\n");
-        if (self.auth.team) |team| {
-            try out.writer.print("[doctor] team={s}\n", .{team});
-        }
         try out.writer.print("[doctor] permission_mode={s}\n", .{permissionModeLabel(self.permission_mode)});
         try out.writer.print("[doctor] agent_step_limit={d}\n", .{self.agent_step_limit});
 
@@ -1267,10 +1254,6 @@ pub const DoctorSnapshot = struct {
         try std.json.Stringify.value(self.auth.activeSourceLabel(), .{}, writer);
         try writer.print(",\"auth_refreshable\":{}", .{self.auth.refreshable()});
         if (self.auth.expired) try writer.writeAll(",\"auth_expired\":true");
-        if (self.auth.team) |team| {
-            try writer.writeAll(",\"team\":");
-            try std.json.Stringify.value(team, .{}, writer);
-        }
         try writer.writeAll(",\"permission_mode\":");
         try std.json.Stringify.value(permissionModeLabel(self.permission_mode), .{}, writer);
         try writer.print(",\"agent_step_limit\":{d},\"checks\":[", .{self.agent_step_limit});
@@ -1976,12 +1959,12 @@ test "core status snapshot text and json stay stable" {
     );
 }
 
-test "core status snapshot includes selected team when present" {
+test "core status snapshot omits retired team context" {
     const snapshot = StatusSnapshot{
         .model = "alpha",
-        .auth = .{ .active_source = .fx_login, .team = "example-team" },
+        .auth = .{ .active_source = .grok_subscription },
         .permission_mode = .ask,
-        .workspace_root = "/tmp/fx",
+        .workspace_root = "/tmp/hx",
         .history_turns = 0,
         .session_permission_grants = 0,
         .agent_step_limit = 24,
@@ -1990,16 +1973,18 @@ test "core status snapshot includes selected team when present" {
     const text = try snapshot.renderText(std.testing.allocator);
     defer std.testing.allocator.free(text);
     try std.testing.expectEqualStrings(
-        "[status] model=alpha\n[status] model_source=SuperGrok\n[status] update_channel=stable\n[status] build_channel=stable\n[status] auth=hx login\n[status] auth_refreshable=true\n[status] team=example-team\n[status] permission_mode=ask\n[status] sandbox=none\n[status] workspace=/tmp/fx\n[status] history_turns=0\n[status] session_permission_grants=0\n[status] agent_step_limit=24\n",
+        "[status] model=alpha\n[status] model_source=SuperGrok\n[status] update_channel=stable\n[status] build_channel=stable\n[status] auth=SuperGrok subscription\n[status] auth_refreshable=true\n[status] permission_mode=ask\n[status] sandbox=none\n[status] workspace=/tmp/hx\n[status] history_turns=0\n[status] session_permission_grants=0\n[status] agent_step_limit=24\n",
         text,
     );
+    try std.testing.expect(std.mem.find(u8, text, "team=") == null);
 
     const json = try snapshot.renderJson(std.testing.allocator);
     defer std.testing.allocator.free(json);
     try std.testing.expectEqualStrings(
-        "{\"kind\":\"status\",\"model\":\"alpha\",\"model_source\":\"SuperGrok\",\"update_channel\":\"stable\",\"build_channel\":\"stable\",\"build_revision\":\"\",\"auth\":\"hx login\",\"auth_refreshable\":true,\"team\":\"example-team\",\"permission_mode\":\"ask\",\"sandbox\":\"none\",\"workspace\":\"/tmp/fx\",\"history_turns\":0,\"session_permission_grants\":0,\"agent_step_limit\":24}",
+        "{\"kind\":\"status\",\"model\":\"alpha\",\"model_source\":\"SuperGrok\",\"update_channel\":\"stable\",\"build_channel\":\"stable\",\"build_revision\":\"\",\"auth\":\"SuperGrok subscription\",\"auth_refreshable\":true,\"permission_mode\":\"ask\",\"sandbox\":\"none\",\"workspace\":\"/tmp/hx\",\"history_turns\":0,\"session_permission_grants\":0,\"agent_step_limit\":24}",
         json,
     );
+    try std.testing.expect(std.mem.find(u8, json, "\"team\"") == null);
 }
 
 test "status distinguishes the selected model route from connected providers" {
@@ -2008,7 +1993,6 @@ test "status distinguishes the selected model route from connected providers" {
         .provider = .codex,
         .auth = .{
             .active_source = .chatgpt_subscription,
-            .gateway_connected = true,
             .chatgpt_connected = true,
         },
         .permission_mode = .auto,
@@ -2155,8 +2139,8 @@ test "model list explains public-only and rejected-credential catalogs" {
         },
         .{
             .snapshot = rejected,
-            .text = "[models] 1 available\n - alpha · SuperGrok\n[models] A retired login credential was ignored. Run hx login grok.\n",
-            .body = "1 available\n - alpha · SuperGrok\nA retired login credential was ignored. Run hx login grok.",
+            .text = "[models] 1 available\n - alpha · SuperGrok\n[models] A SuperGrok or Codex credential was rejected. Run hx login grok.\n",
+            .body = "1 available\n - alpha · SuperGrok\nA SuperGrok or Codex credential was rejected. Run hx login grok.",
         },
         .{
             .snapshot = .{ .ids = &.{}, .private_models_hidden = true, .public_only_reason = .no_credential },
@@ -2165,8 +2149,8 @@ test "model list explains public-only and rejected-credential catalogs" {
         },
         .{
             .snapshot = .{ .ids = &.{}, .private_models_hidden = true, .public_only_reason = .authenticated_credential_rejected },
-            .text = "[models] no models returned by SuperGrok\n[models] A retired login credential was ignored. Run hx login grok.\n",
-            .body = "no models returned by SuperGrok\nA retired login credential was ignored. Run hx login grok.",
+            .text = "[models] no models returned by SuperGrok\n[models] A SuperGrok or Codex credential was rejected. Run hx login grok.\n",
+            .body = "no models returned by SuperGrok\nA SuperGrok or Codex credential was rejected. Run hx login grok.",
         },
         .{
             .snapshot = .{ .ids = &.{}, .provider = .codex },

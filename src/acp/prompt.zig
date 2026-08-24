@@ -56,8 +56,8 @@ const tool_result_errors = @import("../core/tooling/tool_result_errors.zig");
 const tool_runtime = @import("../core/tooling/tool_runtime.zig");
 const command_output_content = @import("../core/tooling/command_output_content.zig");
 const builtin_tools = @import("../builtins/tools.zig");
-const test_builtin_gateway = if (std_builtin.is_test)
-    @import("../builtins/gateway.zig")
+const test_builtin_providers = if (std_builtin.is_test)
+    @import("../builtins/providers.zig")
 else
     struct {};
 const types = @import("../core/shared/types.zig");
@@ -1104,7 +1104,7 @@ fn resolveModelCapabilities(
         ctx.state.alloc,
         ctx.state.cfg.gateway_provider.model_catalog,
         .{
-            .access = credentials.catalogAccessForCredential(session.credential_source, session.api_key, ctx.state.gateway_team),
+            .access = credentials.catalogAccessForCredential(session.credential_source, session.api_key),
             .endpoint = ctx.state.cfg.gateway_models_path,
             .cancel_flag = &session.cancel_flag,
         },
@@ -3334,16 +3334,6 @@ fn testModelPromptOverlay(model: []const u8) ?[]const u8 {
     return if (std.mem.eql(u8, model, "test-model")) "ACP test model overlay" else null;
 }
 
-fn unavailableDevboxForTest(
-    _: ?*anyopaque,
-    _: Allocator,
-    _: []const u8,
-    _: []const u8,
-    _: devbox_executor.Control,
-) devbox_executor.ProviderError!devbox_executor.VercelOutcome {
-    return .unavailable;
-}
-
 fn testServerConfig() server.Config {
     return .{
         .default_model = "test-model",
@@ -3351,7 +3341,7 @@ fn testServerConfig() server.Config {
         .gateway_retry_count = 0,
         .gateway_chat_url = "http://127.0.0.1",
         .gateway_models_path = "/models",
-        .gateway_provider = test_builtin_gateway.provider,
+        .gateway_provider = test_builtin_providers.provider,
         .secret_store = host.unavailable_secret_store,
         .prompt_policy = .{
             .system_prompt = "test",
@@ -3367,7 +3357,7 @@ fn testServerConfig() server.Config {
         .max_history_turns = 8,
         .context_registry = test_acp_context_registry,
         .mode_registry = test_acp_mode_registry,
-        .devbox_provider = .{ .execute_fn = unavailableDevboxForTest },
+        .devbox_provider = devbox_executor.unavailable_provider,
     };
 }
 
@@ -4366,5 +4356,5 @@ test "ACP prompt agent config carries request options from active session" {
     try std.testing.expect(tool_ctx.web_fetch_runtime.? == &state.web_fetch_runtime);
     try std.testing.expectEqualStrings("team_123", tool_ctx.gateway_team.?);
     try std.testing.expectEqualStrings("/models", tool_ctx.gateway_models_path);
-    try std.testing.expect(tool_ctx.devbox_provider.?.execute_fn == unavailableDevboxForTest);
+    try std.testing.expect(tool_ctx.devbox_provider.?.execute_fn == devbox_executor.unavailable_provider.execute_fn);
 }
