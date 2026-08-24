@@ -32,7 +32,7 @@ function createIsolatedRoot(prefix: string) {
   const home = join(root, "home");
   const workspace = join(root, "workspace");
   const external = join(root, "external");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".hx"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   mkdirSync(external, { recursive: true });
   return {
@@ -83,13 +83,13 @@ async function runWithFakeGateway(
 
 describe("external file permissions", () => {
   test(
-    "fx ask --yolo bypasses a configured write denial without a classifier request",
+    "hx ask --yolo bypasses a configured write denial without a classifier request",
     async () => {
       const root = createIsolatedRoot("fx-yolo-permissions-");
       try {
         const target = join(root.external, "yolo-write.txt");
         const tracePath = join(root.root, "permission-trace.log");
-        const settingsPath = join(root.home, ".fx", "settings.json");
+        const settingsPath = join(root.home, ".hx", "settings.json");
         writeFileSync(
           settingsPath,
           JSON.stringify({
@@ -148,7 +148,7 @@ describe("external file permissions", () => {
   );
 
   test(
-    "fx ask reads external paths and exercises classifier and rule-gated writes",
+    "hx ask reads external paths and exercises classifier and rule-gated writes",
     async () => {
       const root = createIsolatedRoot("fx-file-permissions-");
       try {
@@ -158,7 +158,7 @@ describe("external file permissions", () => {
         const tracePath = join(root.root, "permission-trace.log");
         writeFileSync(readTarget, "FX_E2E_EXTERNAL_READ\n");
         writeFileSync(classifiedTarget, "before");
-        writeFileSync(join(root.home, ".fx", "settings.json"), "{}");
+        writeFileSync(join(root.home, ".hx", "settings.json"), "{}");
 
         const { result: readResult } = await runWithFakeGateway(
           root,
@@ -208,7 +208,7 @@ describe("external file permissions", () => {
         expect(readFileSync(classifiedTarget, "utf-8")).toBe("FX_E2E_EXTERNAL_CLASSIFIED");
 
         writeFileSync(
-          join(root.home, ".fx", "settings.json"),
+          join(root.home, ".hx", "settings.json"),
           JSON.stringify({
             permission: {
               edit: {

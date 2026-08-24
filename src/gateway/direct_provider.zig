@@ -338,8 +338,8 @@ test "direct catalog lists configured models without a gateway credential" {
     const alloc = std.testing.allocator;
     var tmp = std.testing.tmpDir(.{});
     defer tmp.cleanup();
-    try tmp.dir.createDirPath(io_mod.getIo(), "home/.fx");
-    var providers_file = try tmp.dir.createFile(io_mod.getIo(), "home/.fx/providers.json", .{});
+    try tmp.dir.createDirPath(io_mod.getIo(), "home/.hx");
+    var providers_file = try tmp.dir.createFile(io_mod.getIo(), "home/.hx/providers.json", .{});
     try providers_file.writeStreamingAll(io_mod.getIo(),
         \\{"providers":{"anthropic":{"api":"anthropic-messages","models":[{"id":"claude-opus-4-6"}]},"xai":{"api":"openai-completions","models":[{"id":"grok-4.6"}]}}}
     );

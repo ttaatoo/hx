@@ -2,17 +2,18 @@ const std = @import("std");
 const builtin = @import("builtin");
 const build_options = @import("build_options");
 const io_mod = @import("core/shared/io.zig");
+const profile_paths = @import("core/shared/profile_paths.zig");
 
 pub const version = "0.0.5";
 
 comptime {
     switch (builtin.os.tag) {
         .linux, .macos => {},
-        else => @compileError("fx supports Linux and macOS only"),
+        else => @compileError("hx supports Linux and macOS only"),
     }
     switch (builtin.cpu.arch) {
         .x86_64, .aarch64 => {},
-        else => @compileError("fx supports x86_64 and aarch64 only"),
+        else => @compileError("hx supports x86_64 and aarch64 only"),
     }
 }
 
@@ -2900,6 +2901,9 @@ fn runNonBenchmark(raw_args: []const [*:0]const u8, raw_env: RawEnviron, cli_arg
     io_mod.setRawEnviron(raw_env);
 
     const alloc = processAllocator();
+    if (io_mod.getenv("HOME")) |home| {
+        profile_paths.adoptLeftoverRootIfMissing(alloc, home);
+    }
     const cfg = if (cli_args.len == 0)
         emptyEntryConfig()
     else if (needsFullEntryConfig(cli_args))
@@ -3406,8 +3410,8 @@ test "session reset traces and clears active paste state" {
 }
 
 test "raw benchmark preflight matches no-arg FX_BENCH presence" {
-    const no_args = [_][*:0]const u8{"fx"};
-    const help_args = [_][*:0]const u8{ "fx", "help" };
+    const no_args = [_][*:0]const u8{"hx"};
+    const help_args = [_][*:0]const u8{ "hx", "help" };
     const bench_env = [_:null]?[*:0]const u8{"FX_BENCH=1"};
     const empty_env = [_:null]?[*:0]const u8{};
 
@@ -3798,6 +3802,8 @@ test {
     _ = @import("core/cli/cli_surface.zig");
     _ = @import("core/workspace/change_tracker.zig");
     _ = @import("core/shared/collections.zig");
+    _ = @import("core/shared/product.zig");
+    _ = @import("core/shared/profile_paths.zig");
     _ = @import("core/slash_commands/command_router.zig");
     _ = @import("core/slash_commands/command_specs.zig");
     _ = @import("core/config/config_runtime.zig");

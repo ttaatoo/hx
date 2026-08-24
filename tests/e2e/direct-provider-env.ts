@@ -33,7 +33,7 @@ function originOf(value: string): string {
 }
 
 function ensureFxDir(home: string): string {
-  const fxDir = join(home, ".fx");
+  const fxDir = join(home, ".hx");
   mkdirSync(fxDir, { recursive: true, mode: 0o700 });
   chmodSync(fxDir, 0o700);
   return fxDir;
@@ -74,7 +74,7 @@ export function maybeWriteE2eGrokAuth(
   env: Record<string, string | undefined>,
 ): void {
   if (!shouldWriteE2eGrokAuth(env) || !env.HOME) return;
-  const path = join(env.HOME, ".fx", "grok-auth.json");
+  const path = join(env.HOME, ".hx", "grok-auth.json");
   if (!existsSync(path)) writeE2eGrokAuthIfPossible(env.HOME);
 }
 
@@ -90,7 +90,7 @@ export function ensureTuiSupergrokHome(
     isLoopbackUrl(env.FX_GATEWAY_CHAT_URL);
   if (!wantsLoopbackChat) return;
   if (!writeE2eGrokAuthIfPossible(home)) return;
-  if (!existsSync(join(home, ".fx", "providers.json"))) {
+  if (!existsSync(join(home, ".hx", "providers.json"))) {
     try {
       writeE2eXaiProviders(home);
     } catch (error) {
@@ -103,7 +103,7 @@ export function ensureTuiSupergrokHome(
 function readProviders(home: string): {
   providers: Record<string, Record<string, unknown>>;
 } {
-  const path = join(home, ".fx", "providers.json");
+  const path = join(home, ".hx", "providers.json");
   if (!existsSync(path)) return { providers: {} };
   try {
     const parsed = JSON.parse(readFileSync(path, "utf8")) as {
@@ -201,7 +201,7 @@ export function adaptRetiredGatewayTestEnv(
     next.ANTHROPIC_API_KEY &&
     wantsAnthropicCatalog &&
     next.FX_E2E_NO_GROK_AUTH !== "1" &&
-    !existsSync(join(next.HOME, ".fx", "providers.json"))
+    !existsSync(join(next.HOME, ".hx", "providers.json"))
   ) {
     writeE2eAnthropicProviders(next.HOME, next.ANTHROPIC_BASE_URL, model);
   }

@@ -100,19 +100,19 @@ jobs:
       - name: Package
         # sha256sum is available on all ubuntu runners used in this workflow
         run: |
-          package_dir="$RUNNER_TEMP/fx-package-${{ matrix.name }}"
+          package_dir="$RUNNER_TEMP/hx-package-${{ matrix.name }}"
           mkdir -p "$package_dir"
-          cp zig-out/bin/fx LICENSE THIRD_PARTY_NOTICES.md "$package_dir/"
-          tar -czf fx-${{ matrix.name }}.tar.gz -C "$package_dir" fx LICENSE THIRD_PARTY_NOTICES.md
-          sha256sum fx-${{ matrix.name }}.tar.gz > fx-${{ matrix.name }}.tar.gz.sha256
+          cp zig-out/bin/hx LICENSE NOTICE THIRD_PARTY_NOTICES.md "$package_dir/"
+          tar -czf hx-${{ matrix.name }}.tar.gz -C "$package_dir" hx LICENSE NOTICE THIRD_PARTY_NOTICES.md
+          sha256sum hx-${{ matrix.name }}.tar.gz > hx-${{ matrix.name }}.tar.gz.sha256
 
       - name: Upload artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: fx-${{ matrix.name }}
+          name: hx-${{ matrix.name }}
           path: |
-            fx-${{ matrix.name }}.tar.gz
-            fx-${{ matrix.name }}.tar.gz.sha256
+            hx-${{ matrix.name }}.tar.gz
+            hx-${{ matrix.name }}.tar.gz.sha256
 
   build-macos-arm64:
     needs: check-version
@@ -136,19 +136,19 @@ jobs:
       - name: Package
         run: |
           set -euo pipefail
-          package_dir="$RUNNER_TEMP/fx-package-macos-aarch64"
+          package_dir="$RUNNER_TEMP/hx-package-macos-aarch64"
           mkdir -p "$package_dir"
-          cp zig-out/bin/fx LICENSE THIRD_PARTY_NOTICES.md "$package_dir/"
-          tar -czf fx-macos-aarch64.tar.gz -C "$package_dir" fx LICENSE THIRD_PARTY_NOTICES.md
-          shasum -a 256 fx-macos-aarch64.tar.gz > fx-macos-aarch64.tar.gz.sha256
+          cp zig-out/bin/hx LICENSE NOTICE THIRD_PARTY_NOTICES.md "$package_dir/"
+          tar -czf hx-macos-aarch64.tar.gz -C "$package_dir" hx LICENSE NOTICE THIRD_PARTY_NOTICES.md
+          shasum -a 256 hx-macos-aarch64.tar.gz > hx-macos-aarch64.tar.gz.sha256
 
       - name: Upload artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: fx-macos-aarch64
+          name: hx-macos-aarch64
           path: |
-            fx-macos-aarch64.tar.gz
-            fx-macos-aarch64.tar.gz.sha256
+            hx-macos-aarch64.tar.gz
+            hx-macos-aarch64.tar.gz.sha256
 
   release:
     needs: [check-version, build, build-macos-arm64]
@@ -163,17 +163,17 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          pattern: fx-*
+          pattern: hx-*
           merge-multiple: true
 
       - name: Alias macOS arm64 tarball for the Homebrew formula
         run: |
           set -euo pipefail
-          # Native macos-15 packages fx-macos-aarch64.tar.gz (upgrade platform id).
-          # Formula/fx.rb downloads fx-macos-arm64.tar.gz from the GitHub Release.
-          if [ -f fx-macos-aarch64.tar.gz ]; then
-            cp fx-macos-aarch64.tar.gz fx-macos-arm64.tar.gz
-            sha256sum fx-macos-arm64.tar.gz > fx-macos-arm64.tar.gz.sha256
+          # Native macos-15 packages hx-macos-aarch64.tar.gz (upgrade platform id).
+          # Formula/hx.rb downloads hx-macos-arm64.tar.gz from the GitHub Release.
+          if [ -f hx-macos-aarch64.tar.gz ]; then
+            cp hx-macos-aarch64.tar.gz hx-macos-arm64.tar.gz
+            sha256sum hx-macos-arm64.tar.gz > hx-macos-arm64.tar.gz.sha256
           fi
 
       - name: Create git tag
@@ -212,5 +212,5 @@ jobs:
           body_path: /tmp/release-notes.md
           fail_on_unmatched_files: true
           files: |
-            fx-*.tar.gz
-            fx-*.tar.gz.sha256
+            hx-*.tar.gz
+            hx-*.tar.gz.sha256

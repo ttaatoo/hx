@@ -1,10 +1,8 @@
 name: Dev Release
 
+# hx publishes GitHub Releases only. There is no Vercel blob CDN.
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,10 +13,6 @@ concurrency:
 
 jobs:
   build:
-    if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_repository.full_name == github.repository
     name: Build ${{ matrix.name }}
     runs-on: ubuntu-latest
     strategy:
@@ -35,8 +29,6 @@ jobs:
             target: aarch64-macos
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
@@ -48,88 +40,16 @@ jobs:
 
       - name: Package
         run: |
-          package_dir="$RUNNER_TEMP/fx-package-${{ matrix.name }}"
+          package_dir="$RUNNER_TEMP/hx-package-${{ matrix.name }}"
           mkdir -p "$package_dir"
-          cp zig-out/bin/fx LICENSE THIRD_PARTY_NOTICES.md "$package_dir/"
-          tar -czf fx-${{ matrix.name }}.tar.gz -C "$package_dir" fx LICENSE THIRD_PARTY_NOTICES.md
-          sha256sum fx-${{ matrix.name }}.tar.gz > fx-${{ matrix.name }}.tar.gz.sha256
+          cp zig-out/bin/hx LICENSE NOTICE THIRD_PARTY_NOTICES.md "$package_dir/"
+          tar -czf hx-${{ matrix.name }}.tar.gz -C "$package_dir" hx LICENSE NOTICE THIRD_PARTY_NOTICES.md
+          sha256sum hx-${{ matrix.name }}.tar.gz > hx-${{ matrix.name }}.tar.gz.sha256
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: fx-${{ matrix.name }}
+          name: hx-${{ matrix.name }}
           path: |
-            fx-${{ matrix.name }}.tar.gz
-            fx-${{ matrix.name }}.tar.gz.sha256
-
-  publish:
-    needs: [build]
-    runs-on: ubuntu-latest
-    env:
-      RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
-      BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          merge-multiple: true
-
-      - name: Publish immutable dev artifacts
-        run: |
-          set -euo pipefail
-
-          for FILE in fx-*.tar.gz fx-*.tar.gz.sha256; do
-            [ -f "$FILE" ] || continue
-            CONTENT_TYPE="application/octet-stream"
-            [[ "$FILE" == *.sha256 ]] && CONTENT_TYPE="text/plain"
-            [[ "$FILE" == *.tar.gz ]] && CONTENT_TYPE="application/gzip"
-
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-              -X PUT "https://blob.vercel-storage.com/cli/dev/${RELEASE_SHA}/${FILE}" \
-              -H "Authorization: Bearer ${BLOB_READ_WRITE_TOKEN}" \
-              -H "x-api-version: 7" \
-              -H "x-content-type: ${CONTENT_TYPE}" \
-              -H "x-add-random-suffix: 0" \
-              -H "x-cache-control-max-age: 31536000" \
-              --data-binary "@${FILE}")
-            echo "Uploaded ${FILE} for ${RELEASE_SHA} ($HTTP_CODE)"
-            if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
-              echo "::error::Failed to upload ${FILE} to the dev channel ($HTTP_CODE)"
-              exit 1
-            fi
-          done
-
-      - name: Point dev channel at this commit
-        id: point-dev
-        run: |
-          set -euo pipefail
-          echo "updated=false" >> "$GITHUB_OUTPUT"
-
-          MAIN_SHA=$(git ls-remote origin refs/heads/main | cut -f1)
-          if [ "$MAIN_SHA" != "$RELEASE_SHA" ]; then
-            echo "main advanced to ${MAIN_SHA}; leaving dev.json unchanged"
-            exit 0
-          fi
-
-          VERSION=$(grep 'pub const version' src/main.zig | head -1 | sed 's/.*"\(.*\)".*/\1/')
-          jq -n --arg version "$VERSION" --arg commit "$RELEASE_SHA" \
-            '{version: $version, commit: $commit}' > /tmp/dev.json
-
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X PUT "https://blob.vercel-storage.com/cli/dev.json" \
-            -H "Authorization: Bearer ${BLOB_READ_WRITE_TOKEN}" \
-            -H "x-api-version: 7" \
-            -H "x-content-type: application/json" \
-            -H "x-add-random-suffix: 0" \
-            -H "x-cache-control-max-age: 60" \
-            --data-binary "@/tmp/dev.json")
-          echo "Updated dev.json to ${RELEASE_SHA} ($HTTP_CODE)"
-          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
-            echo "::error::Failed to update dev.json ($HTTP_CODE)"
-            exit 1
-          fi
-          echo "updated=true" >> "$GITHUB_OUTPUT"
+            hx-${{ matrix.name }}.tar.gz
+            hx-${{ matrix.name }}.tar.gz.sha256

@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runFx } from "../evals/eval-helpers";
+import { FX_BIN, runFx } from "../evals/eval-helpers";
 import {
   LEGACY_REMOTE_TOOL_RESULT,
   LEGACY_SSE_TOOL_RESULT,
@@ -75,14 +75,14 @@ function createRoot(
   cleanupRoot = root;
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".hx"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".hx", "settings.json"),
     JSON.stringify({ maxxing_mode: "minimal" }),
   );
   writeFileSync(
-    join(home, ".fx", "mcp.json"),
+    join(home, ".hx", "mcp.json"),
     JSON.stringify({
       mcp: {
         fixture: {
@@ -411,7 +411,7 @@ describe("version-scoped legacy MCP remote transports", () => {
   }, 30_000);
 
   for (const version of VERSIONS) {
-    test(`fresh fx ask calls Streamable HTTP ${version} with its lifecycle headers`, async () => {
+    test(`fresh hx ask calls Streamable HTTP ${version} with its lifecycle headers`, async () => {
       streamable = startLegacyStreamableHttpFixture(version);
       const root = createRoot(`ask-${version}`, "http", streamable.url);
       gateway = startToolGateway(`${version} complete.`);
@@ -633,7 +633,7 @@ describe("version-scoped legacy MCP remote transports", () => {
           ], {
             models: [{ id: MODEL, type: "language", tags: ["tool-use"] }],
           });
-          const binary = join(REPO_ROOT, "zig-out", "bin", "fx");
+          const binary = FX_BIN;
           tui = await TmuxSession.create({
             isolated: true,
             cwd: root.workspace,
@@ -882,7 +882,7 @@ describe("version-scoped legacy MCP remote transports", () => {
     expect(gateway.requests[2]?.body).toContain("McpAuthenticationRequired");
   }, 30_000);
 
-  test("fresh fx ask uses explicit HTTP+SSE endpoint discovery and message routing", async () => {
+  test("fresh hx ask uses explicit HTTP+SSE endpoint discovery and message routing", async () => {
     legacySse = startLegacyHttpSseFixture();
     const root = createRoot(
       "sse-ask",

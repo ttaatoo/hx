@@ -127,7 +127,7 @@ async function createSession(cwd: string, home: string): Promise<string> {
 }
 
 function sessionIdsFromHome(home: string): string[] {
-  const sessionsRoot = join(home, ".fx", "sessions");
+  const sessionsRoot = join(home, ".hx", "sessions");
   return readdirSync(sessionsRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && entry.name !== "latest")
     .map((entry) => entry.name);
@@ -255,7 +255,7 @@ describe("session recovery", () => {
       mkdirSync(workspace);
       const workspaceRoot = realpathSync(workspace);
       const sessionId = await createSession(workspaceRoot, home);
-      const sessionDir = join(home, ".fx", "sessions", sessionId);
+      const sessionDir = join(home, ".hx", "sessions", sessionId);
       const currentName = readdirSync(sessionDir).find(
         (name) => name.startsWith("commit.") && name.endsWith(".json"),
       )!;
@@ -312,7 +312,7 @@ describe("session recovery", () => {
       writer.kill();
       await Bun.sleep(100);
 
-      const sessionDir = join(home, ".fx", "sessions", sessionId);
+      const sessionDir = join(home, ".hx", "sessions", sessionId);
       const watermarkName = readdirSync(sessionDir).find(
         (name) => name.startsWith("commit.") && name.endsWith(".json"),
       )!;
@@ -325,7 +325,7 @@ describe("session recovery", () => {
       });
       expect(doctor.code).toBe(0);
       expect(doctor.stdout).toContain("commit_watermark_invalid");
-      expect(doctor.stdout).toContain(`fx session recover ${sessionId}`);
+      expect(doctor.stdout).toContain(`hx session recover ${sessionId}`);
 
       const recovery = await runFx(
         ["session", "recover", sessionId, "--json"],
@@ -398,7 +398,7 @@ describe("session recovery", () => {
       expect(JSON.parse(sourceDetail.stdout)).toEqual(
         expect.objectContaining({
           code: "InvalidSessionFormat",
-          error: `session ${sessionId} is corrupt; run \`fx session recover ${sessionId}\``,
+          error: `session ${sessionId} is corrupt; run \`hx session recover ${sessionId}\``,
         }),
       );
     } finally {
@@ -424,7 +424,7 @@ describe("session recovery", () => {
       await Bun.sleep(10);
       const newestBId = await createSession(workspaceBRoot, home);
 
-      const sourceDir = join(home, ".fx", "sessions", sourceId);
+      const sourceDir = join(home, ".hx", "sessions", sourceId);
       const watermarkName = readdirSync(sourceDir).find(
         (name) => name.startsWith("commit.") && name.endsWith(".json"),
       )!;
@@ -502,7 +502,7 @@ describe("session recovery", () => {
         first.kill();
         await Bun.sleep(100);
 
-        const sessionsRoot = join(home, ".fx", "sessions");
+        const sessionsRoot = join(home, ".hx", "sessions");
         const ids = sessionIdsFromHome(home);
         expect(ids).toHaveLength(1);
         const sessionId = ids[0]!;
@@ -615,7 +615,7 @@ describe("session recovery", () => {
 
           const intentPath = join(
             home,
-            ".fx",
+            ".hx",
             "sessions",
             sessionId,
             "commit.pending.json",

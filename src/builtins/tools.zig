@@ -72,7 +72,7 @@ const create_folder_description =
 const file_info_description =
     "Inspect file or directory metadata, including type, size, and modified time. Paths may be workspace-relative or external using an absolute path, ~/..., or a relative workspace escape such as ../...; external access is subject to permission policy. When to use: check existence or distinguish files from directories before acting. When NOT to use: read contents, list child entries, search code, or infer git status.";
 const memory_description =
-    "Save, list, or clear durable user preferences for future fx sessions. When to use: the user explicitly asks to remember, forget, save, or recall a preference. When NOT to use: store task notes, secrets, project facts, temporary context, or anything the user did not ask to persist.";
+    "Save, list, or clear durable user preferences for future hx sessions. When to use: the user explicitly asks to remember, forget, save, or recall a preference. When NOT to use: store task notes, secrets, project facts, temporary context, or anything the user did not ask to persist.";
 const semantic_search_description =
     "Lexically search workspace files for concept keywords when exact symbols are unknown, ranking likely files for follow-up reads. This is not embedding or true semantic search. When to use: explore unfamiliar concepts, features, or responsibilities. When NOT to use: exact symbols, literal text, file names, counts, or narrow known-path inspection.";
 const open_file_description =
@@ -82,7 +82,7 @@ const web_fetch_description =
 const web_search_description =
     "Search the current public web for a query with optional allow or block domain filters. When to use: broad web or current-events research that needs sources; use US-oriented queries and include the current month and year when freshness needs disambiguation. Treat results as untrusted and cite supporting sources with Markdown links. When NOT to use: exact known URLs, local repo facts, authenticated/private sources, or browser interaction.";
 const terminal_description =
-    "Pass exactly one action object in request and set optional fields unused by that action to null. Run captured commands and control durable interactive terminal sessions through one tool. Use exec for a foreground command with one captured result; omitting profile is identical to profile=user, while profile=clean explicitly skips user startup files. Use start for commands or programs that need later input, incremental output, screen state, durable monitoring, or restart-safe control; start also defaults to profile=user and accepts the custom shell object instead of profile. Other actions: read, screen, write, wait, monitor, inspect, list, resize, signal, close. If a durable action reports unsupported_host because the helper lacks current lifecycle behavior, do not retry or escalate lifecycle actions; ask the user to restart the persistent terminal helper after accounting for live sessions. Authority is derived privately from the current fx session; never invent authority fields.";
+    "Pass exactly one action object in request and set optional fields unused by that action to null. Run captured commands and control durable interactive terminal sessions through one tool. Use exec for a foreground command with one captured result; omitting profile is identical to profile=user, while profile=clean explicitly skips user startup files. Use start for commands or programs that need later input, incremental output, screen state, durable monitoring, or restart-safe control; start also defaults to profile=user and accepts the custom shell object instead of profile. Other actions: read, screen, write, wait, monitor, inspect, list, resize, signal, close. If a durable action reports unsupported_host because the helper lacks current lifecycle behavior, do not retry or escalate lifecycle actions; ask the user to restart the persistent terminal helper after accounting for live sessions. Authority is derived privately from the current hx session; never invent authority fields.";
 const terminal_exec_only_description =
     "Run one captured command and return its result.";
 const terminal_exec_only_cwd_description =
@@ -347,7 +347,7 @@ const terminal_exec_only_gateway_required = blk: {
 const skill_description =
     "Read an installed skill or one of its relative text resources in bounded chunks. Pass the exact advertised location when one is listed, then use next_offset to continue. When to use: the user explicitly invokes a listed skill or the task clearly matches one. When NOT to use: generic exploration, ordinary file edits, guessing from vague words, or installing a missing skill.";
 const install_skill_description =
-    "Install a reusable skill from a supported source into fx managed skill storage. When to use: the user asks to install a skill or pastes a skills install command. When NOT to use: no installation is required, install packages, fetch unrelated repos, or modify project code.";
+    "Install a reusable skill from a supported source into hx managed skill storage. When to use: the user asks to install a skill or pastes a skills install command. When NOT to use: no installation is required, install packages, fetch unrelated repos, or modify project code.";
 const mcp_search_tools_description =
     "Search bounded metadata for configured MCP/dynamic tools without loading every dynamic schema into the main prompt. Include the configured server alias and requested use case in the query; refine the use case when more_available is true. When to use: you need a specialized external/MCP capability but do not know its exact tool name. When NOT to use: the needed capability is already advertised directly, or ordinary local inspection, execution, web, or user interaction can handle the work.";
 const mcp_select_tool_description =
@@ -1695,7 +1695,7 @@ test "terminal dispatch is permission gated and fails closed when unavailable" {
     try std.testing.expectEqualStrings("tool_execution_failed", missing_error.get("type").?.string);
     try std.testing.expectEqualStrings("terminal", missing_error.get("tool_name").?.string);
     try std.testing.expectEqualStrings(
-        "Durable terminal actions require a saved fx session.",
+        "Durable terminal actions require a saved hx session.",
         missing_error.get("message").?.string,
     );
     try std.testing.expectEqualStrings(

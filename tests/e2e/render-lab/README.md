@@ -14,7 +14,7 @@ The oracle is byte replay plus terminal-owned text/grid capture.
 Render Lab is designed to answer these questions:
 
 - Did the freshly built Fx binary emit coherent terminal bytes?
-- Did replaying those bytes through `fx replay` produce the expected model?
+- Did replaying those bytes through `hx replay` produce the expected model?
 - Did the real terminal-owned text/grid settle after each user-visible event?
 - Did old shell scrollback stay outside Fx-owned viewport rows?
 - Did quit, relaunch, resize, and native clear-scrollback actions preserve the intended boundaries?
@@ -48,7 +48,7 @@ Zig VT tests
 tmux Render Lab
   Deterministic real PTY coverage. Good for resize, scrollback, cursor, ANSI, relaunch.
 
-FX_RECORD tape and fx replay
+FX_RECORD tape and hx replay
   Byte-level recording of what Fx wrote plus replay through the built-in virtual terminal.
 
 Native Render Lab
@@ -66,7 +66,7 @@ It drives one tmux shell through this shape:
 
 1. Start a shell with temp `HOME`, `ZDOTDIR`, history, and workdir.
 2. Print shell markers and wrapped lines before Fx starts.
-3. Launch the freshly built `zig-out/bin/fx`.
+3. Launch the freshly built `zig-out/bin/hx`.
 4. Run no-key slash commands such as `/status`.
 5. Quit Fx.
 6. Print more shell markers in the same shell.
@@ -204,7 +204,7 @@ Important files:
 - `runtime-evidence.json`: compact witness summary for every frame.
 - `trace.log`: Fx debug trace for repaint, resize, footer, input, and related scopes.
 - `render.fxtape`: byte-level replay tape produced by the freshly built Fx binary.
-- `replay-summary.json`: structured `fx replay` output.
+- `replay-summary.json`: structured `hx replay` output.
 - `final-grid.txt`: replay golden output for the final tape state.
 - `failure.md`: short human-readable failure list.
 - `repro.sh`: command to recreate the scenario.
@@ -384,7 +384,7 @@ zig fmt src/
 cd tests/e2e
 bun test tui-render-lab.test.ts
 bun run render-lab -- --scenario same-shell-relaunch --runs 1 --out /private/tmp/fx-render-lab
-../../zig-out/bin/fx status --json
+../../zig-out/bin/hx status --json
 git diff --check
 ```
 

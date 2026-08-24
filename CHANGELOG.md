@@ -1,28 +1,29 @@
-# fx
+# hx
 
 ## 0.0.5
 
 <!-- release:start -->
 ### Breaking Changes
 
-- **Supported platforms:** Linux and macOS on x86_64 and aarch64. This release does not support Windows, WebAssembly, or browser hosts. Use the native `fx` CLI. Editor hosts still use `fx acp`
+- **Supported platforms:** Linux and macOS on x86_64 and aarch64. This release does not support Windows, WebAssembly, or browser hosts. Use the native `hx` CLI. Editor hosts still use `hx acp`
+- **Product name:** The CLI, Homebrew tap, and config dir are `hx`, `ttaatoo/hx`, and `~/.hx`. If `~/.hx` is missing, leftover `~/.fx` is copied in
 
 ### New Features
 
-- **Direct providers:** Sign in with SuperGrok OAuth (`fx login grok`), Anthropic Messages, or Codex. This fork has no Vercel AI Gateway path
-- **Homebrew tap:** Install this fork from the same-repo tap `ttaatoo/fx` with `brew install --formula --HEAD ttaatoo/fx/fx` until a GitHub Release exists, then `brew install ttaatoo/fx/fx`
+- **Direct providers:** Sign in with SuperGrok OAuth (`hx login grok`), Anthropic Messages, or Codex. There is no Vercel AI Gateway path
+- **Homebrew tap:** `brew tap ttaatoo/hx https://github.com/ttaatoo/hx` then `brew install --HEAD ttaatoo/hx/hx`
 
 ### Improvements
 
-- **GitHub Releases:** Pushes to `main` publish tagged GitHub Release binaries when the version in source has no release yet
+- **GitHub Releases:** Pushes to `main` publish tagged GitHub Release binaries (`hx-macos-arm64.tar.gz` and siblings) when the version in source has no release yet. There is no Vercel CDN
 <!-- release:end -->
 
 ## 0.0.4
 
 ### New Features
 
-- **Session resume command:** Resume the latest workspace session or an exact session ID with `fx session resume`
-- **Headless permission prompts:** Add `--prompt-permissions` so JSON and quiet `fx ask` runs can request Y/N approval on a TTY while keeping stdout clean
+- **Session resume command:** Resume the latest workspace session or an exact session ID with `hx session resume`
+- **Headless permission prompts:** Add `--prompt-permissions` so JSON and quiet `hx ask` runs can request Y/N approval on a TTY while keeping stdout clean
 
 ### Improvements
 
@@ -36,7 +37,7 @@
 - **Session cache contention:** Continue same-workspace session writes and keep listing and resume results current while another process holds the latest-session cache lock
 - **Reasoning effort settings:** Change reasoning effort without crashing or replacing the selected model
 - **Web redirects:** Follow HTTP 303 redirects in `web_fetch`
-- **Command output separation:** End command output that lacks a trailing newline before rendering the next `fx ask` tool header
+- **Command output separation:** End command output that lacks a trailing newline before rendering the next `hx ask` tool header
 - **Skill discovery:** Show one entry for skills reached through symlinked compatibility roots while preserving distinct same-name skills
 - **libfx session transitions:** Cancel active cooperative turns before starting a fresh session so the terminal remains responsive
 - **Memory activity:** Present `memory list` as a read instead of a write
@@ -49,7 +50,7 @@
 
 ### Improvements
 
-- **JSON recovery progress:** Report retry, recovery, and safety-pause status on stderr during `fx ask --json` while keeping stdout parseable
+- **JSON recovery progress:** Report retry, recovery, and safety-pause status on stderr during `hx ask --json` while keeping stdout parseable
 - **Notification sounds:** Use clearer 48 kHz AAC cues with full tails and the intended volume differences between actions
 
 ### Bug Fixes
@@ -58,7 +59,7 @@
 - **Background URLs:** Refuse `/background open` for stopped or stale tasks so saved URLs cannot open an unrelated process after port reuse
 - **Model catalogs:** Reject malformed catalog responses with a nonzero exit instead of treating them as an empty model list
 - **Skill creation:** Show invalid `/skills create` names inline and keep the current session, transcript, and composer usable
-- **GLM 5.2 responses:** Restore responses for fx login sessions without changing requests for other models
+- **GLM 5.2 responses:** Restore responses for hx login sessions without changing requests for other models
 
 ## 0.0.2
 

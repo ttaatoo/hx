@@ -130,7 +130,7 @@ function countOccurrences(text: string, needle: string): number {
 }
 
 function committedAssistantOccurrences(home: string, assistant: string): number {
-  const sessionsRoot = join(home, ".fx", "sessions");
+  const sessionsRoot = join(home, ".hx", "sessions");
   let count = 0;
   for (const entry of readdirSync(sessionsRoot, { withFileTypes: true })) {
     if (!entry.isDirectory() || entry.name === "latest") continue;
@@ -341,7 +341,7 @@ function prepareFixture(config: StressConfig): {
   totalTools: number;
 } {
   const paths = makeRoot(config.label);
-  mkdirSync(join(paths.home, ".fx"), { recursive: true });
+  mkdirSync(join(paths.home, ".hx"), { recursive: true });
   mkdirSync(paths.workspace);
   writeE2eGrokAuth(paths.home);
   writeFileSync(paths.stderrPath, "");
@@ -349,7 +349,7 @@ function prepareFixture(config: StressConfig): {
   writeFileSync(paths.tracePath, "");
   writeFileSync(paths.resumedTracePath, "");
   writeFileSync(
-    join(paths.home, ".fx", "settings.json"),
+    join(paths.home, ".hx", "settings.json"),
     JSON.stringify({
       sandbox: "none",
       permission_mode: "yolo",
@@ -545,7 +545,13 @@ function findFxProcessId(rows: readonly string[]): number | undefined {
     const match = row.trim().match(/^(\d+)\s+(.+)$/);
     if (!match) continue;
     const command = match[2]!;
-    if (command === "fx" || command === FX_BIN || command.endsWith("/fx")) {
+    if (
+      command === "hx" ||
+      command === "fx" ||
+      command === FX_BIN ||
+      command.endsWith("/hx") ||
+      command.endsWith("/fx")
+    ) {
       return Number(match[1]);
     }
   }
@@ -553,8 +559,9 @@ function findFxProcessId(rows: readonly string[]): number | undefined {
 }
 
 test("Fx process discovery accepts basename and path process names", () => {
-  expect(findFxProcessId(["11361 fx"])).toBe(11361);
-  expect(findFxProcessId(["11362 /workspace/zig-out/bin/fx"])).toBe(11362);
+  expect(findFxProcessId(["11361 hx"])).toBe(11361);
+  expect(findFxProcessId(["11362 /workspace/zig-out/bin/hx"])).toBe(11362);
+  expect(findFxProcessId(["11363 fx"])).toBe(11363);
 });
 
 function residentKib(pid: number): number {

@@ -9,11 +9,11 @@ import sys
 
 LINUX_BUDGETS = {
     "fx (startup)": 0.002,
-    "fx help": 0.002,
-    "fx status --json": 0.002,
-    "fx background --json": 0.002,
-    "fx doctor --json": 0.002,
-    "fx sessions --json": 0.002,
+    "hx help": 0.002,
+    "hx status --json": 0.002,
+    "hx background --json": 0.002,
+    "hx doctor --json": 0.002,
+    "hx sessions --json": 0.002,
 }
 DEFAULT_LINUX_BUDGET = 0.002
 

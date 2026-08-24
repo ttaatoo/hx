@@ -148,8 +148,8 @@ test "native network failure evidence excludes opaque and configuration failures
     }
 }
 
-/// Identifies fx on outbound HTTP; the zig std.http default is never sent.
-pub const user_agent = "fx/" ++ build_options.app_version;
+/// Identifies hx on outbound HTTP; the zig std.http default is never sent.
+pub const user_agent = "hx/" ++ build_options.app_version;
 
 pub fn runBoundedHttpOperation(
     comptime Result: type,
@@ -358,8 +358,8 @@ pub fn isLoopbackHttpUrl(url: []const u8) bool {
 }
 
 test "oauth transport user agent uses the product version" {
-    try std.testing.expect(std.mem.startsWith(u8, user_agent, "fx/"));
-    try std.testing.expect(user_agent.len > "fx/".len);
+    try std.testing.expect(std.mem.startsWith(u8, user_agent, "hx/"));
+    try std.testing.expect(user_agent.len > "hx/".len);
     try std.testing.expect(std.mem.find(u8, user_agent, "zig") == null);
     try std.testing.expect(std.mem.find(u8, user_agent, "std.http") == null);
 }

@@ -737,7 +737,7 @@ fn buildMacOSProfileForScope(arena: Allocator, scope: workspace_access.AccessSco
 }
 
 const permissive_cache_dirs = [_][]const u8{
-    ".fx",
+    ".hx",
     ".npm",
     ".cache",
     ".local",

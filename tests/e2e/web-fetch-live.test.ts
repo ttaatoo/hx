@@ -116,10 +116,10 @@ function createIsolatedRoot(domains = ["example.com"]) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-web-fetch-live-")));
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".hx"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".hx", "settings.json"),
     JSON.stringify({
       model: OUTER_MODEL,
       permission: {
@@ -340,7 +340,7 @@ describe.skipIf(process.env.FX_WEB_FETCH_LIVE !== "1")("live web_fetch public UR
         expect(fetch?.web_fetch?.cache_hit).toBe(false);
         expect(fetch?.web_fetch?.artifact).toBe("stored");
 
-        const sessionDir = join(root.home, ".fx", "sessions", json.session_id);
+        const sessionDir = join(root.home, ".hx", "sessions", json.session_id);
         const artifactDir = join(sessionDir, "artifacts", "web-fetch");
         expect(existsSync(artifactDir)).toBe(true);
         const files = readdirSync(artifactDir).filter((name) => name.startsWith("artifact-"));

@@ -537,15 +537,15 @@ function createRoot(
   const workspace = join(root, "workspace");
   const bin = join(root, "bin");
   const trace = join(root, "trace.log");
-  mkdirSync(join(home, ".fx"), { recursive: true, mode: 0o700 });
+  mkdirSync(join(home, ".hx"), { recursive: true, mode: 0o700 });
   mkdirSync(workspace, { recursive: true });
   mkdirSync(bin, { recursive: true });
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".hx", "settings.json"),
     JSON.stringify({ maxxing_mode: "minimal" }),
   );
   writeFileSync(
-    join(home, ".fx", "mcp.json"),
+    join(home, ".hx", "mcp.json"),
     JSON.stringify({
       mcp: {
         fixture: {
@@ -596,7 +596,7 @@ function seedExpiredCredentials(
 ) {
   const endpoint = activeAuth.url;
   const origin = new URL(endpoint).origin;
-  const directory = join(root.home, ".fx", "mcp-credentials");
+  const directory = join(root.home, ".hx", "mcp-credentials");
   mkdirSync(directory, { recursive: true, mode: 0o700 });
   const path = join(directory, "credentials.json");
   writeFileSync(
@@ -1439,7 +1439,7 @@ describe("MCP remote authentication lifecycle", () => {
   }
 
   test(
-    "fx ask reports an actionable auth requirement without opening a browser",
+    "hx ask reports an actionable auth requirement without opening a browser",
     async () => {
       upstream = startModernMcpHttpFixture("json");
       auth = startAuthFixture(upstream.url);
@@ -1476,7 +1476,7 @@ describe("MCP remote authentication lifecycle", () => {
         "Run /mcp auth for this server in an interactive Fx session.",
       );
       expect(
-        existsSync(join(root.home, ".fx", "mcp-credentials")),
+        existsSync(join(root.home, ".hx", "mcp-credentials")),
       ).toBe(false);
     },
     30_000,
@@ -1640,7 +1640,7 @@ describe("MCP remote authentication lifecycle", () => {
       expect(auth.tokenExchanges).toBe(1);
       const credentialPath = join(
         root.home,
-        ".fx",
+        ".hx",
         "mcp-credentials",
         "credentials.json",
       );
@@ -1774,7 +1774,7 @@ describe("MCP remote authentication lifecycle", () => {
       expect(auth.authorizationRequests).toBe(0);
       expect(auth.tokenExchanges).toBe(0);
 
-      const profilePath = join(root.home, ".fx", "mcp.json");
+      const profilePath = join(root.home, ".hx", "mcp.json");
       const profile = JSON.parse(readFileSync(profilePath, "utf8"));
       profile.mcp.fixture.oauth.issuer = origin;
       writeFileSync(profilePath, JSON.stringify(profile));
@@ -1819,7 +1819,7 @@ describe("MCP remote authentication lifecycle", () => {
       expect(auth.authorizationRequests).toBe(1);
       expect(auth.tokenExchanges).toBe(0);
       expect(
-        existsSync(join(root.home, ".fx", "mcp-credentials", "credentials.json")),
+        existsSync(join(root.home, ".hx", "mcp-credentials", "credentials.json")),
       ).toBe(false);
     },
     30_000,
@@ -1855,7 +1855,7 @@ describe("MCP remote authentication lifecycle", () => {
       expect(auth.authorizationRequests).toBe(0);
       expect(auth.tokenExchanges).toBe(0);
       expect(
-        existsSync(join(root.home, ".fx", "mcp-credentials", "credentials.json")),
+        existsSync(join(root.home, ".hx", "mcp-credentials", "credentials.json")),
       ).toBe(false);
     },
     30_000,
@@ -2170,7 +2170,7 @@ describe("MCP remote authentication lifecycle", () => {
       seedExpiredCredentials(root, auth, Date.now() + 3_600_000);
       const credentialStorePath = join(
         root.home,
-        ".fx",
+        ".hx",
         "mcp-credentials",
         "credentials.json",
       );
@@ -2611,7 +2611,7 @@ describe("MCP remote authentication lifecycle", () => {
 
         const credentialDirectory = join(
           root.home,
-          ".fx",
+          ".hx",
           "mcp-credentials",
         );
         mkdirSync(credentialDirectory, { recursive: true, mode: 0o700 });

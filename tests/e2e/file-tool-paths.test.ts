@@ -87,10 +87,10 @@ function createIsolatedRoot() {
   const home = join(root, "home");
   const workspace = join(root, "workspace");
   const external = join(root, "external");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".hx"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   mkdirSync(external, { recursive: true });
-  writeFileSync(join(home, ".fx", "settings.json"), "{}");
+  writeFileSync(join(home, ".hx", "settings.json"), "{}");
   return {
     root,
     home: realpathSync(home),
@@ -150,7 +150,7 @@ type SubagentTurn = {
 
 // Interrupted and completed child turns persist tool outcomes in different fields.
 function readSubagentChild(home: string) {
-  const sessionsDir = join(home, ".fx", "sessions");
+  const sessionsDir = join(home, ".hx", "sessions");
   const children = readdirSync(sessionsDir)
     .map((entry) => join(sessionsDir, entry))
     .filter((dir) => existsSync(join(dir, "subagent", "control.json")))
@@ -653,7 +653,7 @@ describe("filesystem path handling", () => {
       const root = createIsolatedRoot();
       try {
         writeFileSync(
-          join(root.home, ".fx", "settings.json"),
+          join(root.home, ".hx", "settings.json"),
           JSON.stringify({ sandbox: "none" }),
         );
         const cases = [
@@ -799,7 +799,7 @@ describe("filesystem path handling", () => {
         }
 
         writeFileSync(
-          join(root.home, ".fx", "settings.json"),
+          join(root.home, ".hx", "settings.json"),
           JSON.stringify({
             permission: {
               edit: {
@@ -831,7 +831,7 @@ describe("filesystem path handling", () => {
   );
 
   test(
-    "registered typed write and edit use one canonical fx ask mutation path",
+    "registered typed write and edit use one canonical hx ask mutation path",
     async () => {
       const root = createIsolatedRoot();
       try {
@@ -1005,7 +1005,7 @@ describe("filesystem path handling", () => {
         writeFileSync(copyIntoWorkspaceSource, "COPY_IN\n");
         writeFileSync(renameIntoWorkspaceSource, "RENAME_IN\n");
         writeFileSync(
-          join(root.home, ".fx", "settings.json"),
+          join(root.home, ".hx", "settings.json"),
           JSON.stringify({
             permission: {
               copy_file: {
@@ -1110,7 +1110,7 @@ describe("filesystem path handling", () => {
         writeFileSync(editTarget, "BEFORE_EDIT\n");
         writeFileSync(deleteTarget, "DELETE_ME\n");
         writeFileSync(
-          join(root.home, ".fx", "settings.json"),
+          join(root.home, ".hx", "settings.json"),
           JSON.stringify({
             permission: {
               edit: {

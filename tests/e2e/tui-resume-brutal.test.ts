@@ -134,13 +134,13 @@ function gatewayEnv(home: string, gateway: ReturnType<typeof startFakeGateway>) 
 }
 
 function prepareFilesystem(paths: Paths, config: Config): void {
-  mkdirSync(join(paths.home, ".fx"), { recursive: true });
+  mkdirSync(join(paths.home, ".hx"), { recursive: true });
   mkdirSync(paths.workspace);
   mkdirSync(paths.foreignWorkspace);
   writeFileSync(paths.stderr, "");
   writeFileSync(paths.trace, "");
   writeFileSync(
-    join(paths.home, ".fx", "settings.json"),
+    join(paths.home, ".hx", "settings.json"),
     JSON.stringify({
       sandbox: "none",
       permission_mode: "auto",
@@ -238,7 +238,7 @@ async function seedRealSession(paths: Paths, config: Config): Promise<IndexedSum
     gateway.stop();
   }
 
-  const indexPath = join(paths.home, ".fx", "sessions", "index.json");
+  const indexPath = join(paths.home, ".hx", "sessions", "index.json");
   const parsed = JSON.parse(readFileSync(indexPath, "utf8")) as {
     sessions: IndexedSummary[];
   };
@@ -255,7 +255,7 @@ function installLargeCatalog(
   config: Config,
   real: IndexedSummary,
 ): void {
-  const sessionsRoot = join(paths.home, ".fx", "sessions");
+  const sessionsRoot = join(paths.home, ".hx", "sessions");
   const base = Math.max(Date.now(), real.updated_at_ms + config.catalogEntries + 10);
   const entries: IndexedSummary[] = [];
   entries.push({
@@ -487,7 +487,7 @@ async function runStress(config: Config): Promise<Paths> {
 
     const report = {
       config,
-      catalogBytes: statSync(join(paths.home, ".fx", "sessions", "index.json")).size,
+      catalogBytes: statSync(join(paths.home, ".hx", "sessions", "index.json")).size,
       transitions: {
         open: summarize(metrics.open),
         scope: summarize(metrics.scope),

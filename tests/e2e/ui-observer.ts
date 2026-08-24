@@ -149,10 +149,10 @@ function createFixtureRoot(autoPermissions = false) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-ui-observer-fixture-")));
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".hx"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".hx", "settings.json"),
     JSON.stringify({
       sandbox: "none",
       permission_mode: autoPermissions ? "auto" : "ask",
@@ -663,7 +663,7 @@ async function run() {
   if (!args.scenario) throw new Error("--scenario is required");
   if (!tmuxAvailable()) throw new Error("tmux is required");
   if (!existsSync(FX_BIN)) {
-    throw new Error(`fresh fx binary is missing: ${FX_BIN}\nRun: zig build`);
+    throw new Error(`fresh hx binary is missing: ${FX_BIN}\nRun: zig build`);
   }
 
   const fixture = createFixtureRoot(

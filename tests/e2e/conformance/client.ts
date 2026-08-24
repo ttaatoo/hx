@@ -85,15 +85,15 @@ for (const call of toolCalls) {
   permission[`mcp_conformance_${call.name}`] = "allow";
 }
 
-const fxBin = resolve(import.meta.dirname, "../../../zig-out/bin/fx");
+const fxBin = resolve(import.meta.dirname, "../../../zig-out/bin/hx");
 const root = mkdtempSync(join(tmpdir(), "fx-mcp-conformance-client-"));
 const home = join(root, "home");
 const workspace = join(root, "workspace");
-mkdirSync(join(home, ".fx", "skills"), { recursive: true, mode: 0o700 });
+mkdirSync(join(home, ".hx", "skills"), { recursive: true, mode: 0o700 });
 mkdirSync(workspace, { recursive: true });
 
 writeFileSync(
-  join(home, ".fx", "mcp.json"),
+  join(home, ".hx", "mcp.json"),
   JSON.stringify({
     mcp: {
       conformance: {
@@ -115,7 +115,7 @@ writeFileSync(
   }),
 );
 writeFileSync(
-  join(home, ".fx", "settings.json"),
+  join(home, ".hx", "settings.json"),
   JSON.stringify({
     permission_mode: "auto",
     permission,

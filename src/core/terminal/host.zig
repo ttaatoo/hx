@@ -1371,11 +1371,11 @@ fn verifyEndpointPermissions(host_dir: *io_mod.VerifiedDir) !void {
 }
 
 test "hidden host mode is exact and remains private" {
-    const exact = [_][*:0]const u8{ "fx", internal_mode };
+    const exact = [_][*:0]const u8{ "hx", internal_mode };
     try std.testing.expect(isInternalModeRaw(&exact));
-    const public_like = [_][*:0]const u8{ "fx", "terminal-host" };
+    const public_like = [_][*:0]const u8{ "hx", "terminal-host" };
     try std.testing.expect(!isInternalModeRaw(&public_like));
-    const extra = [_][*:0]const u8{ "fx", internal_mode, "extra" };
+    const extra = [_][*:0]const u8{ "hx", internal_mode, "extra" };
     try std.testing.expect(!isInternalModeRaw(&extra));
 }
 
@@ -1566,7 +1566,7 @@ test "endpoint selection preserves short homes and deterministically separates l
     try std.testing.expect(std.mem.endsWith(
         u8,
         first.authority_root,
-        "/.fx/terminal-host",
+        "/.hx/terminal-host",
     ));
     try std.testing.expect(!std.mem.eql(
         u8,

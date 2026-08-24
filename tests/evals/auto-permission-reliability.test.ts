@@ -101,12 +101,12 @@ function createRoot(): Root {
   const workspace = join(root, "workspace");
   const external = join(root, "external");
   const bin = join(root, "bin");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".hx"), { recursive: true });
   mkdirSync(workspace);
   mkdirSync(external);
   mkdirSync(bin);
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".hx", "settings.json"),
     JSON.stringify({
       sandbox: "none",
       permission_mode: "auto",
@@ -125,7 +125,7 @@ function createRoot(): Root {
 
 function writeSettings(root: Root, settings: Record<string, unknown>) {
   writeFileSync(
-    join(root.home, ".fx", "settings.json"),
+    join(root.home, ".hx", "settings.json"),
     JSON.stringify({
       permission_mode: "auto",
       permission: {},
@@ -439,7 +439,7 @@ process.stdin.on("data", (chunk) => {
 `,
   );
   writeFileSync(
-    join(root.home, ".fx", "mcp.json"),
+    join(root.home, ".hx", "mcp.json"),
     JSON.stringify({
       mcp: {
         fixture: {

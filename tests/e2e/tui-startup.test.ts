@@ -172,13 +172,13 @@ describe.skipIf(SKIP_TMUX)("tui: fresh-session commands", () => {
       const workspace = join(repository, "packages", "status-root");
       const headPath = join(repository, ".git", "HEAD");
       const stderrPath = join(root, "stderr.log");
-      mkdirSync(join(home, ".fx"), { recursive: true });
+      mkdirSync(join(home, ".hx"), { recursive: true });
       writeE2eGrokAuth(home);
       mkdirSync(join(repository, ".git"), { recursive: true });
       mkdirSync(workspace, { recursive: true });
       writeFileSync(headPath, "ref: refs/heads/initial-branch\n");
       writeFileSync(
-        join(home, ".fx", "settings.json"),
+        join(home, ".hx", "settings.json"),
         `${JSON.stringify({ statusLine: { workspace: true } })}\n`,
       );
       writeFileSync(stderrPath, "");
@@ -247,7 +247,7 @@ describe.skipIf(SKIP_TMUX)("tui: fresh-session commands", () => {
       writeFileSync(stderrPath, "");
 
       const version = execFileSync(FX_BIN, ["--version"], { encoding: "utf8" }).trim();
-      const banner = `𝒇x v${version} · Run /help for commands`;
+      const banner = `hx v${version} · Run /help for commands`;
 
       try {
         session = await TmuxSession.create({
@@ -304,7 +304,7 @@ describe.skipIf(SKIP_TMUX)("tui: MCP startup", () => {
     async () => {
       const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-e2e-mcp-startup-")));
       const home = join(root, "home");
-      mkdirSync(join(home, ".fx"), { recursive: true });
+      mkdirSync(join(home, ".hx"), { recursive: true });
 
       let discoveryRequests = 0;
       const server = Bun.serve({
@@ -317,7 +317,7 @@ describe.skipIf(SKIP_TMUX)("tui: MCP startup", () => {
         },
       });
       writeFileSync(
-        join(home, ".fx", "mcp.json"),
+        join(home, ".hx", "mcp.json"),
         JSON.stringify({
           mcp: {
             pending: {

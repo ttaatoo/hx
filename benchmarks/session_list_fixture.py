@@ -30,9 +30,9 @@ def write_private_json(path: Path, value: object) -> None:
 
 
 def generate(home: Path, workspace: Path, count: int, log_size: int, deny_event_read: bool) -> None:
-    sessions_root = home / ".fx" / "sessions"
+    sessions_root = home / ".hx" / "sessions"
     sessions_root.mkdir(parents=True, mode=0o700, exist_ok=True)
-    (home / ".fx").chmod(0o700)
+    (home / ".hx").chmod(0o700)
     sessions_root.chmod(0o700)
 
     for index in range(count):

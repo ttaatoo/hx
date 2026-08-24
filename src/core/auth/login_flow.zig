@@ -542,7 +542,7 @@ pub fn runLogin(
     _ = alloc;
     _ = transport;
     _ = url_opener;
-    try writeStdout("Use fx login grok or fx login codex.\n");
+    try writeStdout("Use hx login grok or hx login codex.\n");
     return error.RetiredGatewayLogin;
 }
 
@@ -596,7 +596,7 @@ pub fn runTeams(
 ) !void {
     _ = alloc;
     _ = transport;
-    try writeStdout("Team switching is not supported. Run fx login grok, or set ANTHROPIC_API_KEY.\n");
+    try writeStdout("Team switching is not supported. Run hx login grok, or set ANTHROPIC_API_KEY.\n");
     return error.NoTeams;
 }
 

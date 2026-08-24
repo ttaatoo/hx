@@ -116,7 +116,7 @@ describe.skipIf(!tmuxAvailable())("prompt history", () => {
         await session.waitForSessionEnd(TIMEOUT);
         session = null;
 
-        const historyPath = join(home, ".fx", "history.jsonl");
+        const historyPath = join(home, ".hx", "history.jsonl");
         const history = readFileSync(historyPath, "utf8");
         expect(history).toContain("PLAN10_PROMPT_HISTORY_SENTINEL");
         expect(history).toContain("/help");
@@ -174,7 +174,7 @@ describe.skipIf(!tmuxAvailable())("prompt history", () => {
             },
           });
           await session.waitForText("Run /help", TIMEOUT);
-          expect(existsSync(join(home, ".fx"))).toBe(false);
+          expect(existsSync(join(home, ".hx"))).toBe(false);
         } finally {
           chmodSync(home, 0o700);
         }
@@ -219,7 +219,7 @@ describe.skipIf(!tmuxAvailable())("prompt history", () => {
           session = null;
         }
 
-        const historyPath = join(home, ".fx", "history.jsonl");
+        const historyPath = join(home, ".hx", "history.jsonl");
         expect(readFileSync(historyPath, "utf8")).toContain(
           "PLAN10_HISTORY_WORKSPACE_A",
         );
@@ -232,7 +232,7 @@ describe.skipIf(!tmuxAvailable())("prompt history", () => {
           env: rejectedGatewayEnv(home, gateway),
         });
         await session.waitForText("Run /help", TIMEOUT);
-        await disablePromptHistory(session, join(home, ".fx", "settings.json"));
+        await disablePromptHistory(session, join(home, ".hx", "settings.json"));
         await session.sendText("PLAN10_HISTORY_DISABLED");
         await session.waitForText("HTTP 401", TIMEOUT);
         await session.waitForPane(hasEmptyComposer, TIMEOUT);
@@ -305,7 +305,7 @@ describe.skipIf(!tmuxAvailable())("prompt history", () => {
         const home = join(root, "home");
         const workspaceA = join(root, "workspace-a");
         const workspaceB = join(root, "workspace-b");
-        mkdirSync(join(home, ".fx"), { recursive: true, mode: 0o700 });
+        mkdirSync(join(home, ".hx"), { recursive: true, mode: 0o700 });
         mkdirSync(workspaceA);
         mkdirSync(workspaceB);
         const workspaceARoot = realpathSync(workspaceA);
@@ -330,11 +330,11 @@ describe.skipIf(!tmuxAvailable())("prompt history", () => {
           }));
         }
         writeFileSync(
-          join(home, ".fx", "history.jsonl"),
+          join(home, ".hx", "history.jsonl"),
           records.join("\n") + "\n",
           { mode: 0o600 },
         );
-        writeFileSync(join(home, ".fx", "sessions"), "blocked\n", {
+        writeFileSync(join(home, ".hx", "sessions"), "blocked\n", {
           mode: 0o600,
         });
 

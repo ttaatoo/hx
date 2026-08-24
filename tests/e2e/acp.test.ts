@@ -309,7 +309,7 @@ function findPersistedAcpDeliveryIds(
   childId: string,
   payload: string,
 ): string[] {
-  const path = join(root.home, ".fx", "sessions", childId, "subagent", "communication.json");
+  const path = join(root.home, ".hx", "sessions", childId, "subagent", "communication.json");
   if (!existsSync(path)) return [];
   const record = JSON.parse(readFileSync(
     path,
@@ -368,7 +368,7 @@ function acpSubagentState(
   root: ReturnType<typeof createIsolatedRoot>,
   childId: string,
 ): string | null {
-  const path = join(root.home, ".fx", "sessions", childId, "subagent", "control.json");
+  const path = join(root.home, ".hx", "sessions", childId, "subagent", "control.json");
   if (!existsSync(path)) return null;
   const record = JSON.parse(readFileSync(path, "utf8")) as { state?: string };
   return record.state ?? null;
@@ -463,7 +463,7 @@ function expectAcpHumanUnreadIndependent(
   eventId: string,
 ) {
   const record = JSON.parse(readFileSync(
-    join(root.home, ".fx", "sessions", childId, "subagent", "communication.json"),
+    join(root.home, ".hx", "sessions", childId, "subagent", "communication.json"),
     "utf8",
   )) as {
     ledger: {
@@ -490,7 +490,7 @@ function expectAcpParentHistoryClean(
   parentSessionId: string,
   forbidden: string[],
 ) {
-  const sessionDir = join(root.home, ".fx", "sessions", parentSessionId);
+  const sessionDir = join(root.home, ".hx", "sessions", parentSessionId);
   for (const name of ["session.json", "events.jsonl"]) {
     const path = join(sessionDir, name);
     if (!existsSync(path)) continue;
@@ -511,7 +511,7 @@ function acpChatGptAccessToken(
 }
 
 function writeSeededAcpChatGptLogin(home: string, accessToken: string): void {
-  const fxDir = join(home, ".fx");
+  const fxDir = join(home, ".hx");
   mkdirSync(fxDir, { recursive: true, mode: 0o700 });
   chmodSync(fxDir, 0o700);
   const authPath = join(fxDir, "chatgpt-auth.json");
@@ -791,7 +791,7 @@ function createIsolatedRoot(prefix: string) {
   const home = join(root, "home");
   const workspace = join(root, "workspace");
   const external = join(root, "external");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".hx"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   mkdirSync(external, { recursive: true });
   writeE2eGrokAuth(home);
@@ -808,7 +808,7 @@ function createShortIsolatedRoot(prefix: string) {
   const home = join(root, "home");
   const workspace = join(root, "workspace");
   const external = join(root, "external");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".hx"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   mkdirSync(external, { recursive: true });
   writeE2eGrokAuth(home);
@@ -821,7 +821,7 @@ function createShortIsolatedRoot(prefix: string) {
 }
 
 async function waitForTerminalHostExit(root: string): Promise<void> {
-  const identityPath = join(root, "home", ".fx", "terminal-host", "host.json");
+  const identityPath = join(root, "home", ".hx", "terminal-host", "host.json");
   const deadline = Date.now() + TERMINAL_HOST_EXIT_TIMEOUT_MS;
   while (Date.now() < deadline) {
     if (!existsSync(identityPath)) return;
@@ -852,10 +852,10 @@ function writeAcpSession(
   sessionId: string,
   updatedAtMs: number,
 ): void {
-  const sessionDir = join(home, ".fx", "sessions", sessionId);
+  const sessionDir = join(home, ".hx", "sessions", sessionId);
   mkdirSync(sessionDir, { recursive: true, mode: 0o700 });
-  chmodSync(join(home, ".fx"), 0o700);
-  chmodSync(join(home, ".fx", "sessions"), 0o700);
+  chmodSync(join(home, ".hx"), 0o700);
+  chmodSync(join(home, ".hx", "sessions"), 0o700);
   chmodSync(sessionDir, 0o700);
   writeFileSync(
     join(sessionDir, "session.json"),
@@ -1038,7 +1038,7 @@ describe("acp: model-independent", () => {
       const profilePidPath = join(root.root, "mcp-profile-features.pid");
       const profileWireLogPath = join(root.root, "mcp-profile-features-wire.jsonl");
       writeFileSync(
-        join(root.home, ".fx", "mcp.json"),
+        join(root.home, ".hx", "mcp.json"),
         JSON.stringify({
           mcp: {
             profile: {
@@ -1342,7 +1342,7 @@ describe("acp: model-independent", () => {
         "ACP_RULE_PREFIX\nACP_RULE_SECOND\nACP_RULE_TAIL_SENTINEL\n",
       );
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".hx", "settings.json"),
         JSON.stringify({
           context_limits: { project_instruction_file_bytes: 96 },
           workspaces: {
@@ -1889,7 +1889,7 @@ describe("acp: model-independent", () => {
         expect(mcpRequests).toBe(1);
         expect(metadataRequests).toBe(0);
         expect(
-          existsSync(join(root.home, ".fx", "mcp-credentials")),
+          existsSync(join(root.home, ".hx", "mcp-credentials")),
         ).toBe(false);
         expect(client.stderr).toBe("");
       } finally {
@@ -1962,7 +1962,7 @@ describe("acp: model-independent", () => {
           `${MODERN_HTTP_TOOL_RESULT}:authenticated`,
         );
         const session = readFileSync(
-          join(root.home, ".fx", "sessions", sessionId, "session.json"),
+          join(root.home, ".hx", "sessions", sessionId, "session.json"),
           "utf8",
         );
         expect(session).not.toContain(bearer);
@@ -3561,7 +3561,7 @@ describe("acp: model-independent", () => {
       const suppliedPid = join(root.root, "supplied.pid");
       const gateway = startFakeGateway([]);
       writeFileSync(
-        join(root.home, ".fx", "mcp.json"),
+        join(root.home, ".hx", "mcp.json"),
         JSON.stringify({
           mcp: {
             profile: {
@@ -4434,7 +4434,7 @@ describe("acp: model-independent", () => {
         expect(response.result).toEqual({ sessions: [] });
         await client.close();
 
-        expect(existsSync(join(home, ".fx"))).toBe(false);
+        expect(existsSync(join(home, ".hx"))).toBe(false);
       } finally {
         rmSync(root, { recursive: true, force: true });
       }
@@ -4586,7 +4586,7 @@ describe("acp: model-independent", () => {
           params: { mcpServers: [] },
         });
         expect(await client.waitForExit()).toBe(86);
-        expect(existsSync(join(home, ".fx"))).toBe(false);
+        expect(existsSync(join(home, ".hx"))).toBe(false);
       } finally {
         rmSync(root, { recursive: true, force: true });
       }
@@ -4637,10 +4637,10 @@ describe("acp: model-independent", () => {
         mkdirSync(home);
         mkdirSync(workspace);
         const workspaceRoot = realpathSync(workspace);
-        const sessionDir = join(home, ".fx", "sessions", "last");
+        const sessionDir = join(home, ".hx", "sessions", "last");
         mkdirSync(sessionDir, { recursive: true, mode: 0o700 });
-        chmodSync(join(home, ".fx"), 0o700);
-        chmodSync(join(home, ".fx", "sessions"), 0o700);
+        chmodSync(join(home, ".hx"), 0o700);
+        chmodSync(join(home, ".hx", "sessions"), 0o700);
         chmodSync(sessionDir, 0o700);
         writeE2eGrokAuth(home);
         writeFileSync(
@@ -5121,7 +5121,7 @@ describe("acp: model-independent", () => {
       writeFileSync(join(nested, "AGENTS.md"), `${nestedRule}\n${nestedTail}\n`);
       writeFileSync(join(sibling, "AGENTS.md"), `${siblingRule}\n`);
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".hx", "settings.json"),
         JSON.stringify({
           context_limits: { project_instruction_file_bytes: 48 },
         }),
@@ -5200,7 +5200,7 @@ describe("acp: model-independent", () => {
       const root = createIsolatedRoot("fx-acp-permission-parity-");
       const target = join(root.external, "approved.txt");
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".hx", "settings.json"),
         JSON.stringify({ permission: { edit: { [`${root.external}/**`]: "ask" } } }),
       );
       const gateway = startFakeGateway([
@@ -5271,7 +5271,7 @@ describe("acp: model-independent", () => {
       const root = createIsolatedRoot("fx-acp-permission-reject-");
       const target = join(root.external, "rejected.txt");
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".hx", "settings.json"),
         JSON.stringify({ permission: { edit: { [`${root.external}/**`]: "ask" } } }),
       );
       const gateway = startFakeGateway([
@@ -5314,7 +5314,7 @@ describe("acp: model-independent", () => {
       const root = createIsolatedRoot("fx-acp-command-approval-");
       const marker = join(root.workspace, "approved-command.txt");
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".hx", "settings.json"),
         JSON.stringify({ permission: { bash: { "printf *": "ask" } } }),
       );
       const gateway = startFakeGateway([
@@ -5443,7 +5443,7 @@ describe("acp: model-independent", () => {
           TIMEOUT,
         );
         expect(result.promptResult.result.stopReason).toBe("end_turn");
-        const sessionsDir = join(root.home, ".fx", "sessions");
+        const sessionsDir = join(root.home, ".hx", "sessions");
         let control: { id: string; path: string } | undefined;
         await waitForCondition(
           "ACP one-off child completion",
@@ -5700,7 +5700,7 @@ describe("acp: model-independent", () => {
         );
         const childState = JSON.parse(
           readFileSync(
-            join(root.home, ".fx", "sessions", childId, "session.json"),
+            join(root.home, ".hx", "sessions", childId, "session.json"),
             "utf8",
           ),
         ) as { preferences: { provider: string; model: string } };
@@ -5748,7 +5748,7 @@ describe("acp: model-independent", () => {
       const root = createIsolatedRoot("fx-acp-permission-shutdown-");
       const target = join(root.external, "never-written.txt");
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".hx", "settings.json"),
         JSON.stringify({ permission: { edit: { [`${root.external}/**`]: "ask" } } }),
       );
       const gateway = startFakeGateway([

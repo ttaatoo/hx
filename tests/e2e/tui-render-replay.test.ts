@@ -51,9 +51,9 @@ async function launch(options: {
   const tapePath = join(workDir, "render.fxtape");
   const goldenPath = join(workDir, "grid.txt");
   const tracePath = join(workDir, "trace.log");
-  mkdirSync(join(workDir, ".fx"), { recursive: true });
+  mkdirSync(join(workDir, ".hx"), { recursive: true });
   writeFileSync(
-    join(workDir, ".fx", "settings.json"),
+    join(workDir, ".hx", "settings.json"),
     JSON.stringify({ maxxing_mode: "legacy" }),
   );
 
@@ -94,9 +94,9 @@ async function launchAutomaticRecording(): Promise<{
   const workDir = mkdtempSync("/tmp/fx-render-auto-replay-");
   workDirs.push(workDir);
   const home = join(workDir, "home");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".hx"), { recursive: true });
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".hx", "settings.json"),
     JSON.stringify({ maxxing_mode: "legacy" }),
   );
 
@@ -401,7 +401,7 @@ describe("tui: render record/replay", () => {
       const launched = await launchAutomaticRecording();
       session = launched.session;
 
-      expect(launched.tapePath.startsWith(join(launched.home, ".fx", "recordings"))).toBe(true);
+      expect(launched.tapePath.startsWith(join(launched.home, ".hx", "recordings"))).toBe(true);
       await session.sendText(marker);
       await session.waitForText("SuperGrok needs a subscription login", 5_000);
       await session.sendKeys(`-l '${inputTail}'`);

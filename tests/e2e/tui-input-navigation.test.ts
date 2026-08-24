@@ -67,9 +67,9 @@ async function startFx(
   testHome = mkdtempSync(join(tmpdir(), "fx-tui-input-"));
   stderrPath = join(testHome, "stderr.log");
   writeFileSync(stderrPath, "");
-  mkdirSync(join(testHome, ".fx"), { recursive: true });
+  mkdirSync(join(testHome, ".hx"), { recursive: true });
   writeFileSync(
-    join(testHome, ".fx", "settings.json"),
+    join(testHome, ".hx", "settings.json"),
     JSON.stringify({ maxxing_mode: "legacy", sandbox: "none" }),
   );
   if (withGateway) {
@@ -213,7 +213,7 @@ function rowHasBackgroundSgr(row: string): boolean {
 }
 
 test("selected slash row ignores the welcome header help hint", () => {
-  const header = `${SELECTED_COMPLETION_SGR}𝒇x\x1b[0m\x1b[38;5;245m v0.3.27 · Run /help for commands`;
+  const header = `${SELECTED_COMPLETION_SGR}hx\x1b[0m\x1b[38;5;245m v0.3.27 · Run /help for commands`;
   const composer = `${SELECTED_COMPLETION_SGR}❯ /\x1b[39m`;
   const selected = `${SELECTED_COMPLETION_SGR}  /clear\x1b[38;5;245m Clear the conversation`;
 
@@ -1602,9 +1602,9 @@ tmuxTest(
   "maxxing minimal connects the composer and submitted prompt rails without changing input appearance",
   async () => {
     testHome = mkdtempSync(join(tmpdir(), "fx-tui-input-"));
-    mkdirSync(join(testHome, ".fx"), { recursive: true });
+    mkdirSync(join(testHome, ".hx"), { recursive: true });
     writeFileSync(
-      join(testHome, ".fx", "settings.json"),
+      join(testHome, ".hx", "settings.json"),
       JSON.stringify({ maxxing_mode: "legacy" }),
     );
     const localGateway = startFakeGateway([

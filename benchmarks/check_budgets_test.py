@@ -37,13 +37,13 @@ class BudgetContractTests(unittest.TestCase):
 
     def test_linux_keeps_two_millisecond_raw_budget(self) -> None:
         self.assertEqual(
-            check_budgets.command_budget("Linux", "fx sessions --json"),
+            check_budgets.command_budget("Linux", "hx sessions --json"),
             0.002,
         )
 
     def test_darwin_has_no_local_product_budget(self) -> None:
         self.assertIsNone(
-            check_budgets.command_budget("Darwin", "fx sessions --json"),
+            check_budgets.command_budget("Darwin", "hx sessions --json"),
         )
 
     def test_budget_check_uses_raw_mean(self) -> None:

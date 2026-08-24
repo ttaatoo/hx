@@ -72,14 +72,14 @@ function createIsolatedRoot(args: {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-web-fetch-e2e-")));
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".hx"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
 
   const permission: Record<string, Record<string, string>> = {};
   if (args.webFetchPermission) {
     permission.web_fetch = { "domain:example.com": args.webFetchPermission };
   }
-  writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({ permission }));
+  writeFileSync(join(home, ".hx", "settings.json"), JSON.stringify({ permission }));
   return { root, home, workspace: realpathSync(workspace) };
 }
 
@@ -323,7 +323,7 @@ describe("web_fetch SuperGrok fixture", () => {
         expectNoFetchProgress(result.stderr);
 
         const sessionEvents = readFileSync(
-          join(root.home, ".fx", "sessions", json.session_id, "events.jsonl"),
+          join(root.home, ".hx", "sessions", json.session_id, "events.jsonl"),
           "utf8",
         );
         expect(sessionEvents).toContain("web_fetch");
@@ -371,7 +371,7 @@ describe("web_fetch SuperGrok fixture", () => {
   );
 
   test(
-    "default fx ask validates malformed web_fetch before transport",
+    "default hx ask validates malformed web_fetch before transport",
     async () => {
       const root = createIsolatedRoot();
       const gateway = startFakeGateway([

@@ -48,7 +48,7 @@ afterEach(async () => {
 });
 
 async function waitForTerminalHostExit(root: string): Promise<void> {
-  const identityPath = join(root, "home", ".fx", "terminal-host", "host.json");
+  const identityPath = join(root, "home", ".hx", "terminal-host", "host.json");
   const deadline = Date.now() + 5_000;
   while (Date.now() < deadline) {
     if (!existsSync(identityPath)) return;
@@ -114,7 +114,7 @@ function quietStderr(stderr: string): string {
     .join("\n");
 }
 
-describe("fx ask presentation", () => {
+describe("hx ask presentation", () => {
   test("redirected command output separates the next tool header", async () => {
     const root = createRoot();
     const gateway = startFakeGateway([
@@ -319,7 +319,7 @@ describe("fx ask presentation", () => {
     expect(gateway.requests[2]!.body).toContain("no-alias:no-function");
     expect(gateway.requests[4]!.body).toContain("tool_execution_failed");
     expect(gateway.requests[4]!.body).toContain(
-      "Durable terminal actions require a saved fx session.",
+      "Durable terminal actions require a saved hx session.",
     );
     expect(gateway.requests[4]!.body).toContain(
       "Use terminal.exec, or rerun without --no-save.",
@@ -337,12 +337,12 @@ describe("fx ask presentation", () => {
     expect(existsSync(nestedExecMarker)).toBe(false);
     expect(gateway.requests[6]!.body).toContain("neighbor-exec");
     expect(
-      existsSync(join(root.home, ".fx", "terminal-host", "host.json")),
+      existsSync(join(root.home, ".hx", "terminal-host", "host.json")),
     ).toBe(false);
   }, TIMEOUT);
 
   test.skipIf(!tmuxAvailable())(
-    "fx ask executes the shared public terminal tool through the tmux backend",
+    "hx ask executes the shared public terminal tool through the tmux backend",
     async () => {
       const root = createShortRoot();
       const toolCallId = "ask_terminal_tmux_1";
