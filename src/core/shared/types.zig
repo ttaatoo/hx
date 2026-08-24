@@ -883,9 +883,9 @@ pub const Usage = struct {
     output_tokens: ?u64 = null,
 };
 
-/// Exact usage metadata returned by a completed Gateway stream. `model` is
+/// Exact usage metadata returned by a completed provider stream. `model` is
 /// owned by the completion carrying this value.
-pub const GatewayBilling = struct {
+pub const ProviderBilling = struct {
     created_at_ms: i64,
     model: []const u8,
     total_cost: f64,
@@ -954,12 +954,12 @@ pub const ProviderFinishReason = enum {
     }
 };
 
-pub const GatewayCompletion = struct {
+pub const ProviderCompletion = struct {
     content: ?[]const u8 = null,
     tool_calls: []const ToolCall = &.{},
     generation_id: ?[]const u8 = null,
-    billing: ?GatewayBilling = null,
-    /// Gateway generation or resolved-model metadata was malformed or conflicting.
+    billing: ?ProviderBilling = null,
+    /// Provider generation or resolved-model metadata was malformed or conflicting.
     generation_metadata_invalid: bool = false,
     /// An earlier delivery may have billed outside this generation identity.
     delivery_ambiguous: bool = false,
@@ -971,161 +971,24 @@ pub const GatewayCompletion = struct {
     usage: Usage = .{},
 };
 
-pub fn parseGatewayTimestamp(text: []const u8) error{InvalidGatewayTimestamp}!i64 {
-    if (text.len < 20 or
-        text[4] != '-' or
-        text[7] != '-' or
-        text[10] != 'T' or
-        text[13] != ':' or
-        text[16] != ':')
-    {
-        return error.InvalidGatewayTimestamp;
-    }
-    const year = try parseTimestampDigits(text[0..4]);
-    const month = try parseTimestampDigits(text[5..7]);
-    const day = try parseTimestampDigits(text[8..10]);
-    const hour = try parseTimestampDigits(text[11..13]);
-    const minute = try parseTimestampDigits(text[14..16]);
-    const second = try parseTimestampDigits(text[17..19]);
-    if (year < 1970 or
-        month < 1 or
-        month > 12 or
-        day < 1 or
-        day > daysInMonth(year, month) or
-        hour > 23 or
-        minute > 59 or
-        second > 59)
-    {
-        return error.InvalidGatewayTimestamp;
-    }
-
-    var cursor: usize = 19;
-    var fractional_ms: i64 = 0;
-    if (cursor < text.len and text[cursor] == '.') {
-        cursor += 1;
-        const fraction_start = cursor;
-        while (cursor < text.len and std.ascii.isDigit(text[cursor])) cursor += 1;
-        const fraction = text[fraction_start..cursor];
-        if (fraction.len == 0 or fraction.len > 9) {
-            return error.InvalidGatewayTimestamp;
-        }
-        const digits = @min(fraction.len, 3);
-        fractional_ms = @intCast(try parseTimestampDigits(fraction[0..digits]));
-        if (digits == 1) fractional_ms *= 100;
-        if (digits == 2) fractional_ms *= 10;
-    }
-    if (cursor + 1 != text.len or text[cursor] != 'Z') {
-        return error.InvalidGatewayTimestamp;
-    }
-
-    const days = daysFromCivil(year, month, day);
-    if (days < 0) return error.InvalidGatewayTimestamp;
-    const seconds = std.math.add(
-        i64,
-        std.math.mul(i64, days, std.time.s_per_day) catch
-            return error.InvalidGatewayTimestamp,
-        @as(i64, @intCast(hour * std.time.s_per_hour +
-            minute * std.time.s_per_min +
-            second)),
-    ) catch return error.InvalidGatewayTimestamp;
-    return std.math.add(
-        i64,
-        std.math.mul(i64, seconds, std.time.ms_per_s) catch
-            return error.InvalidGatewayTimestamp,
-        fractional_ms,
-    ) catch return error.InvalidGatewayTimestamp;
-}
-
-fn parseTimestampDigits(text: []const u8) error{InvalidGatewayTimestamp}!u32 {
-    if (text.len == 0) return error.InvalidGatewayTimestamp;
-    var result: u32 = 0;
-    for (text) |byte| {
-        if (!std.ascii.isDigit(byte)) return error.InvalidGatewayTimestamp;
-        result = std.math.mul(u32, result, 10) catch
-            return error.InvalidGatewayTimestamp;
-        result = std.math.add(u32, result, byte - '0') catch
-            return error.InvalidGatewayTimestamp;
-    }
-    return result;
-}
-
-fn daysInMonth(year: u32, month: u32) u32 {
-    return switch (month) {
-        1, 3, 5, 7, 8, 10, 12 => 31,
-        4, 6, 9, 11 => 30,
-        2 => if (year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)) 29 else 28,
-        else => 0,
-    };
-}
-
-fn daysFromCivil(year_value: u32, month_value: u32, day_value: u32) i64 {
-    var year: i64 = year_value;
-    const month: i64 = month_value;
-    const day: i64 = day_value;
-    year -= @intFromBool(month <= 2);
-    const era = @divFloor(year, 400);
-    const year_of_era = year - era * 400;
-    const shifted_month = month + (if (month > 2) @as(i64, -3) else 9);
-    const day_of_year = @divFloor(153 * shifted_month + 2, 5) + day - 1;
-    const day_of_era = year_of_era * 365 + @divFloor(year_of_era, 4) -
-        @divFloor(year_of_era, 100) + day_of_year;
-    return era * 146097 + day_of_era - 719468;
-}
-
-pub fn validGatewayGenerationId(id: []const u8) bool {
-    if (id.len != 30 or !std.mem.startsWith(u8, id, "gen_")) return false;
-    for (id[4..]) |char| switch (char) {
-        '0'...'9', 'A'...'H', 'J'...'K', 'M'...'N', 'P'...'T', 'V'...'Z' => {},
-        else => return false,
-    };
-    return true;
-}
-
-test "Gateway timestamps parse UTC fractions strictly" {
-    try std.testing.expectEqual(
-        @as(i64, 1_775_045_467_000),
-        try parseGatewayTimestamp("2026-04-01T12:11:07Z"),
-    );
-    try std.testing.expectEqual(
-        @as(i64, 1_775_045_467_123),
-        try parseGatewayTimestamp("2026-04-01T12:11:07.123456Z"),
-    );
-    try std.testing.expectError(
-        error.InvalidGatewayTimestamp,
-        parseGatewayTimestamp("2026-02-30T12:11:07Z"),
-    );
-    try std.testing.expectError(
-        error.InvalidGatewayTimestamp,
-        parseGatewayTimestamp("2026-04-01T12:11:07+00:00"),
-    );
-}
-
-test "Gateway timestamp parser handles fuzzed bytes" {
-    try std.testing.fuzz({}, fuzzGatewayTimestamp, .{
-        .corpus = &.{
-            "",
-            "2026-04-01T12:11:07Z",
-            "2026-04-01T12:11:07.123456789Z",
-        },
-    });
-}
-
-fn fuzzGatewayTimestamp(_: void, smith: *std.testing.Smith) !void {
-    var buffer: [128]u8 = undefined;
-    const len: usize = @intCast(smith.slice(&buffer));
-    _ = parseGatewayTimestamp(buffer[0..len]) catch return;
-}
-
-/// Team identifiers reach the gateway as a query value, so reject anything that
-/// would need percent-encoding rather than build a malformed URL. Accepts both
-/// the `team_` id form and the slug form.
-pub fn validGatewayTeam(team: []const u8) bool {
-    if (team.len == 0 or team.len > 128) return false;
-    for (team) |char| switch (char) {
+/// Provider-owned completion identity. Accepts ordinary response ids from
+/// SuperGrok, Anthropic, and Codex, plus historical `gen_` fixtures.
+pub fn validGenerationId(id: []const u8) bool {
+    if (id.len == 0 or id.len > 128) return false;
+    for (id) |char| switch (char) {
         'a'...'z', 'A'...'Z', '0'...'9', '-', '_' => {},
         else => return false,
     };
     return true;
+}
+
+test "generation ids accept provider response identities" {
+    try std.testing.expect(validGenerationId("resp_01ARZ3NDEKTSV4RRFFQ69G5FAV"));
+    try std.testing.expect(validGenerationId("gen_01ARZ3NDEKTSV4RRFFQ69G5FAV"));
+    try std.testing.expect(validGenerationId("cmpl-abc123"));
+    try std.testing.expect(!validGenerationId(""));
+    try std.testing.expect(!validGenerationId("has space"));
+    try std.testing.expect(!validGenerationId("id/with/slash"));
 }
 
 pub const ProviderCompletionDisposition = enum {
@@ -1144,7 +1007,7 @@ pub fn allToolCallsProviderExecuted(tool_calls: []const ToolCall) bool {
     return true;
 }
 
-pub fn classifyProviderCompletion(completion: GatewayCompletion) ProviderCompletionDisposition {
+pub fn classifyProviderCompletion(completion: ProviderCompletion) ProviderCompletionDisposition {
     const finish_reason = completion.finish_reason orelse return .interrupted;
     return switch (finish_reason) {
         .provider_error, .content_filter => .provider_failure,
@@ -1269,7 +1132,7 @@ pub const AuthoritativeToolAdmission = union(enum) {
     reject_duplicate_identity,
 };
 
-pub fn authoritativeToolAdmission(completion: GatewayCompletion) AuthoritativeToolAdmission {
+pub fn authoritativeToolAdmission(completion: ProviderCompletion) AuthoritativeToolAdmission {
     if (completion.provider_result_identity_failure) |failure| {
         return .{ .reject_malformed_provider_result = failure };
     }
@@ -1626,7 +1489,7 @@ pub const ReasoningEffort = union(enum) {
         };
     }
 
-    pub fn gatewayValue(self: *const ReasoningEffort) ?[]const u8 {
+    pub fn providerValue(self: *const ReasoningEffort) ?[]const u8 {
         return switch (self.*) {
             .auto => null,
             .named => self.label(),
@@ -2550,7 +2413,7 @@ test "ReasoningEffort preserves default aliases and opaque names" {
         try std.testing.expectEqual(ReasoningEffort.auto, parsed);
         try std.testing.expectEqualStrings("auto", parsed.label());
         try std.testing.expectEqualStrings("default", parsed.displayLabel());
-        try std.testing.expect(parsed.gatewayValue() == null);
+        try std.testing.expect(parsed.providerValue() == null);
     }
 
     const named_values = [_][]const u8{ "none", "low", "xhigh", "future-tier" };
@@ -2558,7 +2421,7 @@ test "ReasoningEffort preserves default aliases and opaque names" {
         const parsed = ReasoningEffort.parse(raw) orelse return error.ExpectedReasoningEffort;
         try std.testing.expectEqualStrings(raw, parsed.label());
         try std.testing.expectEqualStrings(raw, parsed.displayLabel());
-        try std.testing.expectEqualStrings(raw, parsed.gatewayValue().?);
+        try std.testing.expectEqualStrings(raw, parsed.providerValue().?);
     }
 
     try std.testing.expect(ReasoningEffort.parse("") == null);
@@ -2656,7 +2519,7 @@ test "HistoryTurn helpers duplicate and free owned turns" {
         } },
         .cancelled_command = .{
             .output_replay = .{ .available = .{
-                .handle = try alloc.dupe(u8, "fx-command-replay.bin"),
+                .handle = try alloc.dupe(u8, "hx-command-replay.bin"),
                 .framed_bytes = 42,
             } },
             .command_artifact_handle = try alloc.dupe(u8, "fx-command.log"),
@@ -2669,7 +2532,7 @@ test "HistoryTurn helpers duplicate and free owned turns" {
     const copied_presentation = interrupted_copy.interrupted.cancelled_command.?;
     const original_presentation = interrupted_original.interrupted.cancelled_command.?;
     try std.testing.expectEqualStrings(
-        "fx-command-replay.bin",
+        "hx-command-replay.bin",
         copied_presentation.output_replay.?.available.handle,
     );
     try std.testing.expect(
@@ -2818,7 +2681,7 @@ test "public types remain constructible" {
     try std.testing.expectEqual(ChatRole.assistant, chat.role);
     try std.testing.expectEqualStrings("ok", chat.tool_calls[0].provider_result.?);
 
-    const completion = GatewayCompletion{
+    const completion = ProviderCompletion{
         .content = "done",
         .tool_calls = &.{tool_call},
         .finish_reason = .stop,

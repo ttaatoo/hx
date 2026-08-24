@@ -51,7 +51,7 @@ pub const ConfigModeParseResult = union(enum) {
 };
 
 pub const retired_sandbox_config_message = "sandbox values `vercel` and `just-bash` are not supported as public sandbox modes in this build. Choose `os` or `none`.";
-pub const unsupported_os_sandbox_message = "operating system sandbox is not available on this host because Fx has no OS sandbox implementation here. Choose `none` to run commands without sandbox isolation.";
+pub const unsupported_os_sandbox_message = "operating system sandbox is not available on this host because hx has no OS sandbox implementation here. Choose `none` to run commands without sandbox isolation.";
 
 pub const BackendKind = types.BackendKind;
 

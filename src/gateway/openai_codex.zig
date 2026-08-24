@@ -482,7 +482,7 @@ fn consumeSse(
     on_tool_input_chunk: ?stream_provider.StreamCallback,
     cancel_flag: *std.atomic.Value(bool),
     content_capture_limit: ?usize,
-) !types.GatewayCompletion {
+) !types.ProviderCompletion {
     var content: std.ArrayList(u8) = .empty;
     errdefer content.deinit(alloc);
     var provider_state: std.Io.Writer.Allocating = .init(alloc);

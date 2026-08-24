@@ -211,7 +211,7 @@ pub fn Runtime(comptime App: type) type {
                     app.agentStreamProvider()
                 else
                     agent_stream_provider.unavailable_provider,
-                .gateway_team = app.auth.gatewayTeam(),
+                .gateway_team = null,
                 .credential_source = app.auth.credentialSource(),
                 .account_id = app.auth.accountId(),
                 .provider = provider_runtime.provider(app),
@@ -291,7 +291,7 @@ pub fn Runtime(comptime App: type) type {
                 if (false) {
                     app.web_search_runtime.configure(.{
                         .api_key = app.auth.apiKey() orelse "",
-                        .gateway_team = app.auth.gatewayTeam(),
+                        .gateway_team = null,
                         .worker_model = provider_runtime.model(app),
                         .gateway_retry_count = gateway_retry_count,
                         .gateway_chat_url = gateway_chat_url,

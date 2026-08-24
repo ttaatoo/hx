@@ -6,7 +6,7 @@ const types = @import("../shared/types.zig");
 
 pub const ChatRole = types.ChatRole;
 pub const ChatMessage = types.ChatMessage;
-pub const GatewayCompletion = types.GatewayCompletion;
+pub const ProviderCompletion = types.ProviderCompletion;
 pub const ToolCall = types.ToolCall;
 
 pub const StructuredResponseFormat = struct {
@@ -781,7 +781,7 @@ fn findCacheBreakpoint(messages: []const ChatMessage) ?usize {
     return null;
 }
 
-pub fn parseGatewayCompletion(alloc: std.mem.Allocator, body: []const u8) !GatewayCompletion {
+pub fn parseProviderCompletion(alloc: std.mem.Allocator, body: []const u8) !ProviderCompletion {
     const parsed = try std.json.parseFromSlice(std.json.Value, alloc, body, .{});
     defer parsed.deinit();
 
@@ -797,11 +797,11 @@ pub fn parseGatewayCompletion(alloc: std.mem.Allocator, body: []const u8) !Gatew
     const message_value = choice.object.get("message") orelse return error.InvalidGatewayResponse;
     if (message_value != .object) return error.InvalidGatewayResponse;
 
-    var output: GatewayCompletion = .{};
+    var output: ProviderCompletion = .{};
     if (message_value.object.get("content")) |content| {
         if (content == .string) output.content = try alloc.dupe(u8, content.string);
     }
-    errdefer freeGatewayCompletion(alloc, output);
+    errdefer freeProviderCompletion(alloc, output);
 
     if (choice.object.get("finish_reason")) |finish_reason| {
         if (finish_reason == .string and finish_reason.string.len > 0) {
@@ -863,7 +863,7 @@ pub fn parseGatewayCompletion(alloc: std.mem.Allocator, body: []const u8) !Gatew
     return output;
 }
 
-pub fn freeGatewayCompletion(alloc: std.mem.Allocator, completion: GatewayCompletion) void {
+pub fn freeProviderCompletion(alloc: std.mem.Allocator, completion: ProviderCompletion) void {
     if (completion.content) |content| alloc.free(content);
     for (completion.tool_calls) |tool_call| {
         alloc.free(tool_call.id);
@@ -874,11 +874,11 @@ pub fn freeGatewayCompletion(alloc: std.mem.Allocator, completion: GatewayComple
     if (completion.provider_state_json) |state| alloc.free(state);
 }
 
-fn checkParseGatewayCompletionAllocFailures(alloc: std.mem.Allocator) !void {
+fn checkParseProviderCompletionAllocFailures(alloc: std.mem.Allocator) !void {
     const body = "{\"choices\":[{\"finish_reason\":\"tool_calls\",\"message\":{\"content\":\"hello\",\"tool_calls\":[{\"id\":\"call_1\",\"function\":{\"name\":\"write_file\",\"arguments\":\"{}\"}},{\"id\":\"call_2\",\"function\":{\"name\":\"read_file\",\"arguments\":\"{\\\"path\\\":\\\"src/main.zig\\\"}\"}}]}}]}";
 
-    const completion = try parseGatewayCompletion(alloc, body);
-    defer freeGatewayCompletion(alloc, completion);
+    const completion = try parseProviderCompletion(alloc, body);
+    defer freeProviderCompletion(alloc, completion);
 
     try std.testing.expectEqualStrings("hello", completion.content.?);
     try std.testing.expectEqual(types.ProviderFinishReason.tool_calls, completion.finish_reason.?);
@@ -1532,7 +1532,7 @@ test "gateway request validation rejects mismatched tool result names" {
     try std.testing.expectError(error.InvalidGatewayHistory, buildGatewayRequestBodyWithOptions(alloc, "[]", &messages, .{}, .auto));
 }
 
-test "parseGatewayCompletion duplicates returned strings" {
+test "parseProviderCompletion duplicates returned strings" {
     const alloc = std.testing.allocator;
     const body = try alloc.dupe(
         u8,
@@ -1540,8 +1540,8 @@ test "parseGatewayCompletion duplicates returned strings" {
     );
     defer alloc.free(body);
 
-    const completion = try parseGatewayCompletion(alloc, body);
-    defer freeGatewayCompletion(alloc, completion);
+    const completion = try parseProviderCompletion(alloc, body);
+    defer freeProviderCompletion(alloc, completion);
 
     @memset(body, 'x');
 
@@ -1552,7 +1552,7 @@ test "parseGatewayCompletion duplicates returned strings" {
     try std.testing.expectEqualStrings("{}", completion.tool_calls[0].arguments_json);
 }
 
-test "parseGatewayCompletion skips malformed tool call entries" {
+test "parseProviderCompletion skips malformed tool call entries" {
     const alloc = std.testing.allocator;
     const body =
         "{\"choices\":[{\"message\":{\"content\":\"ok\",\"tool_calls\":[" ++
@@ -1561,8 +1561,8 @@ test "parseGatewayCompletion skips malformed tool call entries" {
         "{\"id\":\"call_1\",\"function\":{\"name\":\"read_file\",\"arguments\":\"{\\\"path\\\":\\\"a\\\"}\"}}" ++
         "]}}]}";
 
-    const completion = try parseGatewayCompletion(alloc, body);
-    defer freeGatewayCompletion(alloc, completion);
+    const completion = try parseProviderCompletion(alloc, body);
+    defer freeProviderCompletion(alloc, completion);
 
     try std.testing.expectEqual(@as(usize, 1), completion.tool_calls.len);
     try std.testing.expectEqualStrings("call_1", completion.tool_calls[0].id);
@@ -1570,7 +1570,7 @@ test "parseGatewayCompletion skips malformed tool call entries" {
     try std.testing.expectEqualStrings("{\"path\":\"a\"}", completion.tool_calls[0].arguments_json);
 }
 
-test "parseGatewayCompletion rejects malformed legacy tool arguments" {
+test "parseProviderCompletion rejects malformed legacy tool arguments" {
     const body =
         "{\"choices\":[{\"finish_reason\":\"tool_calls\",\"message\":{\"tool_calls\":[" ++
         "{\"id\":\"call_1\",\"function\":{\"name\":\"read_file\",\"arguments\":\"{]\"}}" ++
@@ -1578,11 +1578,11 @@ test "parseGatewayCompletion rejects malformed legacy tool arguments" {
 
     try std.testing.expectError(
         error.InvalidGatewayResponse,
-        parseGatewayCompletion(std.testing.allocator, body),
+        parseProviderCompletion(std.testing.allocator, body),
     );
 }
 
-test "parseGatewayCompletion rejects duplicate-key legacy tool arguments" {
+test "parseProviderCompletion rejects duplicate-key legacy tool arguments" {
     const body =
         "{\"choices\":[{\"finish_reason\":\"tool_calls\",\"message\":{\"tool_calls\":[" ++
         "{\"id\":\"call_1\",\"function\":{\"name\":\"read_file\",\"arguments\":\"{\\\"depth\\\":1,\\\"depth\\\":2}\"}}" ++
@@ -1590,18 +1590,18 @@ test "parseGatewayCompletion rejects duplicate-key legacy tool arguments" {
 
     try std.testing.expectError(
         error.InvalidGatewayResponse,
-        parseGatewayCompletion(std.testing.allocator, body),
+        parseProviderCompletion(std.testing.allocator, body),
     );
 }
 
-test "parseGatewayCompletion cleans up allocation failures" {
-    try std.testing.checkAllAllocationFailures(std.testing.allocator, checkParseGatewayCompletionAllocFailures, .{});
+test "parseProviderCompletion cleans up allocation failures" {
+    try std.testing.checkAllAllocationFailures(std.testing.allocator, checkParseProviderCompletionAllocFailures, .{});
 }
 
-test "freeGatewayCompletion frees parsed completions under testing allocator" {
+test "freeProviderCompletion frees parsed completions under testing allocator" {
     const alloc = std.testing.allocator;
     const body = "{\"choices\":[{\"finish_reason\":\"tool_calls\",\"message\":{\"content\":\"hello\",\"tool_calls\":[{\"id\":\"call_1\",\"function\":{\"name\":\"write_file\",\"arguments\":\"{}\"}}]}}]}";
 
-    const completion = try parseGatewayCompletion(alloc, body);
-    freeGatewayCompletion(alloc, completion);
+    const completion = try parseProviderCompletion(alloc, body);
+    freeProviderCompletion(alloc, completion);
 }

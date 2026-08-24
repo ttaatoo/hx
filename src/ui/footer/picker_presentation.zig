@@ -13,48 +13,14 @@ const input_presentation = @import("input_presentation.zig");
 const row_text = @import("row_text.zig");
 
 const Allocator = std.mem.Allocator;
-const team_query_prefix = "   Choose a team · Search: ";
-const compact_team_query_prefix = "Search: ";
-
-const TeamQueryProjection = struct {
-    prefix: []const u8,
-    query: []const u8,
-
-    fn cursorColumn(self: TeamQueryProjection, width: u16) u16 {
-        const content_end = display_width.visibleWidth(self.prefix) +
-            display_width.visibleWidth(self.query) + 1;
-        return @intCast(@min(content_end, width));
-    }
-};
-
 pub fn authPickerQueryCursorColumn(view: auth_runtime.PickerView, width: u16) ?u16 {
-    if (view.stage != .change_team or width == 0) return null;
-    return teamQueryProjection(view.team_query, width).cursorColumn(width);
-}
-
-fn teamQueryProjection(query: []const u8, width: u16) TeamQueryProjection {
-    const available: usize = width;
-    if (query.len == 0) return .{
-        .prefix = display_width.prefixByWidth(team_query_prefix, available),
-        .query = "",
-    };
-
-    const prefix = if (display_width.visibleWidth(team_query_prefix) < available)
-        team_query_prefix
-    else if (display_width.visibleWidth(compact_team_query_prefix) < available)
-        compact_team_query_prefix
-    else
-        "";
-    const query_width = available - display_width.visibleWidth(prefix);
-    return .{
-        .prefix = prefix,
-        .query = display_width.suffixByWidth(query, query_width),
-    };
+    _ = view;
+    _ = width;
+    return null;
 }
 
 pub fn authPickerRowCount(view: auth_runtime.PickerView) u16 {
     if (view.stage == .sign_in) return 7;
-    if (view.stage == .api_key) return 4;
     if (view.stage == .root and view.include_skip) return 18;
     return @intCast(1 + @max(view.choiceCount(), 1));
 }
@@ -69,9 +35,6 @@ pub noinline fn composeAuthPickerRow(
     if (view.stage == .sign_in) {
         return composeSignInPickerRow(alloc, view.sign_in, view.sign_in_source, row_index, width);
     }
-    if (view.stage == .api_key) {
-        return composeApiKeyPickerRow(alloc, view.api_key_mask_count, row_index, width);
-    }
     if (view.stage == .root and view.include_skip) {
         return composeOnboardingPickerRow(alloc, view, row_index, row_count, width);
     }
@@ -79,23 +42,13 @@ pub noinline fn composeAuthPickerRow(
     var row: std.ArrayList(u8) = .empty;
     if (width == 0) return row;
 
-    const show_header = row_index == 0 and (row_count > 1 or view.stage == .change_team);
+    const show_header = row_index == 0 and row_count > 1;
     if (show_header) {
         try row.appendSlice(alloc, ui_render.dim_style);
-        if (view.stage == .change_team) {
-            const projection = teamQueryProjection(view.team_query, width);
-            try row_text.appendClipped(alloc, &row, projection.prefix, width);
-            const remaining: u16 = width -| @as(u16, @intCast(display_width.visibleWidth(projection.prefix)));
-            try row_text.appendClipped(alloc, &row, projection.query, remaining);
-            try row.appendSlice(alloc, ui_render.reset_style);
-            return row;
-        }
         const header = switch (view.stage) {
             .root => "   Setup",
             .provider => "   Switch provider",
             .sign_in => unreachable,
-            .api_key => unreachable,
-            .change_team => unreachable,
             .switch_credential => "   Use this credential",
         };
         try row_text.appendClipped(alloc, &row, header, width);
@@ -117,11 +70,6 @@ pub noinline fn composeAuthPickerRow(
             .root => "",
             .provider => "     No providers available",
             .sign_in => unreachable,
-            .api_key => unreachable,
-            .change_team => if (view.team_query.len == 0)
-                "     No teams available"
-            else
-                "     No matching teams",
             .switch_credential => "     No credentials available",
         }, width);
         try row.appendSlice(alloc, ui_render.reset_style);
@@ -292,47 +240,6 @@ fn composeSignInPickerRow(
         else => "",
     };
     try row_text.appendClipped(alloc, &row, label, width);
-    try row.appendSlice(alloc, ui_render.reset_style);
-    return row;
-}
-
-fn composeApiKeyPickerRow(
-    alloc: Allocator,
-    mask_count: usize,
-    row_index: u16,
-    width: u16,
-) !std.ArrayList(u8) {
-    var row: std.ArrayList(u8) = .empty;
-    errdefer row.deinit(alloc);
-    if (width == 0) return row;
-
-    try row.appendSlice(alloc, if (row_index == 1)
-        ui_render.selected_completion_style
-    else
-        ui_render.dim_style);
-    switch (row_index) {
-        0 => try row_text.appendClipped(alloc, &row, "   API key setup is not used on this repository", width),
-        1 => {
-            try row_text.appendClipped(alloc, &row, "   ┃ ", width);
-            if (mask_count == 0) {
-                try row.appendSlice(alloc, ui_render.dim_style);
-                try row_text.appendClipped(alloc, &row, "Paste or type a key", width -| 5);
-            } else {
-                for (0..@min(mask_count, width -| 5)) |_| try row.appendSlice(alloc, "•");
-            }
-        },
-        2 => try row_text.appendClipped(alloc, &row, "   Enter saves · Esc cancels", width),
-        3 => {
-            var label_buf: [128]u8 = undefined;
-            const label = std.fmt.bufPrint(
-                &label_buf,
-                "   Saves to {s}",
-                .{credentials.stored_key_backend_label},
-            ) catch "   Saves to configured credential store";
-            try row_text.appendClipped(alloc, &row, label, width);
-        },
-        else => {},
-    }
     try row.appendSlice(alloc, ui_render.reset_style);
     return row;
 }
@@ -1671,7 +1578,7 @@ test "compact auth picker keeps the selected hub action visible" {
     try std.testing.expect(std.mem.find(u8, row.items, "Sign in with Codex") != null);
 }
 
-test "auth picker renders the staged switch and disabled team screens" {
+test "auth picker renders the staged switch screen without a team query" {
     const alloc = std.testing.allocator;
     const switch_view = auth_runtime.PickerView{
         .active = true,
@@ -1694,92 +1601,9 @@ test "auth picker renders the staged switch and disabled team screens" {
         authPickerDescriptionColumn(switch_view) >
             5 + display_width.visibleWidth(credentials.sourceLabel(.custom_provider)),
     );
-
-    const team_view = auth_runtime.PickerView{
-        .active = true,
-        .available_sources = .empty,
-        .selected_choice = null,
-        .active_source = .custom_provider,
-        .include_skip = false,
-        .stage = .change_team,
-    };
-    var team_header = try composeAuthPickerRow(alloc, team_view, 0, 2, 80);
-    defer team_header.deinit(alloc);
-    try std.testing.expect(std.mem.find(u8, team_header.items, "Choose a team") != null);
-
-    var no_teams = try composeAuthPickerRow(alloc, team_view, 1, 2, 80);
-    defer no_teams.deinit(alloc);
-    try std.testing.expect(std.mem.find(u8, no_teams.items, "No teams available") != null);
-
-    var search_view = team_view;
-    search_view.team_query = "play";
-    var search_header = try composeAuthPickerRow(alloc, search_view, 0, 2, 80);
-    defer search_header.deinit(alloc);
-    try std.testing.expect(std.mem.find(u8, search_header.items, "Search: play") != null);
-
-    search_view.team_query = "example-internal-team";
-    var narrow_search_header = try composeAuthPickerRow(alloc, search_view, 0, 2, 20);
-    defer narrow_search_header.deinit(alloc);
-    try std.testing.expect(std.mem.find(u8, narrow_search_header.items, "nternal-team") != null);
-    try std.testing.expectEqual(
-        @as(u16, 20),
-        authPickerQueryCursorColumn(search_view, 20).?,
-    );
-
-    var no_matches = try composeAuthPickerRow(alloc, search_view, 1, 2, 80);
-    defer no_matches.deinit(alloc);
-    try std.testing.expect(std.mem.find(u8, no_matches.items, "No matching teams") != null);
-}
-
-test "api key stage renders only a bounded mask and the configured backend label" {
-    const alloc = std.testing.allocator;
-    const view = auth_runtime.PickerView{
-        .active = true,
-        .available_sources = .empty,
-        .selected_choice = null,
-        .active_source = null,
-        .include_skip = false,
-        .stage = .api_key,
-        .api_key_mask_count = 9,
-    };
-
-    try std.testing.expectEqual(@as(u16, 4), authPickerRowCount(view));
-    var field = try composeAuthPickerRow(alloc, view, 1, 4, 80);
-    defer field.deinit(alloc);
-    try std.testing.expectEqual(@as(usize, 9), std.mem.count(u8, field.items, "•"));
-    try std.testing.expect(std.mem.find(u8, field.items, "FX_API_KEY_RENDER_SENTINEL") == null);
-
-    var backend = try composeAuthPickerRow(alloc, view, 3, 4, 80);
-    defer backend.deinit(alloc);
-    try std.testing.expect(std.mem.find(u8, backend.items, "Saves to") != null);
-    try std.testing.expect(std.mem.find(u8, backend.items, credentials.stored_key_backend_label) != null);
-}
-
-test "api key field reads as a text field rather than a selectable row" {
-    const alloc = std.testing.allocator;
-    var view = auth_runtime.PickerView{
-        .active = true,
-        .available_sources = .empty,
-        .selected_choice = null,
-        .active_source = null,
-        .include_skip = false,
-        .stage = .api_key,
-        .api_key_mask_count = 0,
-    };
-
-    var empty = try composeAuthPickerRow(alloc, view, 1, 4, 80);
-    defer empty.deinit(alloc);
-    try std.testing.expect(std.mem.find(u8, empty.items, "┃") != null);
-    try std.testing.expect(std.mem.find(u8, empty.items, "›") == null);
-    const placeholder = std.mem.find(u8, empty.items, "Paste or type a key").?;
-    const dim = std.mem.find(u8, empty.items, ui_render.dim_style).?;
-    try std.testing.expect(dim < placeholder);
-
-    view.api_key_mask_count = 3;
-    var typed = try composeAuthPickerRow(alloc, view, 1, 4, 80);
-    defer typed.deinit(alloc);
-    try std.testing.expect(std.mem.find(u8, typed.items, "┃") != null);
-    try std.testing.expect(std.mem.find(u8, typed.items, ui_render.dim_style) == null);
+    try std.testing.expect(authPickerQueryCursorColumn(switch_view, 80) == null);
+    try std.testing.expect(!@hasField(auth_runtime.PickerStage, "change_team"));
+    try std.testing.expect(!@hasField(auth_runtime.PickerStage, "api_key"));
 }
 
 test "sign-in stage renders the complete device authorization screen" {

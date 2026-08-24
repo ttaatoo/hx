@@ -650,7 +650,7 @@ test "catalog access does not authenticate retired Gateway source names" {
     try std.testing.expect(types.parseCredentialSource("vercel_oidc_token") == null);
     try std.testing.expect(types.parseCredentialSource("stored_key") == null);
 
-    const access = credentials.catalogAccessForCredential(.grok_subscription, "login-token", "ignored-team");
+    const access = credentials.catalogAccessForCredential(.grok_subscription, "login-token");
     try std.testing.expectEqualStrings("login-token", access.authorizationCredential().?);
     try std.testing.expect(access.teamContext() == null);
     try std.testing.expectEqual(credentials.Source.grok_subscription, access.credentialSource().?);
@@ -684,7 +684,7 @@ test "catalog authentication fallback is anonymous and bounded" {
     defer debug_trace.resetForTest();
     try debug_trace.configureForTestWithScopes(alloc, trace_path, "catalog");
 
-    const access = credentials.catalogAccessForCredential(.custom_provider, "test-key", "team_123");
+    const access = credentials.catalogAccessForCredential(.custom_provider, "test-key");
     const rejection = Failure{ .category = .authentication, .http_status = .unauthorized };
     var accepted = FallbackProbe{ .failures = .{ rejection, null } };
     const loaded = fetchWithPublicFallback(accepted.provider(), std.testing.allocator, .{
@@ -740,7 +740,6 @@ test "catalog fallback classification stays bounded across repeated cycles" {
     const access = credentials.catalogAccessForCredential(
         .custom_provider,
         "repeated-test-key",
-        "repeated-team",
     );
     const terminal_failures = [_]Failure{
         .{ .category = .authentication },

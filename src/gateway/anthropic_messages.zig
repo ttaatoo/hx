@@ -18,7 +18,7 @@ pub fn buildRequest(
     try std.json.Stringify.value(request.model, .{}, writer);
     const max_tokens = request.max_output_tokens orelse default_max_tokens;
     const thinking = request.provider_options.reasoning != null and
-        request.provider_options.reasoning.?.gatewayValue() != null;
+        request.provider_options.reasoning.?.providerValue() != null;
     const effective_max = if (thinking) @max(max_tokens, thinking_budget_tokens + 4_096) else max_tokens;
     try writer.print(",\"max_tokens\":{d},\"stream\":true", .{effective_max});
 
@@ -209,7 +209,7 @@ pub fn consumeSse(
     on_tool_input_chunk: ?stream_provider.StreamCallback,
     cancel_flag: *std.atomic.Value(bool),
     content_capture_limit: ?usize,
-) !types.GatewayCompletion {
+) !types.ProviderCompletion {
     var content: std.ArrayList(u8) = .empty;
     errdefer content.deinit(alloc);
     var tools: std.ArrayList(ToolAccumulator) = .empty;

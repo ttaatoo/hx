@@ -2036,11 +2036,10 @@ fn writeAuthStateSummary(writer: *std.Io.Writer, app: anytype) !void {
 
     const auth_view = app.auth.view();
     try writer.print(
-        "auth: source={s} refreshable={s} gateway_team={s}\n",
+        "auth: source={s} refreshable={s}\n",
         .{
             auth_view.activeSourceLabel(),
             boolLabel(auth_view.refreshable),
-            auth_view.gatewayTeamStatus().label(),
         },
     );
 }
@@ -4079,7 +4078,7 @@ test "trace auth summary preserves missing and loaded status text" {
     defer missing.deinit();
     try writeAuthStateSummary(&missing.writer, &app);
     try std.testing.expectEqualStrings(
-        "auth: source=missing refreshable=false gateway_team=unknown\n",
+        "auth: source=missing refreshable=false\n",
         missing.written(),
     );
 
@@ -4093,7 +4092,7 @@ test "trace auth summary preserves missing and loaded status text" {
     defer loaded.deinit();
     try writeAuthStateSummary(&loaded.writer, &app);
     try std.testing.expectEqualStrings(
-        "auth: source=SuperGrok subscription refreshable=true gateway_team=unset\n",
+        "auth: source=SuperGrok subscription refreshable=true\n",
         loaded.written(),
     );
 }

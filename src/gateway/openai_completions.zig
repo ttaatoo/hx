@@ -22,7 +22,7 @@ pub fn buildRequest(
         try writer.print(",\"max_tokens\":{d}", .{max_tokens});
     }
     if (request.provider_options.reasoning) |effort| {
-        if (effort.gatewayValue()) |label| {
+        if (effort.providerValue()) |label| {
             const mapped = if (std.mem.eql(u8, label, "minimal")) "low" else label;
             try writer.writeAll(",\"reasoning_effort\":");
             try std.json.Stringify.value(mapped, .{}, writer);
@@ -163,7 +163,7 @@ pub fn consumeSse(
     on_tool_input_chunk: ?stream_provider.StreamCallback,
     cancel_flag: *std.atomic.Value(bool),
     content_capture_limit: ?usize,
-) !types.GatewayCompletion {
+) !types.ProviderCompletion {
     var content: std.ArrayList(u8) = .empty;
     errdefer content.deinit(alloc);
     var tools: std.ArrayList(ToolAccumulator) = .empty;

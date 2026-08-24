@@ -3219,7 +3219,6 @@ const RoutingFakeApp = struct {
     load_more_session_count: usize = 0,
     selected_credential_source: ?types.CredentialSource = null,
     selected_auth_action: ?auth_runtime.AcquisitionAction = null,
-    selected_auth_team: ?usize = null,
     upgrade_apply_count: usize = 0,
     upgrade_denied_count: usize = 0,
     suspend_count: usize = 0,
@@ -3459,7 +3458,6 @@ const RoutingFakeApp = struct {
             .provider => {},
             .source => |source| _ = try self.selectCredentialSource(source),
             .action => |action| self.selected_auth_action = action,
-            .team => |index| self.selected_auth_team = index,
         }
     }
 
@@ -4029,17 +4027,17 @@ test "app_input_runtime auth stage Escape pops before closing the picker" {
     try std.testing.expectEqual(@as(usize, 0), app.transcript.items.len);
 }
 
-test "app_input_runtime disabled change team action stays silent" {
+test "app_input_runtime auth picker has no change-team action" {
     const alloc = std.testing.allocator;
     var app = try RoutingFakeApp.init(alloc);
     defer app.deinit();
     app.auth.source_inventory = auth_runtime.SourceSet.initMany(&.{ .grok_subscription, .chatgpt_subscription });
     app.auth.openPicker(alloc);
 
-    var index: usize = 0;
-    while (app.auth.pickerView().choiceAt(index)) |choice| : (index += 1) {
-        try std.testing.expect(!choice.eql(.{ .action = .change_team }));
-    }
+    try std.testing.expect(!@hasField(auth_runtime.AcquisitionAction, "change_team"));
+    try std.testing.expect(!@hasField(auth_runtime.AcquisitionAction, "setup"));
+    try std.testing.expect(!@hasField(auth_runtime.Choice, "team"));
+    try std.testing.expect(!@hasField(auth_runtime.PickerStage, "api_key"));
 
     try Runtime(RoutingFakeApp).handleByte(&app, '\r', 4096, 100);
 
@@ -4277,30 +4275,6 @@ test "app_input_runtime Escape closes an idle skills menu before empty-composer 
     try std.testing.expect(!app.skills.menu.active);
     try std.testing.expect(app.shell.render_requests.hasReason(.footer));
     try std.testing.expect(!app.worker.cancel_requested);
-}
-
-test "api key entry bypasses composer paste and zeroes on cancellation" {
-    const alloc = std.testing.allocator;
-    var app = try RoutingFakeApp.init(alloc);
-    defer app.deinit();
-    const sentinel = "FX_API_KEY_HISTORY_SENTINEL";
-    app.auth.openApiKeyPicker(alloc);
-
-    try feedRoutingBytes(&app, "\x1b[200~");
-    try feedRoutingBytes(&app, sentinel);
-    try feedRoutingBytes(&app, "\x1b[201~");
-
-    try std.testing.expect(app.auth.apiKeyEntryActive());
-    try std.testing.expectEqual(sentinel.len, app.auth.pickerView().api_key_mask_count);
-    try std.testing.expectEqual(paste_framing.Owner.none, app.input_runtime.paste.owner);
-    try std.testing.expectEqual(@as(usize, 0), app.input_runtime.edit_state.input.items.len);
-    try std.testing.expectEqual(@as(usize, 0), app.input_runtime.paste.buffer.items.len);
-    try std.testing.expectEqual(@as(usize, 0), app.input_runtime.composer_history.count());
-
-    try Runtime(RoutingFakeApp).resolveEscape(&app, false, 1);
-    try std.testing.expect(!app.auth.apiKeyEntryActive());
-    try std.testing.expectEqual(@as(usize, 0), app.auth.pickerView().api_key_mask_count);
-    try std.testing.expectEqual(@as(usize, 0), app.input_runtime.edit_state.input.items.len);
 }
 
 test "app_input_runtime command skills menu reuses composer input as its query" {

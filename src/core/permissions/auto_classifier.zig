@@ -148,7 +148,7 @@ pub const ReviewRequest = struct {
 };
 
 pub const OwnedCompletion = struct {
-    completion: types.GatewayCompletion,
+    completion: types.ProviderCompletion,
     context: ?*anyopaque = null,
     deinit_fn: ?*const fn (*anyopaque, std.mem.Allocator) void = null,
 
@@ -903,7 +903,7 @@ fn toolsJsonAlloc(alloc: std.mem.Allocator) ![]u8 {
     return std.fmt.allocPrint(alloc, "[{s}]", .{schema_json});
 }
 
-fn parseCompletion(alloc: std.mem.Allocator, completion: types.GatewayCompletion) !ParseOutcome {
+fn parseCompletion(alloc: std.mem.Allocator, completion: types.ProviderCompletion) !ParseOutcome {
     if (completion.content) |content| {
         if (std.mem.trim(u8, content, " \t\r\n").len > 0) return .invalid;
     }
@@ -1109,7 +1109,7 @@ test "automatic review rejects malformed extra and legacy deny assessments" {
         .name = tool_name,
         .arguments_json = "{\"risk\":\"low\",\"authorization\":\"low\",\"decision\":\"allow\",\"rationale\":\"safe\"}",
     };
-    const completions = [_]types.GatewayCompletion{
+    const completions = [_]types.ProviderCompletion{
         .{ .content = "allow" },
         .{ .tool_calls = &.{} },
         .{ .tool_calls = &.{ valid_call, valid_call } },

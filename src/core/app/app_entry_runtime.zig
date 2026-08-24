@@ -26,8 +26,8 @@ const mcp_contract = @import("../mcp/mcp_contract.zig");
 const mcp_runtime = @import("../mcp/mcp_runtime.zig");
 const tool_set_contract = @import("../tooling/tool_set.zig");
 const update_target = @import("../upgrade/update_target.zig");
-const test_builtin_gateway = if (builtin.is_test)
-    @import("../../builtins/gateway.zig")
+const test_builtin_providers = if (builtin.is_test)
+    @import("../../builtins/providers.zig")
 else
     struct {};
 const test_builtin_commands = if (builtin.is_test)
@@ -527,7 +527,7 @@ fn testConfig() Config {
         .models_path = "/models",
         .gateway_retry_count = 2,
         .gateway_chat_url = "https://gateway/chat",
-        .gateway_provider = test_builtin_gateway.provider,
+        .gateway_provider = test_builtin_providers.provider,
         .url_opener = host.unavailable_url_opener,
         .secret_store = host.unavailable_secret_store,
         .prompt_policy = .{ .system_prompt = "system" },
@@ -815,9 +815,9 @@ test "app entry returns after handled CLI success without initializing app" {
     try std.testing.expectEqualStrings("entry", capture.seen_config.?.mode_registry.default_mode_id);
     try std.testing.expectEqualStrings("entry_test_tool", capture.seen_config.?.tool_set.order[0]);
     try std.testing.expectEqualStrings("skills", capture.seen_config.?.skill_root_policy.workspace_roots[0].path);
-    try std.testing.expect(capture.seen_config.?.gateway_provider.oauth_transport.execute_fn == test_builtin_gateway.oauth_transport_provider.execute_fn);
-    try std.testing.expect(capture.seen_config.?.gateway_provider.cli_model_catalog.fetch_fn == test_builtin_gateway.provider.cli_model_catalog.fetch_fn);
-    try std.testing.expect(capture.seen_config.?.gateway_provider.model_catalog.fetch_fn == test_builtin_gateway.provider.model_catalog.fetch_fn);
+    try std.testing.expect(capture.seen_config.?.gateway_provider.oauth_transport.execute_fn == test_builtin_providers.oauth_transport_provider.execute_fn);
+    try std.testing.expect(capture.seen_config.?.gateway_provider.cli_model_catalog.fetch_fn == test_builtin_providers.provider.cli_model_catalog.fetch_fn);
+    try std.testing.expect(capture.seen_config.?.gateway_provider.model_catalog.fetch_fn == test_builtin_providers.provider.model_catalog.fetch_fn);
     try std.testing.expect(
         capture.seen_config.?.background_process_provider.spawn_prepared_fn ==
             cfg.background_process_provider.spawn_prepared_fn,

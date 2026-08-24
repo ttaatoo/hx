@@ -314,14 +314,7 @@ fn adoptServerCredential(state: *ServerState, credential: *credentials.Credentia
     state.credential_source = credential.source;
     state.account_id = credential.account_id;
     credential.account_id = null;
-    state.gateway_team = if (credential.team_id) |team| team else credential.team_slug;
-    if (credential.team_id != null) {
-        credential.team_id = null;
-        if (credential.team_slug) |slug| state.alloc.free(slug);
-        credential.team_slug = null;
-    } else {
-        credential.team_slug = null;
-    }
+    state.gateway_team = null;
     if (state.active_session) |*active| {
         active.api_key = state.api_key;
         active.credential_source = state.credential_source;
@@ -1426,7 +1419,7 @@ fn handleInitialize(state: *ServerState, alloc: Allocator, msg: *jsonrpc.Message
         state.alloc,
         startup_catalog,
         .{
-            .access = credentials.catalogAccessForCredential(state.credential_source, state.api_key, state.gateway_team),
+            .access = credentials.catalogAccessForCredential(state.credential_source, state.api_key),
             .endpoint = state.cfg.gateway_models_path,
             .cancel_flag = &catalog_cancel_flag,
         },
@@ -1659,7 +1652,6 @@ fn handleSetConfigOption(state: *ServerState, alloc: Allocator, msg: *jsonrpc.Me
             const access = credentials.catalogAccessForCredential(
                 staged_credential.source,
                 staged_credential.token,
-                staged_credential.gatewayTeam(),
             );
             const fetched = try catalog_provider.fetch(alloc, .{
                 .access = access,

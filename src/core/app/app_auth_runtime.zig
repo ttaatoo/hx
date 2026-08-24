@@ -267,17 +267,11 @@ pub fn Runtime(comptime App: type) type {
                 });
                 return;
             }
-            const result = login_flow.logout(app.alloc, app.auth.oauthTransport()) catch |err| switch (err) {
-                error.SessionDeleteFailed => {
-                    try writeAuthNotice(app, .{
-                        .topic = "auth",
-                        .tone = .@"error",
-                        .body = "Could not complete hx logout. The current source is unchanged.",
-                    });
-                    return;
-                },
-            };
-            try applyLogoutResult(app, result);
+            try writeAuthNotice(app, .{
+                .topic = "auth",
+                .tone = .neutral,
+                .body = "No SuperGrok or Codex login session found.",
+            });
         }
 
         pub fn openSetupHub(app: *App) !void {
@@ -292,40 +286,6 @@ pub fn Runtime(comptime App: type) type {
             try app.auth.refreshSourceInventory(app.alloc);
             app.auth.openPicker(app.alloc);
             app.shell.render_requests.request(.footer);
-        }
-
-        fn applyLogoutResult(app: *App, result: login_flow.LogoutResult) !void {
-            // Logging out is an explicit rejection of that credential, so a
-            // remembered pointer to it would silently reactivate on next login.
-            // A remembered source always wins resolution, so an active hx login
-            // is the only way one can be remembered; clearing otherwise is a
-            // no-op against a store that holds nothing.
-            applyCredentialChange(app, try app.auth.reconcileAfterFxLoginLogout(app.alloc));
-            try writeAuthNotice(app, if (result.local_durability_failed)
-                .{
-                    .topic = "auth",
-                    .tone = .warning,
-                    .body = "Could not confirm durable hx logout. The active source was recalculated.",
-                }
-            else if (result.session_deleted)
-                .{
-                    .topic = "auth",
-                    .tone = .neutral,
-                    .body = "Signed out of fx.",
-                }
-            else
-                .{
-                    .topic = "auth",
-                    .tone = .neutral,
-                    .body = "No hx login session found.",
-                });
-            if (result.remote_revocation_failed) {
-                try writeAuthNotice(app, .{
-                    .topic = "auth",
-                    .tone = .warning,
-                    .body = login_flow.remote_revocation_warning,
-                });
-            }
         }
 
         pub fn applyPickerChoice(app: *App, choice: auth_runtime.Choice) !void {
@@ -343,20 +303,9 @@ pub fn Runtime(comptime App: type) type {
                 .action => |action| switch (action) {
                     .chatgpt_login => try beginChatGptSignIn(app),
                     .grok_login => try beginGrokSignIn(app),
-                    .setup => try writeAuthNotice(app, .{
-                        .topic = "auth",
-                        .tone = .warning,
-                        .body = "Use SuperGrok or Anthropic. Run /login and choose Sign in with SuperGrok, or set ANTHROPIC_API_KEY.",
-                    }),
-                    .change_team => try writeAuthNotice(app, .{
-                        .topic = "auth",
-                        .tone = .warning,
-                        .body = "Team switching is not supported. Run /login and choose SuperGrok or Codex.",
-                    }),
                     .switch_credential => app.auth.openSwitchCredentialPicker(app.alloc),
                     .automatic => try applyAutomaticCredential(app),
                 },
-                .team => |index| try applyTeamChoice(app, index),
             }
         }
 
@@ -370,29 +319,11 @@ pub fn Runtime(comptime App: type) type {
                 app.shell.render_requests.request(.footer);
                 return true;
             }
-            if (app.auth.teamPickerActive()) {
-                const consumed = switch (byte) {
-                    8, 127 => app.auth.deleteTeamQueryByte(),
-                    else => try app.auth.appendTeamQueryByte(app.alloc, byte),
-                };
-                if (consumed) {
-                    app.shell.render_requests.request(.footer);
-                    return true;
-                }
-            }
-            if (!app.auth.apiKeyEntryActive()) return false;
-            switch (byte) {
-                3, 4 => _ = app.auth.popPickerStage(app.alloc),
-                '\r', '\n' => try submitApiKeyEntry(app),
-                8, 127 => _ = app.auth.deleteApiKeyByte(),
-                else => _ = try app.auth.appendApiKeyByte(app.alloc, byte),
-            }
-            app.shell.render_requests.request(.footer);
-            return true;
+            return false;
         }
 
         pub fn routeAuthPickerEscapeAction(app: *App, action: anytype) bool {
-            if (!app.auth.signInEntryActive() and !app.auth.apiKeyEntryActive()) return false;
+            if (!app.auth.signInEntryActive()) return false;
             return switch (action) {
                 .escape, .remapped_byte => false,
                 else => true,
@@ -494,89 +425,6 @@ pub fn Runtime(comptime App: type) type {
             }
         }
 
-        fn prepareApiKeyInputBoundary(app: *App) void {
-            if (comptime @hasDecl(App, "prepareApiKeyInputBoundary")) {
-                app.prepareApiKeyInputBoundary();
-            }
-        }
-
-        fn submitApiKeyEntry(app: *App) !void {
-            if (app.auth.pickerView().api_key_mask_count == 0) return;
-            switch (app.auth.beginApiKeySave(app.alloc)) {
-                .started => app.shell.render_requests.request(.footer),
-                .empty => {},
-                .busy => try app.writeDomainNotice(.{
-                    .topic = "auth",
-                    .tone = .warning,
-                    .body = "Still saving the previous API key. Nothing was stored for this one; try again in a moment.",
-                }, true),
-            }
-        }
-
-        /// Polled from the event loop so a save that blocks on a locked key store
-        /// or a slow gateway never stalls rendering.
-        pub fn collectApiKeySaveFacts(app: *App) !void {
-            const result = app.auth.takeApiKeySaveResult(app.alloc) orelse return;
-            try applyApiKeySaveResult(app, result);
-        }
-
-        fn applyApiKeySaveResult(app: *App, result: auth_runtime.ApiKeySaveResult) !void {
-            switch (result) {
-                .empty => return,
-                .saved => |changed| {
-                    applyCredentialChange(app, changed);
-                    rememberCredentialSource(app, .custom_provider);
-                    const body = try std.fmt.allocPrint(
-                        app.alloc,
-                        "Saved the API key to {s} and made it active.",
-                        .{credentials.stored_key_backend_label},
-                    );
-                    defer app.alloc.free(body);
-                    try app.writeDomainNotice(.{
-                        .topic = "auth",
-                        .tone = .neutral,
-                        .body = body,
-                    }, true);
-                },
-                .gateway_refused => try app.writeDomainNotice(.{
-                    .topic = "auth",
-                    .tone = .@"error",
-                    .body = "That API key could not be verified. Nothing was stored.",
-                }, true),
-                .gateway_unavailable => try app.writeDomainNotice(.{
-                    .topic = "auth",
-                    .tone = .@"error",
-                    .body = "Could not verify that API key. Nothing was stored.",
-                }, true),
-                .store_failed => {
-                    const body = try std.fmt.allocPrint(
-                        app.alloc,
-                        "Could not save the API key to {s}. Nothing was stored.",
-                        .{credentials.stored_key_backend_label},
-                    );
-                    defer app.alloc.free(body);
-                    try app.writeDomainNotice(.{
-                        .topic = "auth",
-                        .tone = .@"error",
-                        .body = body,
-                    }, true);
-                },
-                .reload_failed => {
-                    const body = try std.fmt.allocPrint(
-                        app.alloc,
-                        "Saved the API key to {s}, but could not make it active.",
-                        .{credentials.stored_key_backend_label},
-                    );
-                    defer app.alloc.free(body);
-                    try app.writeDomainNotice(.{
-                        .topic = "auth",
-                        .tone = .warning,
-                        .body = body,
-                    }, true);
-                },
-            }
-        }
-
         /// Clearing the remembered choice must also re-resolve, otherwise the
         /// session would keep running on a source precedence no longer selects.
         fn applyAutomaticCredential(app: *App) !void {
@@ -667,7 +515,7 @@ pub fn Runtime(comptime App: type) type {
                 return;
             }) {
                 app.shell.render_requests.request(.footer);
-                if (io_mod.getenv("FX_NO_OPEN_BROWSER") == null) try openSignInBrowser(app);
+                if (!login_flow.browserOpenSuppressed()) try openSignInBrowser(app);
             }
         }
 
@@ -680,7 +528,7 @@ pub fn Runtime(comptime App: type) type {
                 return;
             }) {
                 app.shell.render_requests.request(.footer);
-                if (io_mod.getenv("FX_NO_OPEN_BROWSER") == null) try openSignInBrowser(app);
+                if (!login_flow.browserOpenSuppressed()) try openSignInBrowser(app);
             }
         }
 
@@ -693,7 +541,7 @@ pub fn Runtime(comptime App: type) type {
                 return;
             }) {
                 app.shell.render_requests.request(.footer);
-                if (io_mod.getenv("FX_NO_OPEN_BROWSER") == null) try openSignInBrowser(app);
+                if (!login_flow.browserOpenSuppressed()) try openSignInBrowser(app);
             }
         }
 
@@ -706,7 +554,7 @@ pub fn Runtime(comptime App: type) type {
                 return;
             }) {
                 app.shell.render_requests.request(.footer);
-                if (io_mod.getenv("FX_NO_OPEN_BROWSER") == null) try openSignInBrowser(app);
+                if (!login_flow.browserOpenSuppressed()) try openSignInBrowser(app);
             }
         }
 
@@ -809,7 +657,6 @@ pub fn Runtime(comptime App: type) type {
             const access = credentials.catalogAccessForCredential(
                 credential.source,
                 credential.token,
-                credential.gatewayTeam(),
             );
             const fetched = app.fetchProviderCatalog(target, access) catch |err| {
                 debug_trace.logf("provider", "catalog preparation failed provider={t} err={s}", .{ target, @errorName(err) });
@@ -934,19 +781,6 @@ pub fn Runtime(comptime App: type) type {
                 }
             }
             app.shell.render_requests.request(.footer);
-        }
-
-        fn beginTeamPicker(app: *App) !void {
-            try writeAuthNotice(app, .{
-                .topic = "auth",
-                .tone = .warning,
-                .body = "Team switching is not supported. Run /login and choose SuperGrok or Codex.",
-            });
-        }
-
-        fn applyTeamChoice(app: *App, index: usize) !void {
-            _ = index;
-            try beginTeamPicker(app);
         }
 
         fn beginSignIn(app: *App, from_root: bool) !void {
@@ -1132,47 +966,14 @@ const TestModelCache = struct {
     }
 };
 
-const TestTeam = struct {
-    name: []const u8,
-    slug: []const u8,
-};
-
-const test_teams = [_]TestTeam{.{
-    .name = "Example Team",
-    .slug = "example-team",
-}};
-
-const TestSelectedTeam = struct {
-    fn deinit(_: *TestSelectedTeam, _: std.mem.Allocator) void {}
-};
-
-const TestTeamSelection = struct {
-    teams: struct {
-        items: []const TestTeam = &test_teams,
-    } = .{},
-    select_count: usize = 0,
-
-    fn select(
-        self: *TestTeamSelection,
-        _: std.mem.Allocator,
-        index: usize,
-    ) error{ InvalidTeamSelection, SessionChanged, NoSession }!TestSelectedTeam {
-        if (index >= self.teams.items.len) return error.InvalidTeamSelection;
-        self.select_count += 1;
-        return .{};
-    }
-};
-
 const TestAuth = struct {
     select_result: ?bool = false,
     sign_in_transition: login_flow.SignInTransition = .none,
-    logout_changed: bool = false,
     refresh_changed: bool = false,
     refresh_error: ?anyerror = null,
     selected_source: ?credentials.Source = null,
     active_source: ?credentials.Source = .custom_provider,
     refresh_count: usize = 0,
-    logout_reconcile_count: usize = 0,
     source_inventory_refresh_count: usize = 0,
     refresh_failure_source: ?credentials.Source = null,
     picker_opened: bool = false,
@@ -1180,8 +981,6 @@ const TestAuth = struct {
     gateway_ready: bool = true,
     catalog_ready: bool = true,
     gateway_ready_after_refresh_count: ?usize = null,
-    team_selection: TestTeamSelection = .{},
-    selected_team_adopted: bool = false,
     sign_in_url: ?[]const u8 = null,
     picker_pop_count: usize = 0,
 
@@ -1208,8 +1007,6 @@ const TestAuth = struct {
         return true;
     }
 
-    fn openTeamPicker(_: *TestAuth, _: std.mem.Allocator, _: *login_flow.TeamSelection) void {}
-
     fn refreshFxLoginIfNeeded(self: *TestAuth, _: std.mem.Allocator) !bool {
         self.refresh_count += 1;
         if (self.refresh_error) |err| return err;
@@ -1223,14 +1020,9 @@ const TestAuth = struct {
 
     fn modelCatalogAccess(self: *const TestAuth) credentials.CatalogAccess {
         return if (self.catalog_ready)
-            credentials.catalogAccessForCredential(.grok_subscription, "refreshed-key", "team_123")
+            credentials.catalogAccessForCredential(.grok_subscription, "refreshed-key")
         else
             .{ .public_only = .no_credential };
-    }
-
-    fn reconcileAfterFxLoginLogout(self: *TestAuth, _: std.mem.Allocator) !bool {
-        self.logout_reconcile_count += 1;
-        return self.logout_changed;
     }
 
     fn refreshSourceInventory(self: *TestAuth, _: std.mem.Allocator) !void {
@@ -1243,15 +1035,6 @@ const TestAuth = struct {
 
     fn openPicker(self: *TestAuth, _: std.mem.Allocator) void {
         self.picker_opened = true;
-    }
-
-    fn teamSelection(self: *TestAuth) ?*TestTeamSelection {
-        return &self.team_selection;
-    }
-
-    fn adoptSelectedTeam(self: *TestAuth, _: std.mem.Allocator, _: *TestSelectedTeam) bool {
-        self.selected_team_adopted = true;
-        return true;
     }
 
     fn closePicker(self: *TestAuth, _: std.mem.Allocator) void {
@@ -1513,31 +1296,16 @@ test "remaining credential sources persist a remembered choice" {
     }
 }
 
-test "team change stays a local notice and does not activate hx login" {
-    var app: TestApp = .{};
-    defer app.deinit();
-    app.auth.select_result = true;
-
-    try Runtime(TestApp).applyTeamChoice(&app, 0);
-
-    try std.testing.expectEqual(@as(usize, 0), app.auth.team_selection.select_count);
-    try std.testing.expect(!app.auth.selected_team_adopted);
-    try std.testing.expectEqual(credentials.Source.custom_provider, app.auth.active_source.?);
-    try std.testing.expectEqual(@as(usize, 0), app.preference_write_count);
-    try std.testing.expectEqual(@as(usize, 1), app.notice_write_count);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "Team switching is not supported") != null);
-}
-
-test "team change on an active hx login does not persist a team" {
-    var app: TestApp = .{};
-    defer app.deinit();
-    app.auth.active_source = .grok_subscription;
-
-    try Runtime(TestApp).applyTeamChoice(&app, 0);
-
-    try std.testing.expect(!app.auth.selected_team_adopted);
-    try std.testing.expectEqual(@as(usize, 0), app.preference_write_count);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "Team switching is not supported") != null);
+test "auth picker choice has no team or API-key-save path" {
+    try std.testing.expect(!@hasField(auth_runtime.AcquisitionAction, "change_team"));
+    try std.testing.expect(!@hasField(auth_runtime.AcquisitionAction, "setup"));
+    try std.testing.expect(!@hasField(auth_runtime.Choice, "team"));
+    try std.testing.expect(!@hasField(auth_runtime.PickerStage, "api_key"));
+    try std.testing.expect(!@hasDecl(Runtime(TestApp), "applyTeamChoice"));
+    try std.testing.expect(!@hasDecl(Runtime(TestApp), "beginTeamPicker"));
+    try std.testing.expect(!@hasDecl(Runtime(TestApp), "applyApiKeySaveResult"));
+    try std.testing.expect(!@hasDecl(Runtime(TestApp), "collectApiKeySaveFacts"));
+    try std.testing.expect(!@hasDecl(Runtime(TestApp), "applyLogoutResult"));
 }
 
 fn testGrokSignInCompletion() !login_flow.SignInCompletion {
@@ -1564,54 +1332,27 @@ test "successful SuperGrok login refreshes inventory and closes the picker" {
     try std.testing.expect(std.mem.find(u8, app.transcript.items, "Signed in with SuperGrok") != null);
 }
 
-test "successful API key save persists even when the live credential is unchanged" {
-    var app: TestApp = .{};
-    defer app.deinit();
-    app.auth.active_source = .custom_provider;
-
-    try Runtime(TestApp).applyApiKeySaveResult(&app, .{ .saved = false });
-
-    try std.testing.expectEqual(credentials.Source.custom_provider, app.auth.active_source.?);
-    try std.testing.expectEqual(@as(usize, 1), app.preference_write_count);
-    try std.testing.expectEqual(credentials.Source.custom_provider, app.last_preference_source.?);
-}
-
-test "successful API key save remembers the newly active stored key" {
-    var app: TestApp = .{};
-    defer app.deinit();
-    app.auth.active_source = .custom_provider;
-
-    try Runtime(TestApp).applyApiKeySaveResult(&app, .{ .saved = true });
-
-    try std.testing.expectEqual(credentials.Source.custom_provider, app.auth.active_source.?);
-    try std.testing.expectEqual(@as(usize, 1), app.preference_write_count);
-    try std.testing.expectEqual(credentials.Source.custom_provider, app.last_preference_source.?);
-    try std.testing.expectEqual(@as(usize, 1), app.model_cache.reset_count);
-    try std.testing.expectEqual(@as(usize, 1), app.model_cache_warmup_count);
-}
-
-test "cancelled login and rejected API key do not persist a source" {
+test "cancelled login does not persist a source" {
     var app: TestApp = .{};
     defer app.deinit();
     app.auth.sign_in_transition = .cancelled;
 
     try Runtime(TestApp).collectSignInFacts(&app);
-    try Runtime(TestApp).applyApiKeySaveResult(&app, .gateway_refused);
 
     try std.testing.expectEqual(@as(usize, 0), app.preference_write_count);
     try std.testing.expectEqual(credentials.Source.custom_provider, app.auth.active_source.?);
 }
 
-test "team source load failure preserves the environment source and preference" {
+test "source load failure preserves the environment source and preference" {
     var app: TestApp = .{};
     defer app.deinit();
     app.auth.select_result = null;
 
-    try Runtime(TestApp).applyTeamChoice(&app, 0);
+    try Runtime(TestApp).applySourceChoice(&app, .grok_subscription);
 
     try std.testing.expectEqual(credentials.Source.custom_provider, app.auth.active_source.?);
     try std.testing.expectEqual(@as(usize, 0), app.preference_write_count);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "Team switching is not supported") != null);
+    try std.testing.expect(std.mem.find(u8, app.transcript.items, "That credential is no longer available") != null);
 }
 
 test "prompt credential refresh reloads the catalog after the credential changes" {
@@ -1641,42 +1382,18 @@ test "credential removal clears the reconciliation credential" {
     try std.testing.expectEqual(@as(usize, 0), app.session.usage.refresh_count);
 }
 
-test "logout result reconciles live auth and renders only sanitized notices" {
+test "logout without SuperGrok or Codex selected reports no session" {
     var app: TestApp = .{};
     defer app.deinit();
-    app.auth.logout_changed = true;
+    app.auth.active_source = .custom_provider;
 
-    try Runtime(TestApp).applyLogoutResult(&app, .{
-        .session_deleted = true,
-        .remote_revocation_failed = true,
-    });
+    try Runtime(TestApp).runLogoutCommand(&app, "");
 
-    try std.testing.expectEqual(@as(usize, 1), app.auth.logout_reconcile_count);
-    try std.testing.expectEqual(@as(usize, 1), app.model_cache.reset_count);
-    try std.testing.expectEqual(@as(usize, 1), app.model_cache_warmup_count);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "Signed out of fx.") != null);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, login_flow.remote_revocation_warning) != null);
-    for ([_][]const u8{ "access-secret", "refresh-secret", "RemoteRevokeFailed", "https://issuer.example" }) |detail| {
-        try std.testing.expect(std.mem.find(u8, app.transcript.items, detail) == null);
-    }
-}
-
-test "logout durability failure still reconciles live auth" {
-    var app: TestApp = .{};
-    defer app.deinit();
-    app.auth.logout_changed = true;
-
-    try Runtime(TestApp).applyLogoutResult(&app, .{
-        .session_deleted = true,
-        .local_durability_failed = true,
-        .remote_revocation_failed = true,
-    });
-
-    try std.testing.expectEqual(@as(usize, 1), app.auth.logout_reconcile_count);
-    try std.testing.expectEqual(@as(usize, 1), app.model_cache.reset_count);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "Could not confirm durable hx logout.") != null);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, login_flow.remote_revocation_warning) != null);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "current source is unchanged") == null);
+    try std.testing.expectEqual(@as(usize, 1), app.notice_write_count);
+    try std.testing.expect(std.mem.find(u8, app.transcript.items, "No SuperGrok or Codex login session found.") != null);
+    try std.testing.expect(std.mem.find(u8, app.transcript.items, "fx") == null);
+    try std.testing.expect(std.mem.find(u8, app.transcript.items, "Signed out") == null);
+    try std.testing.expectEqual(@as(usize, 0), app.model_cache.reset_count);
 }
 
 test "prompt credential refresh failure is recoverable and detail-free" {
