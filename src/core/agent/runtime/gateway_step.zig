@@ -19,12 +19,12 @@ pub const AttemptEvidence = agent_stream_provider.AttemptEvidence;
 
 pub const StreamResult = struct {
     status: std.http.Status,
-    completion: types.GatewayCompletion = .{},
+    completion: types.ProviderCompletion = .{},
     err_body: ?[]u8 = null,
     retry_after_seconds: ?u64 = null,
 };
 
-pub fn streamGatewayCompletion(
+pub fn streamProviderCompletion(
     provider: agent_stream_provider.Provider,
     alloc: Allocator,
     api_key: []const u8,
@@ -166,7 +166,7 @@ fn recordGatewayResultMetric(
     model: []const u8,
     started_at_ms: i64,
     status: std.http.Status,
-    completion: types.GatewayCompletion,
+    completion: types.ProviderCompletion,
     err_body: ?[]const u8,
     failure_schema: ?[]const u8,
     failure_request_shape: ?[]const u8,
@@ -350,7 +350,7 @@ test "pre-send gateway failure settles usage as unbilled" {
     var delivery = DeliveryCertainty.init();
     var attempt_evidence: agent_stream_provider.AttemptEvidence = .{};
     var callback_ctx: u8 = 0;
-    const result = streamGatewayCompletion(
+    const result = streamProviderCompletion(
         agent_stream_provider.unavailable_provider,
         alloc,
         "test-key",
@@ -408,7 +408,7 @@ test "possibly sent gateway failure marks billing incomplete" {
     var attempt_evidence: agent_stream_provider.AttemptEvidence = .{};
     var callback_ctx: u8 = 0;
 
-    const result = streamGatewayCompletion(
+    const result = streamProviderCompletion(
         .{ .stream_fn = Gateway.stream },
         alloc,
         "test-key",

@@ -852,7 +852,7 @@ fn materializeConfirmedProviderTools(
     arena: Allocator,
     config: Config,
     turn_id: u64,
-    completion: types.GatewayCompletion,
+    completion: types.ProviderCompletion,
     advertised_dynamic_tool_names: []const []const u8,
     step_ctx: TraceContext,
     within_turn_suffix: *std.ArrayList(ChatMessage),
@@ -1245,7 +1245,7 @@ fn semanticAttemptLimit(max_provider_attempts: usize) usize {
     return if (max_provider_attempts == 0) 1 else max_provider_attempts;
 }
 
-fn completionContentBytes(completion: types.GatewayCompletion) usize {
+fn completionContentBytes(completion: types.ProviderCompletion) usize {
     return if (completion.content) |content| content.len else 0;
 }
 
@@ -1291,7 +1291,7 @@ fn appendReadFailureRecoveryContext(
 }
 
 fn recoveryToolEvidence(
-    completion: ?types.GatewayCompletion,
+    completion: ?types.ProviderCompletion,
     stream_ctx: *const runtime_assistant_stream.StreamChunkContext,
 ) model_response_recovery.ToolEvidence {
     if (completion) |value| {
@@ -1312,7 +1312,7 @@ fn recoveryToolEvidence(
 
 noinline fn effectiveRecoveryToolEvidence(
     preserved: model_response_recovery.ToolEvidence,
-    completion: ?types.GatewayCompletion,
+    completion: ?types.ProviderCompletion,
     stream_ctx: *const runtime_assistant_stream.StreamChunkContext,
 ) model_response_recovery.ToolEvidence {
     const observed = recoveryToolEvidence(completion, stream_ctx);
@@ -1556,7 +1556,7 @@ fn recoveryPauseRequested(config: Config) bool {
 }
 
 fn providerFailureReplaySafe(
-    completion: types.GatewayCompletion,
+    completion: types.ProviderCompletion,
     stream_ctx: *const runtime_assistant_stream.StreamChunkContext,
 ) bool {
     return completion.finish_reason == .provider_error and
@@ -1590,11 +1590,11 @@ fn disableFastRouteAfterFailure(
     return true;
 }
 
-fn routeFailureDetail(completion: types.GatewayCompletion) []const u8 {
+fn routeFailureDetail(completion: types.ProviderCompletion) []const u8 {
     return if (completion.provider_failure_detail) |detail| debug_trace.preview(detail, 240) else "";
 }
 
-fn isTerminalProviderExecutedCompletion(completion: types.GatewayCompletion) bool {
+fn isTerminalProviderExecutedCompletion(completion: types.ProviderCompletion) bool {
     if (completion.finish_reason != .stop) return false;
     const content = completion.content orelse return false;
     return content.len > 0 and types.allToolCallsProviderExecuted(completion.tool_calls);
@@ -1650,7 +1650,7 @@ fn onRequiredVisionStreamToolStart(
 }
 
 fn unsafeNoRetryReason(
-    completion: types.GatewayCompletion,
+    completion: types.ProviderCompletion,
     stream_ctx: *const runtime_assistant_stream.StreamChunkContext,
 ) types.RouteRecoveryUnsafeReason {
     return if (stream_ctx.saw_tool_start or completion.tool_calls.len > 0)
@@ -1762,7 +1762,7 @@ fn pushTerminalProviderFailureStatus(
     deps: *const AgentRuntimeDeps,
     attempts: usize,
     attempt_limit: usize,
-    completion: types.GatewayCompletion,
+    completion: types.ProviderCompletion,
     diagnostic: types.ModelFailureDiagnostic,
 ) !void {
     const reason = completion.finish_reason orelse return;
@@ -1867,7 +1867,7 @@ fn hasDiagnosticIdentifier(text: []const u8) bool {
 
 fn providerCompletionDiagnostic(
     alloc: Allocator,
-    completion: types.GatewayCompletion,
+    completion: types.ProviderCompletion,
     fallback: []const u8,
 ) !types.ModelFailureDiagnostic {
     return prepareExternalFailureDiagnostic(
@@ -1894,7 +1894,7 @@ fn traceRouteFailure(
     fast_mode: bool,
     semantic_attempt: usize,
     semantic_limit: usize,
-    completion: types.GatewayCompletion,
+    completion: types.ProviderCompletion,
     stream_ctx: *const runtime_assistant_stream.StreamChunkContext,
     retry: bool,
 ) void {
@@ -3274,7 +3274,7 @@ fn processQueuedPromptLoop(
             const gateway_wait_started_ms = io_mod.milliTimestamp();
             var gateway_delivery = runtime_gateway_step.DeliveryCertainty.init();
             var gateway_attempt_evidence: runtime_gateway_step.AttemptEvidence = .{};
-            stream_result = runtime_gateway_step.streamGatewayCompletion(
+            stream_result = runtime_gateway_step.streamProviderCompletion(
                 deps.agent_stream_provider,
                 arena,
                 active_api_key,
@@ -3642,7 +3642,7 @@ fn processQueuedPromptLoop(
                     auth_retry_used = true;
                     var replay_delivery = runtime_gateway_step.DeliveryCertainty.init();
                     var replay_evidence: runtime_gateway_step.AttemptEvidence = .{};
-                    stream_result = try runtime_gateway_step.streamGatewayCompletion(
+                    stream_result = try runtime_gateway_step.streamProviderCompletion(
                         deps.agent_stream_provider,
                         arena,
                         active_api_key,

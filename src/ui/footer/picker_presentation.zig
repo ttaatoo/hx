@@ -13,43 +13,10 @@ const input_presentation = @import("input_presentation.zig");
 const row_text = @import("row_text.zig");
 
 const Allocator = std.mem.Allocator;
-const team_query_prefix = "   Choose a team · Search: ";
-const compact_team_query_prefix = "Search: ";
-
-const TeamQueryProjection = struct {
-    prefix: []const u8,
-    query: []const u8,
-
-    fn cursorColumn(self: TeamQueryProjection, width: u16) u16 {
-        const content_end = display_width.visibleWidth(self.prefix) +
-            display_width.visibleWidth(self.query) + 1;
-        return @intCast(@min(content_end, width));
-    }
-};
-
 pub fn authPickerQueryCursorColumn(view: auth_runtime.PickerView, width: u16) ?u16 {
-    if (view.stage != .change_team or width == 0) return null;
-    return teamQueryProjection(view.team_query, width).cursorColumn(width);
-}
-
-fn teamQueryProjection(query: []const u8, width: u16) TeamQueryProjection {
-    const available: usize = width;
-    if (query.len == 0) return .{
-        .prefix = display_width.prefixByWidth(team_query_prefix, available),
-        .query = "",
-    };
-
-    const prefix = if (display_width.visibleWidth(team_query_prefix) < available)
-        team_query_prefix
-    else if (display_width.visibleWidth(compact_team_query_prefix) < available)
-        compact_team_query_prefix
-    else
-        "";
-    const query_width = available - display_width.visibleWidth(prefix);
-    return .{
-        .prefix = prefix,
-        .query = display_width.suffixByWidth(query, query_width),
-    };
+    _ = view;
+    _ = width;
+    return null;
 }
 
 pub fn authPickerRowCount(view: auth_runtime.PickerView) u16 {
@@ -79,23 +46,14 @@ pub noinline fn composeAuthPickerRow(
     var row: std.ArrayList(u8) = .empty;
     if (width == 0) return row;
 
-    const show_header = row_index == 0 and (row_count > 1 or view.stage == .change_team);
+    const show_header = row_index == 0 and row_count > 1;
     if (show_header) {
         try row.appendSlice(alloc, ui_render.dim_style);
-        if (view.stage == .change_team) {
-            const projection = teamQueryProjection(view.team_query, width);
-            try row_text.appendClipped(alloc, &row, projection.prefix, width);
-            const remaining: u16 = width -| @as(u16, @intCast(display_width.visibleWidth(projection.prefix)));
-            try row_text.appendClipped(alloc, &row, projection.query, remaining);
-            try row.appendSlice(alloc, ui_render.reset_style);
-            return row;
-        }
         const header = switch (view.stage) {
             .root => "   Setup",
             .provider => "   Switch provider",
             .sign_in => unreachable,
             .api_key => unreachable,
-            .change_team => unreachable,
             .switch_credential => "   Use this credential",
         };
         try row_text.appendClipped(alloc, &row, header, width);
@@ -118,10 +76,6 @@ pub noinline fn composeAuthPickerRow(
             .provider => "     No providers available",
             .sign_in => unreachable,
             .api_key => unreachable,
-            .change_team => if (view.team_query.len == 0)
-                "     No teams available"
-            else
-                "     No matching teams",
             .switch_credential => "     No credentials available",
         }, width);
         try row.appendSlice(alloc, ui_render.reset_style);
@@ -1671,7 +1625,7 @@ test "compact auth picker keeps the selected hub action visible" {
     try std.testing.expect(std.mem.find(u8, row.items, "Sign in with Codex") != null);
 }
 
-test "auth picker renders the staged switch and disabled team screens" {
+test "auth picker renders the staged switch screen without a team query" {
     const alloc = std.testing.allocator;
     const switch_view = auth_runtime.PickerView{
         .active = true,
@@ -1694,41 +1648,8 @@ test "auth picker renders the staged switch and disabled team screens" {
         authPickerDescriptionColumn(switch_view) >
             5 + display_width.visibleWidth(credentials.sourceLabel(.custom_provider)),
     );
-
-    const team_view = auth_runtime.PickerView{
-        .active = true,
-        .available_sources = .empty,
-        .selected_choice = null,
-        .active_source = .custom_provider,
-        .include_skip = false,
-        .stage = .change_team,
-    };
-    var team_header = try composeAuthPickerRow(alloc, team_view, 0, 2, 80);
-    defer team_header.deinit(alloc);
-    try std.testing.expect(std.mem.find(u8, team_header.items, "Choose a team") != null);
-
-    var no_teams = try composeAuthPickerRow(alloc, team_view, 1, 2, 80);
-    defer no_teams.deinit(alloc);
-    try std.testing.expect(std.mem.find(u8, no_teams.items, "No teams available") != null);
-
-    var search_view = team_view;
-    search_view.team_query = "play";
-    var search_header = try composeAuthPickerRow(alloc, search_view, 0, 2, 80);
-    defer search_header.deinit(alloc);
-    try std.testing.expect(std.mem.find(u8, search_header.items, "Search: play") != null);
-
-    search_view.team_query = "example-internal-team";
-    var narrow_search_header = try composeAuthPickerRow(alloc, search_view, 0, 2, 20);
-    defer narrow_search_header.deinit(alloc);
-    try std.testing.expect(std.mem.find(u8, narrow_search_header.items, "nternal-team") != null);
-    try std.testing.expectEqual(
-        @as(u16, 20),
-        authPickerQueryCursorColumn(search_view, 20).?,
-    );
-
-    var no_matches = try composeAuthPickerRow(alloc, search_view, 1, 2, 80);
-    defer no_matches.deinit(alloc);
-    try std.testing.expect(std.mem.find(u8, no_matches.items, "No matching teams") != null);
+    try std.testing.expect(authPickerQueryCursorColumn(switch_view, 80) == null);
+    try std.testing.expect(!@hasField(auth_runtime.PickerStage, "change_team"));
 }
 
 test "api key stage renders only a bounded mask and the configured backend label" {

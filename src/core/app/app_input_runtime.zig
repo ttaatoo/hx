@@ -3219,7 +3219,6 @@ const RoutingFakeApp = struct {
     load_more_session_count: usize = 0,
     selected_credential_source: ?types.CredentialSource = null,
     selected_auth_action: ?auth_runtime.AcquisitionAction = null,
-    selected_auth_team: ?usize = null,
     upgrade_apply_count: usize = 0,
     upgrade_denied_count: usize = 0,
     suspend_count: usize = 0,
@@ -3459,7 +3458,6 @@ const RoutingFakeApp = struct {
             .provider => {},
             .source => |source| _ = try self.selectCredentialSource(source),
             .action => |action| self.selected_auth_action = action,
-            .team => |index| self.selected_auth_team = index,
         }
     }
 
@@ -4029,17 +4027,15 @@ test "app_input_runtime auth stage Escape pops before closing the picker" {
     try std.testing.expectEqual(@as(usize, 0), app.transcript.items.len);
 }
 
-test "app_input_runtime disabled change team action stays silent" {
+test "app_input_runtime auth picker has no change-team action" {
     const alloc = std.testing.allocator;
     var app = try RoutingFakeApp.init(alloc);
     defer app.deinit();
     app.auth.source_inventory = auth_runtime.SourceSet.initMany(&.{ .grok_subscription, .chatgpt_subscription });
     app.auth.openPicker(alloc);
 
-    var index: usize = 0;
-    while (app.auth.pickerView().choiceAt(index)) |choice| : (index += 1) {
-        try std.testing.expect(!choice.eql(.{ .action = .change_team }));
-    }
+    try std.testing.expect(!@hasField(auth_runtime.AcquisitionAction, "change_team"));
+    try std.testing.expect(!@hasField(auth_runtime.Choice, "team"));
 
     try Runtime(RoutingFakeApp).handleByte(&app, '\r', 4096, 100);
 

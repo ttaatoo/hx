@@ -55,7 +55,6 @@ pub const CatalogAccess = union(enum) {
     authenticated: struct {
         source: CatalogAuthenticatedSource,
         credential: []const u8,
-        team_context: ?[]const u8,
     },
 
     pub fn credentialSource(self: CatalogAccess) ?Source {
@@ -90,23 +89,15 @@ pub const CatalogAccess = union(enum) {
         };
     }
 
-    pub fn teamContext(self: CatalogAccess) ?[]const u8 {
-        const team = switch (self) {
-            .public_only => return null,
-            .authenticated => |access| access.team_context orelse return null,
-        };
-        return if (team.len > 0) team else null;
+    pub fn teamContext(_: CatalogAccess) ?[]const u8 {
+        return null;
     }
 };
 
 pub fn catalogAccessAt(credential: ?Credential, now_ms: i64) CatalogAccess {
     _ = now_ms;
     const selected = credential orelse return .{ .public_only = .no_credential };
-    return catalogAccessForCredential(
-        selected.source,
-        selected.token,
-        selected.gatewayTeam(),
-    );
+    return catalogAccessForCredential(selected.source, selected.token);
 }
 
 pub fn catalogAccessAfterRefreshFailure(source: Source) CatalogAccess {
@@ -120,9 +111,7 @@ pub fn catalogAccessAfterRefreshFailure(source: Source) CatalogAccess {
 pub fn catalogAccessForCredential(
     source: ?Source,
     credential: []const u8,
-    team_context: ?[]const u8,
 ) CatalogAccess {
-    _ = team_context;
     const selected_source = source orelse return .{ .public_only = .no_credential };
     const authenticated_source: CatalogAuthenticatedSource = switch (selected_source) {
         .chatgpt_subscription => .chatgpt_subscription,
@@ -133,7 +122,6 @@ pub fn catalogAccessForCredential(
         .authenticated = .{
             .source = authenticated_source,
             .credential = credential,
-            .team_context = null,
         },
     };
 }
@@ -154,7 +142,7 @@ pub const missing_grok_credential_message = "This model uses SuperGrok / X Premi
 pub const missing_grok_interactive_credential_message = "SuperGrok needs a subscription login. Run /login and choose Sign in with SuperGrok.";
 pub const missing_credential_message = missing_grok_credential_message;
 pub const missing_interactive_credential_message = missing_grok_interactive_credential_message;
-pub const unreadable_store_message = "Fx could not read a stored key from " ++ stored_key_backend_label ++ ". Run hx login grok, or set ANTHROPIC_API_KEY.";
+pub const unreadable_store_message = "hx could not read a stored key from " ++ stored_key_backend_label ++ ". Run hx login grok, or set ANTHROPIC_API_KEY.";
 
 pub const MissingSurface = enum { cli, interactive };
 
@@ -179,21 +167,12 @@ pub const Credential = struct {
     token: []u8,
     source: Source,
     account_id: ?[]u8 = null,
-    team_id: ?[]u8 = null,
-    team_slug: ?[]u8 = null,
     refresh_after_ms: ?i64 = null,
 
     pub fn deinit(self: *Credential, alloc: std.mem.Allocator) void {
         secret.zeroAndFree(alloc, self.token);
         if (self.account_id) |account_id| alloc.free(account_id);
-        if (self.team_id) |team| alloc.free(team);
-        if (self.team_slug) |team| alloc.free(team);
         self.* = undefined;
-    }
-
-    pub fn gatewayTeam(self: Credential) ?[]const u8 {
-        if (self.team_id) |team| return team;
-        return self.team_slug;
     }
 
     pub fn accountId(self: Credential) ?[]const u8 {
@@ -446,18 +425,6 @@ test "missing credential messages ask for SuperGrok login" {
     try std.testing.expect(std.mem.find(u8, missing_interactive_credential_message, "AI_GATEWAY_API_KEY") == null);
 }
 
-test "credential gateway team prefers team id" {
-    var credential = Credential{
-        .token = try std.testing.allocator.dupe(u8, "token"),
-        .source = .grok_subscription,
-        .team_id = try std.testing.allocator.dupe(u8, "team_123"),
-        .team_slug = try std.testing.allocator.dupe(u8, "example-team"),
-    };
-    defer credential.deinit(std.testing.allocator);
-
-    try std.testing.expectEqualStrings("team_123", credential.gatewayTeam().?);
-}
-
 test "catalog access isolates public and authenticated provider credentials" {
     const missing = catalogAccessAt(null, 0);
     try std.testing.expectEqual(CatalogPublicOnlyReason.no_credential, missing.publicOnlyReason().?);
@@ -472,7 +439,6 @@ test "catalog access isolates public and authenticated provider credentials" {
     const chatgpt = catalogAccessForCredential(
         .chatgpt_subscription,
         "chatgpt-secret",
-        "chatgpt-account",
     );
     try std.testing.expectEqual(Source.chatgpt_subscription, chatgpt.credentialSource().?);
     try std.testing.expectEqualStrings("chatgpt-secret", chatgpt.authorizationCredential().?);
@@ -491,7 +457,6 @@ test "authenticated catalog access does not send team context or public fallback
         var credential = Credential{
             .token = try std.testing.allocator.dupe(u8, "token"),
             .source = source,
-            .team_slug = try std.testing.allocator.dupe(u8, "example-team"),
         };
         defer credential.deinit(std.testing.allocator);
 

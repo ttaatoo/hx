@@ -311,7 +311,7 @@ pub fn Runtime(comptime App: type) type {
                 .{
                     .topic = "auth",
                     .tone = .neutral,
-                    .body = "Signed out of fx.",
+                    .body = "Signed out of hx.",
                 }
             else
                 .{
@@ -348,15 +348,9 @@ pub fn Runtime(comptime App: type) type {
                         .tone = .warning,
                         .body = "Use SuperGrok or Anthropic. Run /login and choose Sign in with SuperGrok, or set ANTHROPIC_API_KEY.",
                     }),
-                    .change_team => try writeAuthNotice(app, .{
-                        .topic = "auth",
-                        .tone = .warning,
-                        .body = "Team switching is not supported. Run /login and choose SuperGrok or Codex.",
-                    }),
                     .switch_credential => app.auth.openSwitchCredentialPicker(app.alloc),
                     .automatic => try applyAutomaticCredential(app),
                 },
-                .team => |index| try applyTeamChoice(app, index),
             }
         }
 
@@ -369,16 +363,6 @@ pub fn Runtime(comptime App: type) type {
                 }
                 app.shell.render_requests.request(.footer);
                 return true;
-            }
-            if (app.auth.teamPickerActive()) {
-                const consumed = switch (byte) {
-                    8, 127 => app.auth.deleteTeamQueryByte(),
-                    else => try app.auth.appendTeamQueryByte(app.alloc, byte),
-                };
-                if (consumed) {
-                    app.shell.render_requests.request(.footer);
-                    return true;
-                }
             }
             if (!app.auth.apiKeyEntryActive()) return false;
             switch (byte) {
@@ -667,7 +651,7 @@ pub fn Runtime(comptime App: type) type {
                 return;
             }) {
                 app.shell.render_requests.request(.footer);
-                if (io_mod.getenv("FX_NO_OPEN_BROWSER") == null) try openSignInBrowser(app);
+                if (!login_flow.browserOpenSuppressed()) try openSignInBrowser(app);
             }
         }
 
@@ -680,7 +664,7 @@ pub fn Runtime(comptime App: type) type {
                 return;
             }) {
                 app.shell.render_requests.request(.footer);
-                if (io_mod.getenv("FX_NO_OPEN_BROWSER") == null) try openSignInBrowser(app);
+                if (!login_flow.browserOpenSuppressed()) try openSignInBrowser(app);
             }
         }
 
@@ -693,7 +677,7 @@ pub fn Runtime(comptime App: type) type {
                 return;
             }) {
                 app.shell.render_requests.request(.footer);
-                if (io_mod.getenv("FX_NO_OPEN_BROWSER") == null) try openSignInBrowser(app);
+                if (!login_flow.browserOpenSuppressed()) try openSignInBrowser(app);
             }
         }
 
@@ -706,7 +690,7 @@ pub fn Runtime(comptime App: type) type {
                 return;
             }) {
                 app.shell.render_requests.request(.footer);
-                if (io_mod.getenv("FX_NO_OPEN_BROWSER") == null) try openSignInBrowser(app);
+                if (!login_flow.browserOpenSuppressed()) try openSignInBrowser(app);
             }
         }
 
@@ -809,7 +793,6 @@ pub fn Runtime(comptime App: type) type {
             const access = credentials.catalogAccessForCredential(
                 credential.source,
                 credential.token,
-                credential.gatewayTeam(),
             );
             const fetched = app.fetchProviderCatalog(target, access) catch |err| {
                 debug_trace.logf("provider", "catalog preparation failed provider={t} err={s}", .{ target, @errorName(err) });
@@ -934,19 +917,6 @@ pub fn Runtime(comptime App: type) type {
                 }
             }
             app.shell.render_requests.request(.footer);
-        }
-
-        fn beginTeamPicker(app: *App) !void {
-            try writeAuthNotice(app, .{
-                .topic = "auth",
-                .tone = .warning,
-                .body = "Team switching is not supported. Run /login and choose SuperGrok or Codex.",
-            });
-        }
-
-        fn applyTeamChoice(app: *App, index: usize) !void {
-            _ = index;
-            try beginTeamPicker(app);
         }
 
         fn beginSignIn(app: *App, from_root: bool) !void {
@@ -1132,37 +1102,6 @@ const TestModelCache = struct {
     }
 };
 
-const TestTeam = struct {
-    name: []const u8,
-    slug: []const u8,
-};
-
-const test_teams = [_]TestTeam{.{
-    .name = "Example Team",
-    .slug = "example-team",
-}};
-
-const TestSelectedTeam = struct {
-    fn deinit(_: *TestSelectedTeam, _: std.mem.Allocator) void {}
-};
-
-const TestTeamSelection = struct {
-    teams: struct {
-        items: []const TestTeam = &test_teams,
-    } = .{},
-    select_count: usize = 0,
-
-    fn select(
-        self: *TestTeamSelection,
-        _: std.mem.Allocator,
-        index: usize,
-    ) error{ InvalidTeamSelection, SessionChanged, NoSession }!TestSelectedTeam {
-        if (index >= self.teams.items.len) return error.InvalidTeamSelection;
-        self.select_count += 1;
-        return .{};
-    }
-};
-
 const TestAuth = struct {
     select_result: ?bool = false,
     sign_in_transition: login_flow.SignInTransition = .none,
@@ -1180,8 +1119,6 @@ const TestAuth = struct {
     gateway_ready: bool = true,
     catalog_ready: bool = true,
     gateway_ready_after_refresh_count: ?usize = null,
-    team_selection: TestTeamSelection = .{},
-    selected_team_adopted: bool = false,
     sign_in_url: ?[]const u8 = null,
     picker_pop_count: usize = 0,
 
@@ -1208,8 +1145,6 @@ const TestAuth = struct {
         return true;
     }
 
-    fn openTeamPicker(_: *TestAuth, _: std.mem.Allocator, _: *login_flow.TeamSelection) void {}
-
     fn refreshFxLoginIfNeeded(self: *TestAuth, _: std.mem.Allocator) !bool {
         self.refresh_count += 1;
         if (self.refresh_error) |err| return err;
@@ -1223,7 +1158,7 @@ const TestAuth = struct {
 
     fn modelCatalogAccess(self: *const TestAuth) credentials.CatalogAccess {
         return if (self.catalog_ready)
-            credentials.catalogAccessForCredential(.grok_subscription, "refreshed-key", "team_123")
+            credentials.catalogAccessForCredential(.grok_subscription, "refreshed-key")
         else
             .{ .public_only = .no_credential };
     }
@@ -1243,15 +1178,6 @@ const TestAuth = struct {
 
     fn openPicker(self: *TestAuth, _: std.mem.Allocator) void {
         self.picker_opened = true;
-    }
-
-    fn teamSelection(self: *TestAuth) ?*TestTeamSelection {
-        return &self.team_selection;
-    }
-
-    fn adoptSelectedTeam(self: *TestAuth, _: std.mem.Allocator, _: *TestSelectedTeam) bool {
-        self.selected_team_adopted = true;
-        return true;
     }
 
     fn closePicker(self: *TestAuth, _: std.mem.Allocator) void {
@@ -1513,31 +1439,11 @@ test "remaining credential sources persist a remembered choice" {
     }
 }
 
-test "team change stays a local notice and does not activate hx login" {
-    var app: TestApp = .{};
-    defer app.deinit();
-    app.auth.select_result = true;
-
-    try Runtime(TestApp).applyTeamChoice(&app, 0);
-
-    try std.testing.expectEqual(@as(usize, 0), app.auth.team_selection.select_count);
-    try std.testing.expect(!app.auth.selected_team_adopted);
-    try std.testing.expectEqual(credentials.Source.custom_provider, app.auth.active_source.?);
-    try std.testing.expectEqual(@as(usize, 0), app.preference_write_count);
-    try std.testing.expectEqual(@as(usize, 1), app.notice_write_count);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "Team switching is not supported") != null);
-}
-
-test "team change on an active hx login does not persist a team" {
-    var app: TestApp = .{};
-    defer app.deinit();
-    app.auth.active_source = .grok_subscription;
-
-    try Runtime(TestApp).applyTeamChoice(&app, 0);
-
-    try std.testing.expect(!app.auth.selected_team_adopted);
-    try std.testing.expectEqual(@as(usize, 0), app.preference_write_count);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "Team switching is not supported") != null);
+test "auth picker choice has no team-switching path" {
+    try std.testing.expect(!@hasField(auth_runtime.AcquisitionAction, "change_team"));
+    try std.testing.expect(!@hasField(auth_runtime.Choice, "team"));
+    try std.testing.expect(!@hasDecl(Runtime(TestApp), "applyTeamChoice"));
+    try std.testing.expect(!@hasDecl(Runtime(TestApp), "beginTeamPicker"));
 }
 
 fn testGrokSignInCompletion() !login_flow.SignInCompletion {
@@ -1602,16 +1508,16 @@ test "cancelled login and rejected API key do not persist a source" {
     try std.testing.expectEqual(credentials.Source.custom_provider, app.auth.active_source.?);
 }
 
-test "team source load failure preserves the environment source and preference" {
+test "source load failure preserves the environment source and preference" {
     var app: TestApp = .{};
     defer app.deinit();
     app.auth.select_result = null;
 
-    try Runtime(TestApp).applyTeamChoice(&app, 0);
+    try Runtime(TestApp).applySourceChoice(&app, .grok_subscription);
 
     try std.testing.expectEqual(credentials.Source.custom_provider, app.auth.active_source.?);
     try std.testing.expectEqual(@as(usize, 0), app.preference_write_count);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "Team switching is not supported") != null);
+    try std.testing.expect(std.mem.find(u8, app.transcript.items, "That credential is no longer available") != null);
 }
 
 test "prompt credential refresh reloads the catalog after the credential changes" {
@@ -1654,7 +1560,7 @@ test "logout result reconciles live auth and renders only sanitized notices" {
     try std.testing.expectEqual(@as(usize, 1), app.auth.logout_reconcile_count);
     try std.testing.expectEqual(@as(usize, 1), app.model_cache.reset_count);
     try std.testing.expectEqual(@as(usize, 1), app.model_cache_warmup_count);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "Signed out of fx.") != null);
+    try std.testing.expect(std.mem.find(u8, app.transcript.items, "Signed out of hx.") != null);
     try std.testing.expect(std.mem.find(u8, app.transcript.items, login_flow.remote_revocation_warning) != null);
     for ([_][]const u8{ "access-secret", "refresh-secret", "RemoteRevokeFailed", "https://issuer.example" }) |detail| {
         try std.testing.expect(std.mem.find(u8, app.transcript.items, detail) == null);

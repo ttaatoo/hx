@@ -147,8 +147,6 @@ pub const Session = struct {
     expires_at_ms: i64,
     scope: []u8,
     token_type: []u8,
-    team_slug: ?[]u8 = null,
-    team_id: ?[]u8 = null,
 
     pub fn deinit(self: *Session, alloc: Allocator) void {
         alloc.free(self.issuer);
@@ -157,8 +155,6 @@ pub const Session = struct {
         secret.zeroAndFree(alloc, self.refresh_token);
         alloc.free(self.scope);
         alloc.free(self.token_type);
-        if (self.team_slug) |value| alloc.free(value);
-        if (self.team_id) |value| alloc.free(value);
         self.* = undefined;
     }
 
@@ -814,10 +810,8 @@ pub fn parse(alloc: Allocator, bytes: []const u8) !Session {
     errdefer alloc.free(scope);
     const token_type = try dupeRequiredString(alloc, object, "token_type");
     errdefer alloc.free(token_type);
-    const team_slug = try dupeOptionalString(alloc, object, "team_slug");
-    errdefer if (team_slug) |value| alloc.free(value);
-    const team_id = try dupeOptionalString(alloc, object, "team_id");
-    errdefer if (team_id) |value| alloc.free(value);
+    if (try dupeOptionalString(alloc, object, "team_slug")) |value| alloc.free(value);
+    if (try dupeOptionalString(alloc, object, "team_id")) |value| alloc.free(value);
 
     return .{
         .issuer = owned_issuer,
@@ -827,8 +821,6 @@ pub fn parse(alloc: Allocator, bytes: []const u8) !Session {
         .expires_at_ms = expires_at_ms,
         .scope = scope,
         .token_type = token_type,
-        .team_slug = team_slug,
-        .team_id = team_id,
     };
 }
 
@@ -844,8 +836,6 @@ pub fn stringify(alloc: Allocator, session: Session) ![]u8 {
     try writer.print(",\"expires_at_ms\":{d}", .{session.expires_at_ms});
     try writeField(writer, "scope", session.scope);
     try writeField(writer, "token_type", session.token_type);
-    if (session.team_slug) |value| try writeField(writer, "team_slug", value);
-    if (session.team_id) |value| try writeField(writer, "team_id", value);
     try writer.writeAll("}\n");
     return out.toOwnedSlice();
 }
@@ -880,7 +870,7 @@ fn requiredInteger(object: std.json.ObjectMap, key: []const u8) !i64 {
     return value.integer;
 }
 
-const test_session_json = "{\"version\":1,\"issuer\":\"http://127.0.0.1:9\",\"client_id\":\"client\",\"access_token\":\"access\",\"refresh_token\":\"refresh\",\"expires_at_ms\":1,\"scope\":\"openid offline_access\",\"token_type\":\"Bearer\",\"team_slug\":\"team-slug\",\"team_id\":\"team-id\"}";
+const test_session_json = "{\"version\":1,\"issuer\":\"http://127.0.0.1:9\",\"client_id\":\"client\",\"access_token\":\"access\",\"refresh_token\":\"refresh\",\"expires_at_ms\":1,\"scope\":\"openid offline_access\",\"token_type\":\"Bearer\"}";
 
 const HostStoreTestState = struct {
     record: ?[]const u8 = test_session_json,
@@ -963,8 +953,6 @@ test "oauth session stringifies and parses" {
         .expires_at_ms = 1234,
         .scope = try std.testing.allocator.dupe(u8, "openid offline_access"),
         .token_type = try std.testing.allocator.dupe(u8, "Bearer"),
-        .team_slug = try std.testing.allocator.dupe(u8, "vercel-labs"),
-        .team_id = try std.testing.allocator.dupe(u8, "team_123"),
     };
     defer session.deinit(std.testing.allocator);
 
@@ -975,8 +963,8 @@ test "oauth session stringifies and parses" {
     try std.testing.expectEqualStrings(test_issuer, parsed.issuer);
     try std.testing.expectEqualStrings("client", parsed.client_id);
     try std.testing.expectEqualStrings("access", parsed.access_token);
-    try std.testing.expectEqualStrings("vercel-labs", parsed.team_slug.?);
-    try std.testing.expectEqualStrings("team_123", parsed.team_id.?);
+    try std.testing.expect(std.mem.find(u8, text, "team_slug") == null);
+    try std.testing.expect(std.mem.find(u8, text, "team_id") == null);
 }
 
 test "OAuth storage backend selection is platform scoped and explicitly disableable" {

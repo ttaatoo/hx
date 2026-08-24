@@ -40,8 +40,8 @@ const usage_report = @import("../session/usage_report.zig");
 const skill_contract = @import("../skills/skill_contract.zig");
 const types = @import("../shared/types.zig");
 const update_target = @import("../upgrade/update_target.zig");
-const test_builtin_gateway = if (builtin.is_test)
-    @import("../../builtins/gateway.zig")
+const test_builtin_providers = if (builtin.is_test)
+    @import("../../builtins/providers.zig")
 else
     struct {};
 const context_contract = @import("../workspace/context_contract.zig");
@@ -5018,7 +5018,7 @@ fn testConfig() Config {
         .models_path = "/v1/models",
         .gateway_retry_count = 1,
         .gateway_chat_url = "https://example.test/chat",
-        .gateway_provider = test_builtin_gateway.provider,
+        .gateway_provider = test_builtin_providers.provider,
         .url_opener = host.unavailable_url_opener,
         .secret_store = host.unavailable_secret_store,
         .prompt_policy = .{ .system_prompt = "system" },

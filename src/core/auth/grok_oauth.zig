@@ -114,7 +114,7 @@ pub fn runLogin(
         try writeStdout("\n");
     }
     try writeStdout("\nWaiting for authorization...\n");
-    if (io_mod.getenv("FX_NO_OPEN_BROWSER") == null) {
+    if (!login_flow.browserOpenSuppressed()) {
         _ = url_opener.open(alloc, authorization_url) catch false;
     }
 

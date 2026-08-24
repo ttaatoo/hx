@@ -56,8 +56,8 @@ const tool_result_errors = @import("../core/tooling/tool_result_errors.zig");
 const tool_runtime = @import("../core/tooling/tool_runtime.zig");
 const command_output_content = @import("../core/tooling/command_output_content.zig");
 const builtin_tools = @import("../builtins/tools.zig");
-const test_builtin_gateway = if (std_builtin.is_test)
-    @import("../builtins/gateway.zig")
+const test_builtin_providers = if (std_builtin.is_test)
+    @import("../builtins/providers.zig")
 else
     struct {};
 const types = @import("../core/shared/types.zig");
@@ -1104,7 +1104,7 @@ fn resolveModelCapabilities(
         ctx.state.alloc,
         ctx.state.cfg.gateway_provider.model_catalog,
         .{
-            .access = credentials.catalogAccessForCredential(session.credential_source, session.api_key, ctx.state.gateway_team),
+            .access = credentials.catalogAccessForCredential(session.credential_source, session.api_key),
             .endpoint = ctx.state.cfg.gateway_models_path,
             .cancel_flag = &session.cancel_flag,
         },
@@ -3341,7 +3341,7 @@ fn testServerConfig() server.Config {
         .gateway_retry_count = 0,
         .gateway_chat_url = "http://127.0.0.1",
         .gateway_models_path = "/models",
-        .gateway_provider = test_builtin_gateway.provider,
+        .gateway_provider = test_builtin_providers.provider,
         .secret_store = host.unavailable_secret_store,
         .prompt_policy = .{
             .system_prompt = "test",

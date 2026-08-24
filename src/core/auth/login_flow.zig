@@ -9,8 +9,8 @@ const io_mod = @import("../shared/io.zig");
 const oauth = @import("oauth.zig");
 const oauth_session = @import("oauth_session.zig");
 const oauth_transport = @import("oauth_transport.zig");
-const test_builtin_gateway = if (builtin.is_test)
-    @import("../../builtins/gateway.zig")
+const test_oauth_http = if (builtin.is_test)
+    @import("oauth_http.zig")
 else
     struct {};
 
@@ -25,8 +25,7 @@ pub const LoginError = error{
     NoSession,
     SessionChanged,
     NoRefreshToken,
-    NoTeams,
-    InvalidTeamSelection,
+    SignInHandlerMissing,
 };
 
 const LogoutError = error{SessionDeleteFailed};
@@ -37,82 +36,6 @@ pub const LogoutResult = struct {
     session_deleted: bool = false,
     local_durability_failed: bool = false,
     remote_revocation_failed: bool = false,
-};
-
-pub const Team = struct {
-    id: []u8,
-    slug: []u8,
-    name: []u8,
-
-    pub fn deinit(self: *Team, alloc: Allocator) void {
-        alloc.free(self.id);
-        alloc.free(self.slug);
-        alloc.free(self.name);
-        self.* = undefined;
-    }
-};
-
-pub const SelectedTeam = struct {
-    id: []u8,
-    slug: []u8,
-
-    pub fn deinit(self: *SelectedTeam, alloc: Allocator) void {
-        alloc.free(self.id);
-        alloc.free(self.slug);
-        self.* = undefined;
-    }
-};
-
-pub const TeamSelection = struct {
-    session: ?oauth_session.Session = null,
-    teams: std.ArrayList(Team) = .empty,
-
-    pub fn deinit(self: *TeamSelection, alloc: Allocator) void {
-        if (self.session) |*session| session.deinit(alloc);
-        freeTeams(alloc, &self.teams);
-        self.* = .{};
-    }
-
-    pub fn take(self: *TeamSelection) TeamSelection {
-        const selection = self.*;
-        self.* = .{};
-        return selection;
-    }
-
-    pub fn currentTeam(self: *const TeamSelection) ?[]const u8 {
-        const session = self.session orelse return null;
-        return session.team_id orelse session.team_slug;
-    }
-
-    pub fn select(self: *const TeamSelection, alloc: Allocator, selected_index: usize) !SelectedTeam {
-        const session = self.session orelse return LoginError.NoSession;
-        if (selected_index >= self.teams.items.len) return LoginError.InvalidTeamSelection;
-        const selected = self.teams.items[selected_index];
-
-        var mutation = (try oauth_session.beginExistingMutation()) orelse return LoginError.SessionChanged;
-        defer mutation.deinit();
-        var current = (try mutation.load(alloc)) orelse return LoginError.SessionChanged;
-        defer current.deinit(alloc);
-        if (!sameCredentialState(session, current)) return LoginError.SessionChanged;
-
-        const selected_team_id = try alloc.dupe(u8, selected.id);
-        const selected_team_slug = alloc.dupe(u8, selected.slug) catch |err| {
-            alloc.free(selected_team_id);
-            return err;
-        };
-        if (current.team_id) |value| alloc.free(value);
-        if (current.team_slug) |value| alloc.free(value);
-        current.team_id = selected_team_id;
-        current.team_slug = selected_team_slug;
-
-        try mutation.save(alloc, current);
-        current.team_id = null;
-        current.team_slug = null;
-        return .{
-            .id = selected_team_id,
-            .slug = selected_team_slug,
-        };
-    }
 };
 
 pub const SignInState = enum {
@@ -194,17 +117,6 @@ pub const SignInRuntime = struct {
     failure: ?anyerror = null,
     poll_state: ?LoginPollState = null,
     deps: SignInRuntimeDeps = .{},
-
-    pub fn start(
-        self: *Self,
-        alloc: Allocator,
-        transport: oauth_transport.Provider,
-    ) !bool {
-        _ = self;
-        _ = alloc;
-        _ = transport;
-        return error.RetiredGatewayLogin;
-    }
 
     pub fn startPrepared(
         self: *Self,
@@ -481,96 +393,11 @@ fn completeSignIn(
     _: []const u8,
     _: *oauth.TokenSet,
 ) !SignInCompletion {
-    return error.RetiredGatewayLogin;
+    return error.SignInHandlerMissing;
 }
 
 fn saveSignIn(_: ?*anyopaque, _: Allocator, _: SignInCompletion) !void {
-    return error.RetiredGatewayLogin;
-}
-
-pub fn runLogin(
-    alloc: Allocator,
-    transport: oauth_transport.Provider,
-    url_opener: host.UrlOpener,
-) !void {
-    _ = alloc;
-    _ = transport;
-    _ = url_opener;
-    try writeStdout("Use hx login grok or hx login codex.\n");
-    return error.RetiredGatewayLogin;
-}
-
-fn take_login_session(
-    alloc: Allocator,
-    issuer_url: []const u8,
-    client_id: []const u8,
-    token: *oauth.TokenSet,
-    selected_team: ?*const Team,
-    now_ms: i64,
-) !oauth_session.Session {
-    const refresh_token = token.refresh_token orelse return LoginError.NoRefreshToken;
-    const expires_at_ms = try oauth.expiry_timestamp_ms(now_ms, token.expires_in);
-    const owned_issuer = try alloc.dupe(u8, issuer_url);
-    errdefer alloc.free(owned_issuer);
-    const owned_client_id = try alloc.dupe(u8, client_id);
-    errdefer alloc.free(owned_client_id);
-    const team_slug = if (selected_team) |team| try alloc.dupe(u8, team.slug) else null;
-    errdefer if (team_slug) |value| alloc.free(value);
-    const team_id = if (selected_team) |team| try alloc.dupe(u8, team.id) else null;
-    errdefer if (team_id) |value| alloc.free(value);
-
-    const session = oauth_session.Session{
-        .issuer = owned_issuer,
-        .client_id = owned_client_id,
-        .access_token = token.access_token,
-        .refresh_token = refresh_token,
-        .expires_at_ms = expires_at_ms,
-        .scope = token.scope,
-        .token_type = token.token_type,
-        .team_slug = team_slug,
-        .team_id = team_id,
-    };
-    token.access_token = &.{};
-    token.refresh_token = null;
-    token.scope = &.{};
-    token.token_type = &.{};
-    if (oauth.missingGrantedScope(oauth.default_scope, session.scope)) |missing| {
-        debug_trace.logf(
-            "auth",
-            "issuer reduced the grant missing_scope={s} granted={s}",
-            .{ missing, session.scope },
-        );
-    }
-    return session;
-}
-
-pub fn runTeams(
-    alloc: Allocator,
-    transport: oauth_transport.Provider,
-) !void {
-    _ = alloc;
-    _ = transport;
-    try writeStdout("Team switching is not supported. Run hx login grok, or set ANTHROPIC_API_KEY.\n");
-    return error.NoTeams;
-}
-
-pub fn loadTeamSelection(
-    alloc: Allocator,
-    transport: oauth_transport.Provider,
-) !TeamSelection {
-    _ = alloc;
-    _ = transport;
-    return error.NoTeams;
-}
-
-fn sameCredentialState(left: oauth_session.Session, right: oauth_session.Session) bool {
-    return left.expires_at_ms == right.expires_at_ms and
-        std.mem.eql(u8, left.issuer, right.issuer) and
-        std.mem.eql(u8, left.client_id, right.client_id) and
-        std.mem.eql(u8, left.access_token, right.access_token) and
-        std.mem.eql(u8, left.refresh_token, right.refresh_token) and
-        std.mem.eql(u8, left.scope, right.scope) and
-        std.mem.eql(u8, left.token_type, right.token_type);
+    return error.SignInHandlerMissing;
 }
 
 pub fn logout(
@@ -828,7 +655,7 @@ const BrowserOpenPrompt = struct {
         const stdin_is_tty = try std.Io.File.stdin().isTty(io_mod.getIo());
         return .{
             .url = url,
-            .enabled = browserOpenEnabled(io_mod.getenv("FX_NO_OPEN_BROWSER") != null, stdin_is_tty, host.current()),
+            .enabled = browserOpenEnabled(browserOpenSuppressed(), stdin_is_tty, host.current()),
         };
     }
 
@@ -840,6 +667,10 @@ const BrowserOpenPrompt = struct {
         }
     }
 };
+
+pub fn browserOpenSuppressed() bool {
+    return io_mod.getenv("HX_NO_OPEN_BROWSER") != null or io_mod.getenv("FX_NO_OPEN_BROWSER") != null;
+}
 
 fn browserOpenEnabled(no_open_browser: bool, stdin_is_tty: bool, host_capabilities: host.Capabilities) bool {
     return !no_open_browser and stdin_is_tty and host_capabilities.native_url_open;
@@ -904,398 +735,8 @@ fn discardStdinLine() void {
     }
 }
 
-fn fetchTeams(_: Allocator, _: []const u8, _: []const u8) !std.ArrayList(Team) {
-    return error.NoTeams;
-}
-
-fn parseTeams(alloc: Allocator, bytes: []const u8) !std.ArrayList(Team) {
-    var parsed = try std.json.parseFromSlice(std.json.Value, alloc, bytes, .{});
-    defer parsed.deinit();
-
-    const teams_value = if (parsed.value == .object)
-        parsed.value.object.get("teams") orelse return error.InvalidTeamsResponse
-    else
-        return error.InvalidTeamsResponse;
-    if (teams_value != .array) return error.InvalidTeamsResponse;
-
-    var teams: std.ArrayList(Team) = .empty;
-    errdefer freeTeams(alloc, &teams);
-    for (teams_value.array.items) |entry| {
-        if (entry != .object) continue;
-        const id = entry.object.get("id") orelse continue;
-        const slug = entry.object.get("slug") orelse continue;
-        if (id != .string or slug != .string) continue;
-        const name_value = entry.object.get("name");
-        const name = if (name_value != null and name_value.? == .string and name_value.?.string.len > 0)
-            name_value.?.string
-        else
-            slug.string;
-        var team = try dupeTeam(alloc, id.string, slug.string, name);
-        teams.append(alloc, team) catch |err| {
-            team.deinit(alloc);
-            return err;
-        };
-    }
-    return teams;
-}
-
-fn selectTeam(alloc: Allocator, teams: []const Team, current: ?[]const u8) !?usize {
-    if (teams.len == 0) return null;
-    if (teams.len == 1) return 0;
-
-    const default_index = defaultTeamIndex(teams, current);
-    const index = if (canUseInteractiveTeamPicker())
-        selectTeamInteractive(alloc, teams, default_index) catch |err| switch (err) {
-            error.NotATerminal => try selectTeamByLine(alloc, teams, default_index),
-            else => return err,
-        }
-    else
-        try selectTeamByLine(alloc, teams, default_index);
-    return index;
-}
-
-fn defaultTeamIndex(teams: []const Team, current: ?[]const u8) usize {
-    const needle = current orelse return 0;
-    for (teams, 0..) |team, i| {
-        if (std.mem.eql(u8, team.id, needle) or std.mem.eql(u8, team.slug, needle)) return i;
-    }
-    return 0;
-}
-
-fn selectTeamByLine(alloc: Allocator, teams: []const Team, default_index: usize) !usize {
-    try writeStdout("\nSelect a team:\n");
-    try writeStdout("Model requests will use the selected team.\n\n");
-    for (teams, 0..) |team, i| {
-        const marker = if (i == default_index) " (default)" else "";
-        try writeStdoutFmt("  {d}. {s} ({s}){s}\n", .{ i + 1, team.name, team.slug, marker });
-    }
-
-    while (true) {
-        try writeStdoutFmt("Team [{d}]: ", .{default_index + 1});
-        const input = try readLine(alloc);
-        defer alloc.free(input);
-        const trimmed = std.mem.trim(u8, input, " \t\r\n");
-        if (trimmed.len == 0) return default_index;
-        const parsed_index = std.fmt.parseUnsigned(usize, trimmed, 10) catch {
-            try writeStdout("Enter a team number from the list.\n");
-            continue;
-        };
-        if (parsed_index >= 1 and parsed_index <= teams.len) return parsed_index - 1;
-        try writeStdout("Enter a team number from the list.\n");
-    }
-}
-
-fn selectTeamInteractive(alloc: Allocator, teams: []const Team, default_index: usize) !usize {
-    var raw = try TeamPickerRawMode.enable();
-    defer raw.disable();
-
-    try writeStdout("\nSelect a team:\n");
-    try writeStdout("Model requests will use the selected team.\n\n");
-
-    var selected = default_index;
-    var first_render = true;
-    try renderTeamPicker(alloc, teams, selected, default_index, &first_render);
-
-    while (true) {
-        switch (try readTeamPickerKey()) {
-            .up => {
-                selected = if (selected == 0) teams.len - 1 else selected - 1;
-                try renderTeamPicker(alloc, teams, selected, default_index, &first_render);
-            },
-            .down => {
-                selected = if (selected + 1 == teams.len) 0 else selected + 1;
-                try renderTeamPicker(alloc, teams, selected, default_index, &first_render);
-            },
-            .enter => return selected,
-            .cancel => return LoginError.InvalidTeamSelection,
-            .number => |number| {
-                if (number >= 1 and number <= teams.len) return number - 1;
-            },
-            .ignored => {},
-        }
-    }
-}
-
-fn canUseInteractiveTeamPicker() bool {
-    const stdin_tty = std.Io.File.stdin().isTty(io_mod.getIo()) catch false;
-    return stdin_tty and std.c.isatty(std.posix.STDOUT_FILENO) != 0;
-}
-
-fn renderTeamPicker(
-    alloc: Allocator,
-    teams: []const Team,
-    selected: usize,
-    default_index: usize,
-    first_render: *bool,
-) !void {
-    if (!first_render.*) {
-        const move_up = try std.fmt.allocPrint(alloc, "\x1b[{d}A\r", .{teams.len});
-        defer alloc.free(move_up);
-        try writeStdout(move_up);
-    }
-
-    for (teams, 0..) |team, i| {
-        const prefix = if (i == selected) "  › " else "    ";
-        const marker = if (i == default_index) " (current)" else "";
-        try writeStdoutFmt("\x1b[2K{s}{d}. {s} ({s}){s}\n", .{ prefix, i + 1, team.name, team.slug, marker });
-    }
-    first_render.* = false;
-}
-
-const TeamPickerKey = union(enum) {
-    up,
-    down,
-    enter,
-    cancel,
-    number: usize,
-    ignored,
-};
-
-fn readTeamPickerKey() !TeamPickerKey {
-    var buf: [8]u8 = undefined;
-    const first_read = try std.posix.read(std.posix.STDIN_FILENO, buf[0..1]);
-    if (first_read == 0) return .ignored;
-
-    var len = first_read;
-    if (buf[0] == 0x1b) {
-        while (len < buf.len) {
-            if (escapeSequenceComplete(buf[0..len])) break;
-            var fds = [_]std.posix.pollfd{.{
-                .fd = std.posix.STDIN_FILENO,
-                .events = std.posix.POLL.IN,
-                .revents = 0,
-            }};
-            const ready = try std.posix.poll(&fds, 25);
-            if (ready == 0 or (fds[0].revents & std.posix.POLL.IN) == 0) break;
-            const n = try std.posix.read(std.posix.STDIN_FILENO, buf[len .. len + 1]);
-            if (n == 0) break;
-            len += n;
-        }
-    }
-
-    return parseTeamPickerKey(buf[0..len]);
-}
-
-fn escapeSequenceComplete(bytes: []const u8) bool {
-    if (bytes.len < 3 or bytes[0] != 0x1b) return false;
-    if (bytes[1] != '[' and bytes[1] != 'O') return true;
-    const final = bytes[bytes.len - 1];
-    return (final >= 'A' and final <= 'Z') or final == '~';
-}
-
-fn parseTeamPickerKey(bytes: []const u8) TeamPickerKey {
-    if (bytes.len == 0) return .ignored;
-    return switch (bytes[0]) {
-        '\r', '\n' => .enter,
-        3, 4 => .cancel,
-        '1'...'9' => .{ .number = @intCast(bytes[0] - '0') },
-        0x1b => parseEscapeTeamPickerKey(bytes),
-        else => .ignored,
-    };
-}
-
-fn parseEscapeTeamPickerKey(bytes: []const u8) TeamPickerKey {
-    if (bytes.len >= 3 and (bytes[1] == '[' or bytes[1] == 'O')) {
-        return switch (bytes[2]) {
-            'A' => .up,
-            'B' => .down,
-            else => .ignored,
-        };
-    }
-    return .cancel;
-}
-
-const TeamPickerRawMode = struct {
-    original: std.posix.termios = undefined,
-    active: bool = false,
-
-    fn enable() !TeamPickerRawMode {
-        if (std.c.isatty(std.posix.STDIN_FILENO) == 0 or std.c.isatty(std.posix.STDOUT_FILENO) == 0) {
-            return error.NotATerminal;
-        }
-
-        var self = TeamPickerRawMode{};
-        self.original = try std.posix.tcgetattr(std.posix.STDIN_FILENO);
-        var raw = self.original;
-
-        raw.iflag.BRKINT = false;
-        raw.iflag.ICRNL = false;
-        raw.iflag.INPCK = false;
-        raw.iflag.ISTRIP = false;
-        raw.iflag.IXON = false;
-        raw.iflag.IXOFF = false;
-
-        raw.cflag.CSIZE = .CS8;
-
-        raw.lflag.ECHO = false;
-        raw.lflag.ICANON = false;
-        raw.lflag.IEXTEN = false;
-        raw.lflag.ISIG = false;
-
-        const vmin_idx = vminIndex();
-        const vtime_idx = vtimeIndex();
-        if (vmin_idx < raw.cc.len and vtime_idx < raw.cc.len) {
-            raw.cc[vmin_idx] = 1;
-            raw.cc[vtime_idx] = 0;
-        }
-
-        try std.posix.tcsetattr(std.posix.STDIN_FILENO, .FLUSH, raw);
-        self.active = true;
-        return self;
-    }
-
-    fn disable(self: *TeamPickerRawMode) void {
-        if (!self.active) return;
-        std.posix.tcsetattr(std.posix.STDIN_FILENO, .FLUSH, self.original) catch {};
-        self.active = false;
-    }
-};
-
-fn vminIndex() usize {
-    return switch (builtin.os.tag) {
-        .linux => 6,
-        .macos, .ios, .tvos, .watchos, .visionos => 16,
-        .freebsd, .netbsd, .dragonfly, .openbsd => 16,
-        else => 16,
-    };
-}
-
-fn vtimeIndex() usize {
-    return switch (builtin.os.tag) {
-        .linux => 5,
-        .macos, .ios, .tvos, .watchos, .visionos => 17,
-        .freebsd, .netbsd, .dragonfly, .openbsd => 17,
-        else => 17,
-    };
-}
-
-fn dupeTeam(alloc: Allocator, source_id: []const u8, source_slug: []const u8, source_name: []const u8) !Team {
-    const id = try alloc.dupe(u8, source_id);
-    errdefer alloc.free(id);
-    const slug = try alloc.dupe(u8, source_slug);
-    errdefer alloc.free(slug);
-    const name = try alloc.dupe(u8, source_name);
-    errdefer alloc.free(name);
-    return .{
-        .id = id,
-        .slug = slug,
-        .name = name,
-    };
-}
-
-fn check_parse_teams_allocation_failures(alloc: Allocator) !void {
-    var teams = try parseTeams(
-        alloc,
-        "{\"teams\":[{\"id\":\"team-1\",\"slug\":\"one\",\"name\":\"One\"},{\"id\":\"team-2\",\"slug\":\"two\",\"name\":\"Two\"}]}",
-    );
-    defer freeTeams(alloc, &teams);
-}
-
-fn check_take_login_session_allocation_failures(alloc: Allocator) !void {
-    var token = oauth.TokenSet{
-        .access_token = &.{},
-        .expires_in = 3600,
-        .scope = &.{},
-        .token_type = &.{},
-    };
-    defer token.deinit(alloc);
-    token.access_token = try alloc.dupe(u8, "access");
-    token.refresh_token = try alloc.dupe(u8, "refresh");
-    token.scope = try alloc.dupe(u8, oauth.default_scope);
-    token.token_type = try alloc.dupe(u8, "Bearer");
-
-    var team_id = [_]u8{'i'};
-    var team_slug = [_]u8{'s'};
-    var team_name = [_]u8{'n'};
-    const team = Team{
-        .id = &team_id,
-        .slug = &team_slug,
-        .name = &team_name,
-    };
-    var session = try take_login_session(
-        alloc,
-        "http://127.0.0.1:9",
-        "client",
-        &token,
-        &team,
-        1_000,
-    );
-    defer session.deinit(alloc);
-
-    try std.testing.expectEqual(@as(usize, 0), token.access_token.len);
-    try std.testing.expect(token.refresh_token == null);
-}
-
-fn freeTeams(alloc: Allocator, teams: *std.ArrayList(Team)) void {
-    for (teams.items) |*team| team.deinit(alloc);
-    teams.deinit(alloc);
-}
-
-test "team parsing cleans up allocation failures" {
-    try std.testing.checkAllAllocationFailures(std.testing.allocator, check_parse_teams_allocation_failures, .{});
-}
-
-test "single team selection does not allocate" {
-    var id = [_]u8{'i'};
-    var slug = [_]u8{'s'};
-    var name = [_]u8{'n'};
-    const teams = [_]Team{.{
-        .id = &id,
-        .slug = &slug,
-        .name = &name,
-    }};
-    var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
-
-    try std.testing.expect((try selectTeam(failing.allocator(), &teams, null)) != null);
-}
-
-test "login session transfer cleans up allocation failures" {
-    try std.testing.checkAllAllocationFailures(std.testing.allocator, check_take_login_session_allocation_failures, .{});
-}
-
-fn readLine(alloc: Allocator) ![]u8 {
-    var read_buf: [1024]u8 = undefined;
-    var reader = std.Io.File.stdin().reader(io_mod.getIo(), &read_buf);
-    const line = reader.interface.takeDelimiter('\n') catch return try alloc.dupe(u8, "");
-    return try alloc.dupe(u8, line orelse "");
-}
-
 fn writeStdout(text: []const u8) !void {
     try std.Io.File.stdout().writeStreamingAll(io_mod.getIo(), text);
-}
-
-fn writeStdoutFmt(comptime fmt: []const u8, args: anytype) !void {
-    var buf: [512]u8 = undefined;
-    const text = try std.fmt.bufPrint(&buf, fmt, args);
-    try writeStdout(text);
-}
-
-test "legacy Vercel sign-in and team catalog stay local" {
-    var runtime: SignInRuntime = .{};
-    try std.testing.expectError(
-        error.RetiredGatewayLogin,
-        runtime.start(std.testing.allocator, oauth_transport.unavailable_provider),
-    );
-    try std.testing.expectError(
-        error.NoTeams,
-        loadTeamSelection(std.testing.allocator, oauth_transport.unavailable_provider),
-    );
-    try std.testing.expectError(
-        error.NoTeams,
-        fetchTeams(std.testing.allocator, "token", "https://issuer.test"),
-    );
-}
-
-test "login flow parses teams" {
-    var teams = try parseTeams(
-        std.testing.allocator,
-        "{\"teams\":[{\"id\":\"team_1\",\"slug\":\"vercel-labs\",\"name\":\"Vercel Labs\"},{\"id\":\"team_2\",\"slug\":\"personal\"}]}",
-    );
-    defer freeTeams(std.testing.allocator, &teams);
-    try std.testing.expectEqual(@as(usize, 2), teams.items.len);
-    try std.testing.expectEqualStrings("team_1", teams.items[0].id);
-    try std.testing.expectEqualStrings("Vercel Labs", teams.items[0].name);
-    try std.testing.expectEqualStrings("personal", teams.items[1].name);
 }
 
 const ScriptedPollResult = enum {
@@ -1951,7 +1392,7 @@ test "VT-8(e) withheld token HTTP poll has bounded timeout cancel restart and de
         alloc,
         try makeLoopbackPreparedLogin(alloc, timeout_endpoint),
         .{
-            .oauth_transport = test_builtin_gateway.oauth_transport_provider,
+            .oauth_transport = test_oauth_http.provider,
             .poll = .{ .request_timeout_ms = 40 },
         },
     ));
@@ -1976,7 +1417,7 @@ test "VT-8(e) withheld token HTTP poll has bounded timeout cancel restart and de
         alloc,
         try makeLoopbackPreparedLogin(alloc, cancel_endpoint),
         .{
-            .oauth_transport = test_builtin_gateway.oauth_transport_provider,
+            .oauth_transport = test_oauth_http.provider,
             .poll = .{ .request_timeout_ms = 1000 },
         },
     ));
@@ -2013,7 +1454,7 @@ test "VT-8(e) withheld token HTTP poll has bounded timeout cancel restart and de
         alloc,
         try makeLoopbackPreparedLogin(alloc, deinit_endpoint),
         .{
-            .oauth_transport = test_builtin_gateway.oauth_transport_provider,
+            .oauth_transport = test_oauth_http.provider,
             .poll = .{ .request_timeout_ms = 1000 },
         },
     ));
@@ -2149,6 +1590,16 @@ test "login polling rejects invalid provider timing values" {
         pollForTokenWithDeps(alloc, oauth_transport.unavailable_provider, testMetadata(), "client", device, &prompt, state.deps()),
     );
     try std.testing.expectEqual(@as(usize, 0), state.poll_index);
+}
+
+test "device-code login does not expose retired Gateway team or sign-in paths" {
+    try std.testing.expect(@hasDecl(@This(), "SignInRuntime"));
+    try std.testing.expect(!@hasDecl(@This(), "Team"));
+    try std.testing.expect(!@hasDecl(@This(), "TeamSelection"));
+    try std.testing.expect(!@hasDecl(@This(), "runLogin"));
+    try std.testing.expect(!@hasDecl(@This(), "runTeams"));
+    try std.testing.expect(!@hasDecl(@This(), "loadTeamSelection"));
+    try std.testing.expect(!browserOpenSuppressed());
 }
 
 test "login browser opener respects environment tty and platform gates" {

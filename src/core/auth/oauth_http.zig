@@ -1,55 +1,16 @@
 const std = @import("std");
 
-const api_key_validator_contract = @import("../core/auth/api_key_validator.zig");
-const oauth_transport = @import("../core/auth/oauth_transport.zig");
-const secret = @import("../core/auth/secret.zig");
-const io_mod = @import("../core/shared/io.zig");
-const http_client = @import("../gateway/http.zig");
-const gateway_provider = @import("../core/gateway/gateway_provider.zig");
-const model_catalog = @import("../core/gateway/model_catalog.zig");
+const io_mod = @import("../shared/io.zig");
+const oauth_transport = @import("oauth_transport.zig");
+const secret = @import("secret.zig");
+const http_client = @import("../../gateway/http.zig");
 
 const Allocator = std.mem.Allocator;
 const oauth_request_timeout_ms: i64 = 15_000;
 const oauth_response_max_bytes: usize = 64 * 1024;
 
-pub const default_model = @import("../core/config/model_provider.zig").default_model;
-pub const retry_count: usize = 3;
-pub const models_path = "/v1/models";
-
-pub fn defaultChatUrl() []const u8 {
-    return "";
-}
-
-pub const api_key_validator = api_key_validator_contract.unavailable_provider;
-
-pub const oauth_transport_provider = oauth_transport.Provider{
+pub const provider = oauth_transport.Provider{
     .execute_fn = executeOAuthRequest,
-};
-
-fn unavailableCliModelCatalog(
-    _: ?*anyopaque,
-    _: Allocator,
-    input: gateway_provider.CliModelCatalogInput,
-) gateway_provider.CliModelCatalogResult {
-    return .{ .failure = .{
-        .access = .init(input.access),
-        .anonymous_fallback_used = false,
-        .failure = .{ .category = .runtime },
-    } };
-}
-
-fn unavailableModelCatalog(
-    _: ?*anyopaque,
-    _: Allocator,
-    _: model_catalog.FetchInput,
-) Allocator.Error!model_catalog.ProviderResult {
-    return .{ .failure = .{ .category = .runtime } };
-}
-
-pub const provider = gateway_provider.Provider{
-    .oauth_transport = oauth_transport_provider,
-    .cli_model_catalog = .{ .fetch_fn = unavailableCliModelCatalog },
-    .model_catalog = .{ .fetch_fn = unavailableModelCatalog },
 };
 
 fn executeOAuthRequest(

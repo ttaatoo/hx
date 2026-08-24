@@ -434,9 +434,6 @@ pub const StatusSnapshot = struct {
         if (self.auth_help) |help| {
             try out.writer.print("[status] auth_help={s}\n", .{help});
         }
-        if (self.auth.team) |team| {
-            try out.writer.print("[status] team={s}\n", .{team});
-        }
         try out.writer.print("[status] permission_mode={s}\n", .{permissionModeLabel(self.permission_mode)});
         try out.writer.print("[status] sandbox={s}\n", .{sandbox.publicModeForBackend(self.sandbox_backend).label()});
         try out.writer.print("[status] workspace={s}\n", .{self.workspace_root});
@@ -468,7 +465,6 @@ pub const StatusSnapshot = struct {
         try out.writer.print("auth_refreshable={}\n", .{self.auth.refreshable()});
         if (self.auth.expired) try out.writer.writeAll("auth_expired=true\n");
         if (self.auth_help) |help| try out.writer.print("auth_help={s}\n", .{help});
-        if (self.auth.team) |team| try out.writer.print("team={s}\n", .{team});
         try out.writer.print("permission_mode={s}\n", .{permissionModeLabel(self.permission_mode)});
         try out.writer.print("sandbox={s}\n", .{sandbox.publicModeForBackend(self.sandbox_backend).label()});
         try out.writer.print("workspace={s}\n", .{self.workspace_root});
@@ -528,10 +524,6 @@ pub const StatusSnapshot = struct {
         if (self.auth_help) |help| {
             try writer.writeAll(",\"auth_help\":");
             try std.json.Stringify.value(help, .{}, writer);
-        }
-        if (self.auth.team) |team| {
-            try writer.writeAll(",\"team\":");
-            try std.json.Stringify.value(team, .{}, writer);
         }
         try writer.writeAll(",\"permission_mode\":");
         try std.json.Stringify.value(permissionModeLabel(self.permission_mode), .{}, writer);
@@ -1226,9 +1218,6 @@ pub const DoctorSnapshot = struct {
         try out.writer.print("[doctor] auth={s}\n", .{self.auth.activeSourceLabel()});
         try out.writer.print("[doctor] auth_refreshable={}\n", .{self.auth.refreshable()});
         if (self.auth.expired) try out.writer.writeAll("[doctor] auth_expired=true\n");
-        if (self.auth.team) |team| {
-            try out.writer.print("[doctor] team={s}\n", .{team});
-        }
         try out.writer.print("[doctor] permission_mode={s}\n", .{permissionModeLabel(self.permission_mode)});
         try out.writer.print("[doctor] agent_step_limit={d}\n", .{self.agent_step_limit});
 
@@ -1265,10 +1254,6 @@ pub const DoctorSnapshot = struct {
         try std.json.Stringify.value(self.auth.activeSourceLabel(), .{}, writer);
         try writer.print(",\"auth_refreshable\":{}", .{self.auth.refreshable()});
         if (self.auth.expired) try writer.writeAll(",\"auth_expired\":true");
-        if (self.auth.team) |team| {
-            try writer.writeAll(",\"team\":");
-            try std.json.Stringify.value(team, .{}, writer);
-        }
         try writer.writeAll(",\"permission_mode\":");
         try std.json.Stringify.value(permissionModeLabel(self.permission_mode), .{}, writer);
         try writer.print(",\"agent_step_limit\":{d},\"checks\":[", .{self.agent_step_limit});
@@ -1974,12 +1959,12 @@ test "core status snapshot text and json stay stable" {
     );
 }
 
-test "core status snapshot includes selected team when present" {
+test "core status snapshot omits retired team context" {
     const snapshot = StatusSnapshot{
         .model = "alpha",
-        .auth = .{ .active_source = .grok_subscription, .team = "example-team" },
+        .auth = .{ .active_source = .grok_subscription },
         .permission_mode = .ask,
-        .workspace_root = "/tmp/fx",
+        .workspace_root = "/tmp/hx",
         .history_turns = 0,
         .session_permission_grants = 0,
         .agent_step_limit = 24,
@@ -1988,16 +1973,18 @@ test "core status snapshot includes selected team when present" {
     const text = try snapshot.renderText(std.testing.allocator);
     defer std.testing.allocator.free(text);
     try std.testing.expectEqualStrings(
-        "[status] model=alpha\n[status] model_source=SuperGrok\n[status] update_channel=stable\n[status] build_channel=stable\n[status] auth=SuperGrok subscription\n[status] auth_refreshable=true\n[status] team=example-team\n[status] permission_mode=ask\n[status] sandbox=none\n[status] workspace=/tmp/fx\n[status] history_turns=0\n[status] session_permission_grants=0\n[status] agent_step_limit=24\n",
+        "[status] model=alpha\n[status] model_source=SuperGrok\n[status] update_channel=stable\n[status] build_channel=stable\n[status] auth=SuperGrok subscription\n[status] auth_refreshable=true\n[status] permission_mode=ask\n[status] sandbox=none\n[status] workspace=/tmp/hx\n[status] history_turns=0\n[status] session_permission_grants=0\n[status] agent_step_limit=24\n",
         text,
     );
+    try std.testing.expect(std.mem.find(u8, text, "team=") == null);
 
     const json = try snapshot.renderJson(std.testing.allocator);
     defer std.testing.allocator.free(json);
     try std.testing.expectEqualStrings(
-        "{\"kind\":\"status\",\"model\":\"alpha\",\"model_source\":\"SuperGrok\",\"update_channel\":\"stable\",\"build_channel\":\"stable\",\"build_revision\":\"\",\"auth\":\"SuperGrok subscription\",\"auth_refreshable\":true,\"team\":\"example-team\",\"permission_mode\":\"ask\",\"sandbox\":\"none\",\"workspace\":\"/tmp/fx\",\"history_turns\":0,\"session_permission_grants\":0,\"agent_step_limit\":24}",
+        "{\"kind\":\"status\",\"model\":\"alpha\",\"model_source\":\"SuperGrok\",\"update_channel\":\"stable\",\"build_channel\":\"stable\",\"build_revision\":\"\",\"auth\":\"SuperGrok subscription\",\"auth_refreshable\":true,\"permission_mode\":\"ask\",\"sandbox\":\"none\",\"workspace\":\"/tmp/hx\",\"history_turns\":0,\"session_permission_grants\":0,\"agent_step_limit\":24}",
         json,
     );
+    try std.testing.expect(std.mem.find(u8, json, "\"team\"") == null);
 }
 
 test "status distinguishes the selected model route from connected providers" {

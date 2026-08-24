@@ -136,7 +136,7 @@ pub const ResultOwnership = enum {
 
 pub const Result = struct {
     status: std.http.Status,
-    completion: types.GatewayCompletion = .{},
+    completion: types.ProviderCompletion = .{},
     err_body: ?[]u8 = null,
     /// Borrowed base URL used to reconcile generation usage for this result.
     generation_origin: []const u8 = "",

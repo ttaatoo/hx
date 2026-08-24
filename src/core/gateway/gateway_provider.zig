@@ -191,7 +191,7 @@ const FakeCatalog = struct {
             if (self.calls == 1) {
                 self.saw_authenticated_access =
                     std.mem.eql(u8, input.access.authorizationCredential() orelse "", "test-key") and
-                    std.mem.eql(u8, input.access.teamContext() orelse "", "team_123");
+                    input.access.teamContext() == null;
                 return .{ .failure = .{ .category = .authentication, .http_status = .unauthorized } };
             }
             self.saw_public_retry =
@@ -324,7 +324,7 @@ test "capability resolver uses provider catalog metadata" {
         std.testing.allocator,
         fake.provider(),
         .{
-            .access = credentials.catalogAccessForCredential(.custom_provider, "test-key", null),
+            .access = credentials.catalogAccessForCredential(.custom_provider, "test-key"),
             .endpoint = "/v1/models",
             .cancel_flag = &cancel_flag,
         },
@@ -358,7 +358,7 @@ test "capability resolver does not retry rejected SuperGrok or Anthropic catalog
         std.testing.allocator,
         fake.provider(),
         .{
-            .access = credentials.catalogAccessForCredential(.custom_provider, "test-key", null),
+            .access = credentials.catalogAccessForCredential(.custom_provider, "test-key"),
             .endpoint = "/v1/models",
         },
         "provider/model",

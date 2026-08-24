@@ -62,8 +62,8 @@ const subagent_resume_admission = @import("../subagent/resume_admission.zig");
 const parent_delivery_projector = @import("../subagent/parent_delivery_projector.zig");
 const subagent_tool_host = @import("../subagent/tool_host.zig");
 const text_utils = @import("../shared/text_utils.zig");
-const test_builtin_gateway = if (std_builtin.is_test)
-    @import("../../builtins/gateway.zig")
+const test_builtin_providers = if (std_builtin.is_test)
+    @import("../../builtins/providers.zig")
 else
     struct {};
 const builtin_tools = @import("../../builtins/tools.zig");
@@ -1544,10 +1544,10 @@ fn runPromptInternal(alloc: Allocator, prompt: []const u8, permission_override: 
     };
     const api_key = credential.token;
     ctx.api_key = api_key;
-    ctx.gateway_team = credential.gatewayTeam();
+    ctx.gateway_team = null;
     ctx.credential_source = credential.source;
     ctx.account_id = credential.accountId();
-    ctx.model_catalog_access = credentials.catalogAccessForCredential(credential.source, api_key, credential.gatewayTeam());
+    ctx.model_catalog_access = credentials.catalogAccessForCredential(credential.source, api_key);
 
     const restored_image_catalog = try ctx.session.snapshotImageCatalog(alloc, &.{});
     defer types.freeImageAttachmentSlice(alloc, restored_image_catalog);
@@ -1673,7 +1673,7 @@ fn runPromptInternal(alloc: Allocator, prompt: []const u8, permission_override: 
         .authorized_image_catalog = authorized_image_catalog,
         .model = @constCast(ctx.model),
         .api_key = api_key,
-        .gateway_team = if (credential.gatewayTeam()) |team| @constCast(team) else null,
+        .gateway_team = null,
         .credential_source = credential.source,
         .account_id = if (credential.accountId()) |account_id| @constCast(account_id) else null,
         .provider = ctx.provider,
@@ -3821,7 +3821,7 @@ fn testConfig() Config {
         .gateway_retry_count = 1,
         .gateway_chat_url = "https://example.invalid/chat",
         .gateway_models_path = "/models",
-        .gateway_provider = test_builtin_gateway.provider,
+        .gateway_provider = test_builtin_providers.provider,
         .secret_store = host.unavailable_secret_store,
         .prompt_policy = .{
             .system_prompt = "system",
