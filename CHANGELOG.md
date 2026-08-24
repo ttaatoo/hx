@@ -1,8 +1,20 @@
 # hx
 
-## 0.0.5
+## 0.0.6
 
 <!-- release:start -->
+### New Features
+
+- **hx-named GitHub Release binaries:** Publish the first GitHub Release assets named `hx-macos-arm64.tar.gz`, `hx-macos-x86_64.tar.gz`, `hx-linux-aarch64.tar.gz`, and `hx-linux-x86_64.tar.gz`
+
+### Improvements
+
+- **Homebrew stable install:** Tap with `brew tap ttaatoo/hx https://github.com/ttaatoo/hx` and install with `brew install ttaatoo/hx/hx`. Building from git with `--HEAD` is optional
+- **Product names:** The CLI, tap, and config dir remain `hx`, `ttaatoo/hx`, and `~/.hx`
+<!-- release:end -->
+
+## 0.0.5
+
 ### Breaking Changes
 
 - **Supported platforms:** Linux and macOS on x86_64 and aarch64. This release does not support Windows, WebAssembly, or browser hosts. Use the native `hx` CLI. Editor hosts still use `hx acp`
@@ -16,7 +28,6 @@
 ### Improvements
 
 - **GitHub Releases:** Pushes to `main` publish tagged GitHub Release binaries (`hx-macos-arm64.tar.gz` and siblings) when the version in source has no release yet. There is no Vercel CDN
-<!-- release:end -->
 
 ## 0.0.4
 

@@ -4,7 +4,7 @@ const build_options = @import("build_options");
 const io_mod = @import("core/shared/io.zig");
 const profile_paths = @import("core/shared/profile_paths.zig");
 
-pub const version = "0.0.5";
+pub const version = "0.0.6";
 
 comptime {
     switch (builtin.os.tag) {
