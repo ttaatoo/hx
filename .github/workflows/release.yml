@@ -48,7 +48,10 @@ jobs:
           echo "version=${TAG}" >> "$GITHUB_OUTPUT"
 
           RELEASE_JSON=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" 2>/dev/null || true)
-          if [ -n "$RELEASE_JSON" ]; then
+          # A 404 still prints {"message":"Not Found"} on stdout. Only a numeric
+          # or string .id means a release exists; missing .id or HTTP failure
+          # means no release.
+          if jq -e '.id | (type == "number" or type == "string")' <<< "$RELEASE_JSON" >/dev/null 2>&1; then
             if jq -e '.draft == true' <<< "$RELEASE_JSON" >/dev/null; then
               echo "GitHub Release ${TAG} is still a draft; resuming its guarded publication"
             else
