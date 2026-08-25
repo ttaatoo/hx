@@ -38,7 +38,14 @@ runs:
 
     - name: Build
       shell: bash
-      run: zig build -Dtarget=${{ inputs.target }} -Doptimize=${{ inputs.optimize }}
+      run: |
+        zig build -Dtarget=${{ inputs.target }} -Doptimize=${{ inputs.optimize }}
+        zig build-exe \
+          -O${{ inputs.optimize }} \
+          -lc \
+          -target ${{ inputs.target }} \
+          -femit-bin=zig-out/bin/terminal-client-fixture \
+          src/terminal_client_fixture.zig
 
     - name: Run unit tests
       shell: bash
@@ -65,7 +72,10 @@ runs:
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: hx-full-ci-${{ inputs.platform }}-${{ github.sha }}
-        path: zig-out/bin/hx
+        path: |
+          zig-out/bin/hx
+          zig-out/bin/mcp-stdio-dispatcher-driver
+          zig-out/bin/terminal-client-fixture
         if-no-files-found: error
         overwrite: true
         retention-days: 7

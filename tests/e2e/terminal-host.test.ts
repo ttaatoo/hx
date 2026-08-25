@@ -22,6 +22,7 @@ import { createConnection, type Socket } from "node:net";
 import { tmpdir, userInfo } from "node:os";
 import { join } from "node:path";
 import { FX_BIN } from "../evals/eval-helpers";
+import { TERMINAL_CLIENT_FIXTURE } from "./prebuilt-artifacts";
 import {
   terminalFixtureShell,
   TmuxSession,
@@ -461,6 +462,10 @@ async function runClientFixture(
 
 function buildCurrentClientFixture(): string {
   if (currentClientFixtureBinary !== null) return currentClientFixtureBinary;
+  if (existsSync(TERMINAL_CLIENT_FIXTURE)) {
+    currentClientFixtureBinary = TERMINAL_CLIENT_FIXTURE;
+    return TERMINAL_CLIENT_FIXTURE;
+  }
   const repoRoot = join(import.meta.dir, "../..");
   const fixtureRoot = mkdtempSync(join(tmpdir(), "fx-terminal-client-fixture-"));
   const binary = join(fixtureRoot, "terminal-client-fixture");
@@ -560,11 +565,20 @@ int main(int argc, char **argv) {
 }
 `,
   );
-  execFileSync(
-    "zig",
-    ["cc", "-O2", "-pthread", source, "-o", binary],
-    { cwd: repoRoot, stdio: "pipe", timeout: 120_000 },
-  );
+  const compiler = process.env.CC ?? "cc";
+  try {
+    execFileSync(
+      compiler,
+      ["-O2", "-pthread", source, "-o", binary],
+      { cwd: repoRoot, stdio: "pipe", timeout: 120_000 },
+    );
+  } catch {
+    execFileSync(
+      "zig",
+      ["cc", "-O2", "-pthread", source, "-o", binary],
+      { cwd: repoRoot, stdio: "pipe", timeout: 120_000 },
+    );
+  }
   currentThreadForkFixtureBinary = binary;
   return binary;
 }

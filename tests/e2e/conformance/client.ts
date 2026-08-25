@@ -18,6 +18,7 @@ import {
   fakeGatewayToolCall,
   startFakeGateway,
 } from "../tmux-helpers";
+import { mcpDispatcherPrefix } from "../prebuilt-artifacts";
 
 const serverUrl = process.argv[2];
 if (!serverUrl) {
@@ -55,10 +56,7 @@ if (scenario === "sep-2322-client-request-state") {
   const repoRoot = resolve(import.meta.dirname, "../../..");
   const child = Bun.spawn(
     [
-      "zig",
-      "build",
-      "run-mcp-stdio-dispatcher-e2e",
-      "--",
+      ...mcpDispatcherPrefix(),
       "runtime-http-mrtr",
       configuredServerUrl,
     ],

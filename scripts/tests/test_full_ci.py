@@ -131,7 +131,9 @@ class FullCiWorkflowTests(unittest.TestCase):
             "name: hx-full-ci-${{ inputs.platform }}-${{ github.sha }}",
             self.native_action,
         )
-        self.assertIn("path: zig-out/bin/hx", self.native_action)
+        self.assertIn("zig-out/bin/hx", self.native_action)
+        self.assertIn("zig-out/bin/mcp-stdio-dispatcher-driver", self.native_action)
+        self.assertIn("zig-out/bin/terminal-client-fixture", self.native_action)
         self.assertIn(
             "cache-key: full-ci-native-${{ inputs.platform }}-${{ inputs.optimize }}",
             self.native_action,
@@ -150,8 +152,10 @@ class FullCiWorkflowTests(unittest.TestCase):
             "name: hx-full-ci-${{ inputs.platform }}-${{ github.sha }}",
             self.e2e_action,
         )
-        self.assertIn("path: zig-out/bin", self.e2e_action)
+        self.assertIn("path: .", self.e2e_action)
         self.assertIn("chmod +x zig-out/bin/hx", self.e2e_action)
+        self.assertIn("zig-out/bin/mcp-stdio-dispatcher-driver", self.e2e_action)
+        self.assertIn("zig-out/bin/terminal-client-fixture", self.e2e_action)
         self.assertIn(
             "FX_REQUIRE_TMUX",
             "\n".join(self.jobs[f"e2e-{n}"] for n, _, _ in PLATFORMS),

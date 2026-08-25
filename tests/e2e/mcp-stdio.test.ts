@@ -11,6 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FX_BIN, runFx } from "../evals/eval-helpers";
+import { mcpDispatcherPrefix } from "./prebuilt-artifacts";
 import { SUPERGROK_MODEL } from "./direct-provider-env";
 import {
   fakeGatewayFinalText,
@@ -1407,10 +1408,7 @@ describe("modern MCP stdio compatibility", () => {
   test("the real dispatcher keeps reversed concurrent responses and progress correlated", async () => {
     const proc = Bun.spawn(
       [
-        "zig",
-        "build",
-        "run-mcp-stdio-dispatcher-e2e",
-        "--",
+        ...mcpDispatcherPrefix(),
         process.execPath,
         DISPATCHER_RACE_FIXTURE,
       ],
@@ -1442,10 +1440,7 @@ describe("modern MCP stdio compatibility", () => {
   test("operation timeout bounds a blocked stdin write and reaps the child", async () => {
     const proc = Bun.spawn(
       [
-        "zig",
-        "build",
-        "run-mcp-stdio-dispatcher-e2e",
-        "--",
+        ...mcpDispatcherPrefix(),
         "blocked-write",
         process.execPath,
         BLOCKED_WRITE_FIXTURE,
@@ -1477,10 +1472,7 @@ describe("modern MCP stdio compatibility", () => {
     cleanupRoot = root;
     const proc = Bun.spawn(
       [
-        "zig",
-        "build",
-        "run-mcp-stdio-dispatcher-e2e",
-        "--",
+        ...mcpDispatcherPrefix(),
         "runtime-recovery",
         process.execPath,
         MODERN_FIXTURE,
@@ -1525,10 +1517,7 @@ describe("modern MCP stdio compatibility", () => {
       cleanupRoot = root;
       const proc = Bun.spawn(
         [
-          "zig",
-          "build",
-          "run-mcp-stdio-dispatcher-e2e",
-          "--",
+          ...mcpDispatcherPrefix(),
           "runtime-catalog-control",
           process.execPath,
           MODERN_FIXTURE,
@@ -1573,10 +1562,7 @@ describe("modern MCP stdio compatibility", () => {
       cleanupRoot = root;
       const proc = Bun.spawn(
         [
-          "zig",
-          "build",
-          "run-mcp-stdio-dispatcher-e2e",
-          "--",
+          ...mcpDispatcherPrefix(),
           "runtime-recovery-control",
           process.execPath,
           MODERN_FIXTURE,
@@ -1617,10 +1603,7 @@ describe("modern MCP stdio compatibility", () => {
     cleanupRoot = root;
     const proc = Bun.spawn(
       [
-        "zig",
-        "build",
-        "run-mcp-stdio-dispatcher-e2e",
-        "--",
+        ...mcpDispatcherPrefix(),
         "runtime-recovery-collision",
         process.execPath,
         MODERN_FIXTURE,
@@ -1663,10 +1646,7 @@ describe("modern MCP stdio compatibility", () => {
     cleanupRoot = root;
     const proc = Bun.spawn(
       [
-        "zig",
-        "build",
-        "run-mcp-stdio-dispatcher-e2e",
-        "--",
+        ...mcpDispatcherPrefix(),
         "runtime-recovery-budget",
         process.execPath,
         MODERN_FIXTURE,
@@ -1706,10 +1686,7 @@ describe("modern MCP stdio compatibility", () => {
     cleanupRoot = root;
     const proc = Bun.spawn(
       [
-        "zig",
-        "build",
-        "run-mcp-stdio-dispatcher-e2e",
-        "--",
+        ...mcpDispatcherPrefix(),
         "runtime-stale-recovery",
         process.execPath,
         MODERN_FIXTURE,
@@ -4385,10 +4362,7 @@ describe("modern MCP stdio compatibility", () => {
       cleanupRoot = root;
       const proc = Bun.spawn(
         [
-          "zig",
-          "build",
-          "run-mcp-stdio-dispatcher-e2e",
-          "--",
+          ...mcpDispatcherPrefix(),
           "runtime-scoped-recovery",
           process.execPath,
           MODERN_FIXTURE,

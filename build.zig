@@ -112,6 +112,7 @@ pub fn build(b: *std.Build) void {
         "mcp_test_exports",
         mcp_test_exports,
     );
+    b.installArtifact(mcp_dispatcher_e2e);
     const run_mcp_dispatcher_e2e = b.addRunArtifact(mcp_dispatcher_e2e);
     if (b.args) |args| run_mcp_dispatcher_e2e.addArgs(args);
     const mcp_dispatcher_e2e_step = b.step(
