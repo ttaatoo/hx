@@ -124,6 +124,7 @@ class FullCiWorkflowTests(unittest.TestCase):
         self.assertNotIn("use-cache: false", self.e2e_action)
         self.assertNotIn("github.run_id", self.e2e_action)
         self.assertNotIn("github.run_attempt", self.e2e_action)
+        self.assertNotIn("timeout-minutes", self.e2e_action)
         self.assertNotIn("fetch-depth: 0", self.e2e_action)
         for name, _runner in PLATFORMS:
             self.assertNotIn("fetch-depth: 0", self.jobs[f"e2e-{name}"])

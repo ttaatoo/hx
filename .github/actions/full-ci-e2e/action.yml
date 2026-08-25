@@ -33,7 +33,6 @@ runs:
 
     - name: Install E2E system dependencies
       shell: bash
-      timeout-minutes: 17
       run: |
         if [ "$RUNNER_OS" = "Linux" ]; then
           missing=()
