@@ -1,8 +1,23 @@
 # hx
 
-## 0.0.6
+## 0.0.7
 
 <!-- release:start -->
+### New Features
+
+- **Release artifacts:** Publish signed-provenance GitHub Release tarballs with an SPDX SBOM and pinned Homebrew checksums.
+
+### Improvements
+
+- **Project lineage:** Record hx as an independently evolved project derived from vercel-labs/fx, with maintainer, support, and conduct policies.
+
+### Security
+
+- **Security policy:** Document supported versions, private vulnerability reporting, and the current threat model.
+<!-- release:end -->
+
+## 0.0.6
+
 ### New Features
 
 - **hx-named GitHub Release binaries:** Publish the first GitHub Release assets named `hx-macos-arm64.tar.gz`, `hx-macos-x86_64.tar.gz`, `hx-linux-aarch64.tar.gz`, and `hx-linux-x86_64.tar.gz`
@@ -11,7 +26,6 @@
 
 - **Homebrew stable install:** Tap with `brew tap ttaatoo/hx https://github.com/ttaatoo/hx` and install with `brew install ttaatoo/hx/hx`. Building from git with `--HEAD` is optional
 - **Product names:** The CLI, tap, and config dir remain `hx`, `ttaatoo/hx`, and `~/.hx`
-<!-- release:end -->
 
 ## 0.0.5
 
