@@ -112,6 +112,7 @@ pub fn build(b: *std.Build) void {
         "mcp_test_exports",
         mcp_test_exports,
     );
+    b.installArtifact(mcp_dispatcher_e2e);
     const run_mcp_dispatcher_e2e = b.addRunArtifact(mcp_dispatcher_e2e);
     if (b.args) |args| run_mcp_dispatcher_e2e.addArgs(args);
     const mcp_dispatcher_e2e_step = b.step(
@@ -119,6 +120,21 @@ pub fn build(b: *std.Build) void {
         "Run the MCP stdio dispatcher E2E driver",
     );
     mcp_dispatcher_e2e_step.dependOn(&run_mcp_dispatcher_e2e.step);
+
+    // Private terminal client used by tests/e2e/terminal-host.test.ts.
+    // Same flags as buildCurrentClientFixture: Debug, libc, native host.
+    // Do not inherit -Doptimize/-Dtarget. `zig build-exe -target x86_64-linux`
+    // links static musl and the current-client e2e cases exit 1 with no output.
+    const terminal_client_fixture = b.addExecutable(.{
+        .name = "terminal-client-fixture",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/terminal_client_fixture.zig"),
+            .target = b.resolveTargetQuery(.{}),
+            .optimize = .Debug,
+            .link_libc = true,
+        }),
+    });
+    b.installArtifact(terminal_client_fixture);
 
     // --- file_index search benchmark ---
     const benchmark_exports_mod = b.createModule(.{

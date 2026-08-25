@@ -21,8 +21,9 @@ Choose exactly one `type:` label in the PR metadata:
 - [ ] I built the current checkout with `zig build`.
 - [ ] I ran `./zig-out/bin/hx` and exercised the changed path with a real
       terminal or CLI interaction. I checked the exit status and stderr.
-- [ ] Full CI passed for the exact current commit on all required runners. If
-      it has not passed, this PR remains a draft.
+- [ ] I applied `full-ci` while this PR was a draft. Full CI passed for the
+      exact candidate commit on all required runners. If it has not passed,
+      this PR remains a draft.
 
 ## Security
 

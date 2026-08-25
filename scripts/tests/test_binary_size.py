@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import struct
 import subprocess
 import sys
 import tempfile
@@ -11,6 +12,7 @@ from scripts.binary_size import (
     BinarySizeError,
     append_delta_table,
     build_report,
+    dump_macho_size,
     markdown_report,
     parse_macho_sections,
 )
@@ -18,6 +20,86 @@ from scripts.binary_size import (
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "binary-size.yml"
+
+MH_MAGIC_64 = 0xFEEDFACF
+CPU_TYPE_X86_64 = 0x01000007
+CPU_SUBTYPE_X86_64_ALL = 3
+MH_EXECUTE = 2
+LC_SEGMENT_64 = 0x19
+MH_NOUNDEFS = 1
+
+
+def write_minimal_macho(path: pathlib.Path) -> None:
+    pagezero = struct.pack(
+        "<II16sQQQQiiII",
+        LC_SEGMENT_64,
+        72,
+        b"__PAGEZERO",
+        0,
+        0x100000000,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    )
+    text_section = struct.pack(
+        "<16s16sQQIIIIIIII",
+        b"__text",
+        b"__TEXT",
+        0x100000000 + 256,
+        16,
+        256,
+        4,
+        0,
+        0,
+        0x80000400,
+        0,
+        0,
+        0,
+    )
+    text = struct.pack(
+        "<II16sQQQQiiII",
+        LC_SEGMENT_64,
+        152,
+        b"__TEXT",
+        0x100000000,
+        0x4000,
+        0,
+        272,
+        7,
+        5,
+        1,
+        0,
+    ) + text_section
+    linkedit = struct.pack(
+        "<II16sQQQQiiII",
+        LC_SEGMENT_64,
+        72,
+        b"__LINKEDIT",
+        0x100004000,
+        0x1000,
+        272,
+        0,
+        7,
+        1,
+        0,
+        0,
+    )
+    commands = pagezero + text + linkedit
+    header = struct.pack(
+        "<IiiIIIII",
+        MH_MAGIC_64,
+        CPU_TYPE_X86_64,
+        CPU_SUBTYPE_X86_64_ALL,
+        MH_EXECUTE,
+        3,
+        len(commands),
+        MH_NOUNDEFS,
+        0,
+    )
+    path.write_bytes(header + commands + (b"\x90" * 16))
 
 
 class BinarySizeCliTests(unittest.TestCase):
@@ -236,25 +318,88 @@ class BinarySizeCliTests(unittest.TestCase):
             with self.assertRaisesRegex(BinarySizeError, "missing __TEXT segment"):
                 parse_macho_sections(report)
 
+    def test_dump_macho_reads_thin_64_bit_segments(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="fx-binary-size-") as tmp:
+            binary = pathlib.Path(tmp) / "hx"
+            write_minimal_macho(binary)
+
+            dumped = dump_macho_size(binary)
+            report = pathlib.Path(tmp) / "sections.txt"
+            report.write_text(dumped, encoding="utf-8")
+            segments, sections = parse_macho_sections(report)
+
+            self.assertIn("Segment __PAGEZERO: 4294967296", dumped)
+            self.assertEqual(0x4000, segments["__TEXT"])
+            self.assertEqual(0x1000, segments["__LINKEDIT"])
+            self.assertEqual(16, sections["__TEXT.__text"])
+            self.assertNotIn("__PAGEZERO", segments)
+
+    def test_dump_macho_cli_writes_section_report(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="fx-binary-size-") as tmp:
+            binary = pathlib.Path(tmp) / "hx"
+            output = pathlib.Path(tmp) / "sections.txt"
+            write_minimal_macho(binary)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "scripts.binary_size",
+                    "dump-macho",
+                    "--binary",
+                    str(binary),
+                    "--output",
+                    str(output),
+                ],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn("Segment __TEXT: 16384", output.read_text(encoding="utf-8"))
+
+    def test_dump_macho_rejects_non_macho(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="fx-binary-size-") as tmp:
+            binary = pathlib.Path(tmp) / "hx"
+            binary.write_bytes(b"\x7fELF" + b"\0" * 28)
+
+            with self.assertRaisesRegex(BinarySizeError, "unsupported Mach-O magic"):
+                dump_macho_size(binary)
+
 
 class BinarySizeWorkflowTests(unittest.TestCase):
-    def test_pr_workflow_compares_all_supported_release_safe_targets(self) -> None:
+    def test_candidate_workflow_compares_all_supported_release_safe_targets(self) -> None:
         self.assertTrue(WORKFLOW_PATH.is_file(), "binary-size workflow is missing")
         workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
 
         self.assertIn("pull_request:", workflow)
+        self.assertIn("types: [labeled, synchronize]", workflow)
+        self.assertIn(
+            "contains(github.event.pull_request.labels.*.name, 'full-ci')",
+            workflow,
+        )
+        self.assertIn("github.event.label.name == 'full-ci'", workflow)
+        self.assertIn("'metadata' || 'candidate'", workflow)
         self.assertNotIn("pull_request_target", workflow)
         self.assertIn("contents: read", workflow)
         self.assertIn("runs-on: ${{ matrix.runner }}", workflow)
         for name, target, runner in (
             ("linux-x86_64", "x86_64-linux", "ubuntu-24.04"),
             ("linux-aarch64", "aarch64-linux", "ubuntu-24.04-arm"),
-            ("macos-x86_64", "x86_64-macos", "macos-15-intel"),
-            ("macos-aarch64", "aarch64-macos", "macos-15"),
+            ("macos-x86_64", "x86_64-macos", "ubuntu-24.04"),
+            ("macos-aarch64", "aarch64-macos", "ubuntu-24.04-arm"),
         ):
             self.assertIn(f"name: {name}", workflow)
             self.assertIn(f"target: {target}", workflow)
             self.assertIn(f"runner: {runner}", workflow)
+        self.assertNotIn("macos-15-intel", workflow)
+        self.assertNotIn("runner: macos-15", workflow)
+        self.assertNotIn("use-cache: false", workflow)
+        self.assertNotIn("github.run_id", workflow)
+        self.assertNotIn("github.run_attempt", workflow)
+        self.assertIn("cache-key: binary-size-${{ matrix.name }}", workflow)
         self.assertIn("fetch-depth: 0", workflow)
         self.assertIn("github.event.pull_request.base.sha", workflow)
         self.assertIn('test "$(git rev-parse HEAD)" = "$HEAD_SHA"', workflow)
@@ -265,8 +410,9 @@ class BinarySizeWorkflowTests(unittest.TestCase):
         self.assertIn("-Dtarget=${{ matrix.target }}", workflow)
         self.assertIn("-Doptimize=ReleaseSafe", workflow)
         self.assertGreaterEqual(workflow.count("zig build"), 2)
-        self.assertGreaterEqual(workflow.count("size -m"), 2)
+        self.assertGreaterEqual(workflow.count("dump-macho"), 2)
         self.assertGreaterEqual(workflow.count("size -A -d"), 2)
+        self.assertNotIn("size -m", workflow)
         self.assertIn("python3 -m scripts.binary_size", workflow)
         self.assertIn("$GITHUB_STEP_SUMMARY", workflow)
         self.assertIn("::warning title=Binary size increase::", workflow)

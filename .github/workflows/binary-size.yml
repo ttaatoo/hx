@@ -2,9 +2,11 @@ name: Binary Size
 
 on:
   pull_request:
+    types: [labeled, synchronize]
 
 concurrency:
-  group: binary-size-${{ github.event.pull_request.number }}
+  # A skipped unrelated-label event must not cancel a candidate size comparison.
+  group: binary-size-${{ github.event.pull_request.number }}-${{ github.event.action == 'labeled' && github.event.label.name != 'full-ci' && 'metadata' || 'candidate' }}
   cancel-in-progress: true
 
 permissions:
@@ -13,12 +15,20 @@ permissions:
 jobs:
   compare:
     name: ReleaseSafe delta (${{ matrix.name }})
+    if: >-
+      ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') &&
+          (github.event.action == 'synchronize' || github.event.label.name == 'full-ci') }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         include:
+          # Cross-compile every target from Linux. GitHub-hosted Ubuntu already
+          # produces these triples in ci.yml and release.yml. This keeps the
+          # four-platform size check without consuming macOS hosted runners.
+          # Linux-cross Mach-O size deltas are same-toolchain head vs base;
+          # absolute bytes may differ from a native Darwin link.
           - name: linux-x86_64
             target: x86_64-linux
             runner: ubuntu-24.04
@@ -31,14 +41,14 @@ jobs:
             expected_file: "ELF 64-bit LSB.*ARM aarch64"
           - name: macos-x86_64
             target: x86_64-macos
-            runner: macos-15-intel
+            runner: ubuntu-24.04
             section_format: macho
-            expected_file: "Mach-O 64-bit executable x86_64"
+            expected_file: "Mach-O 64-bit.*x86_64"
           - name: macos-aarch64
             target: aarch64-macos
-            runner: macos-15
+            runner: ubuntu-24.04-arm
             section_format: macho
-            expected_file: "Mach-O 64-bit executable arm64"
+            expected_file: "Mach-O 64-bit.*(arm64|aarch64)"
     env:
       BASE_SHA: ${{ github.event.pull_request.base.sha }}
       HEAD_SHA: ${{ github.sha }}
@@ -55,10 +65,11 @@ jobs:
         uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
           version: "0.16.0"
-          use-cache: false
+          # Target name only. Do not include run_id or run_attempt.
+          cache-key: binary-size-${{ matrix.name }}
 
       - name: Test size reporter
-        run: python3 -m unittest scripts.tests.test_binary_size -v
+        run: python3 -m unittest scripts.tests.test_binary_size scripts.tests.test_full_ci -v
 
       - name: Build pull request binary
         shell: bash
@@ -67,17 +78,22 @@ jobs:
           evidence_dir="$RUNNER_TEMP/fx-binary-size-evidence"
           mkdir -p "$evidence_dir"
           test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+          # Head and base share Zig's default global cache so the second compile
+          # can reuse compiler artifacts. setup-zig persists ~/.cache/zig.
+          # Separate --cache-dir values keep the two checkouts isolated.
           zig build \
             -Dtarget=${{ matrix.target }} \
             -Doptimize=ReleaseSafe \
             --cache-dir "$RUNNER_TEMP/fx-head-cache" \
-            --global-cache-dir "$RUNNER_TEMP/fx-global-cache"
+            --global-cache-dir "$HOME/.cache/zig"
           cp zig-out/bin/hx "$evidence_dir/head-fx"
           file "$evidence_dir/head-fx" > "$evidence_dir/head-file.txt"
           cat "$evidence_dir/head-file.txt"
           grep -Eq "$EXPECTED_FILE" "$evidence_dir/head-file.txt"
           if [ "$SECTION_FORMAT" = "macho" ]; then
-            size -m "$evidence_dir/head-fx" > "$evidence_dir/head-sections.txt"
+            python3 -m scripts.binary_size dump-macho \
+              --binary "$evidence_dir/head-fx" \
+              --output "$evidence_dir/head-sections.txt"
           else
             size -A -d "$evidence_dir/head-fx" > "$evidence_dir/head-sections.txt"
           fi
@@ -101,7 +117,7 @@ jobs:
               -Dtarget=${{ matrix.target }} \
               -Doptimize=ReleaseSafe \
               --cache-dir "$RUNNER_TEMP/fx-base-cache" \
-              --global-cache-dir "$RUNNER_TEMP/fx-global-cache"
+              --global-cache-dir "$HOME/.cache/zig"
           )
           if [ -f "$base_worktree/zig-out/bin/hx" ]; then
             cp "$base_worktree/zig-out/bin/hx" "$evidence_dir/base-fx"
@@ -116,7 +132,9 @@ jobs:
           cat "$evidence_dir/base-file.txt"
           grep -Eq "$EXPECTED_FILE" "$evidence_dir/base-file.txt"
           if [ "$SECTION_FORMAT" = "macho" ]; then
-            size -m "$evidence_dir/base-fx" > "$evidence_dir/base-sections.txt"
+            python3 -m scripts.binary_size dump-macho \
+              --binary "$evidence_dir/base-fx" \
+              --output "$evidence_dir/base-sections.txt"
           else
             size -A -d "$evidence_dir/base-fx" > "$evidence_dir/base-sections.txt"
           fi

@@ -17,6 +17,7 @@ import { homedir, tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { runFx } from "../evals/eval-helpers";
+import { mcpDispatcherPrefix } from "./prebuilt-artifacts";
 import {
   startLegacyHttpSseFixture,
   startLegacyStreamableHttpFixture,
@@ -1884,10 +1885,7 @@ describe("MCP remote authentication lifecycle", () => {
 
         const proc = Bun.spawn(
           [
-            "zig",
-            "build",
-            "run-mcp-stdio-dispatcher-e2e",
-            "--",
+            ...mcpDispatcherPrefix(),
             "runtime-scoped-http-auth",
             auth.url,
             markerPath,
@@ -2106,10 +2104,7 @@ describe("MCP remote authentication lifecycle", () => {
 
       const proc = Bun.spawn(
         [
-          "zig",
-          "build",
-          "run-mcp-stdio-dispatcher-e2e",
-          "--",
+          ...mcpDispatcherPrefix(),
           "runtime-legacy-refresh-locks",
           auth.url,
           refreshStartedPath,
@@ -2176,10 +2171,7 @@ describe("MCP remote authentication lifecycle", () => {
 
       const proc = Bun.spawn(
         [
-          "zig",
-          "build",
-          "run-mcp-stdio-dispatcher-e2e",
-          "--",
+          ...mcpDispatcherPrefix(),
           "runtime-logout-refresh-race",
           auth.url,
           refreshStartedPath,
@@ -2226,10 +2218,7 @@ describe("MCP remote authentication lifecycle", () => {
 
       const proc = Bun.spawn(
         [
-          "zig",
-          "build",
-          "run-mcp-stdio-dispatcher-e2e",
-          "--",
+          ...mcpDispatcherPrefix(),
           "runtime-interactive-auth-locks",
           auth.url,
           authStartedPath,
@@ -2275,10 +2264,7 @@ describe("MCP remote authentication lifecycle", () => {
 
       const proc = Bun.spawn(
         [
-          "zig",
-          "build",
-          "run-mcp-stdio-dispatcher-e2e",
-          "--",
+          ...mcpDispatcherPrefix(),
           "runtime-interactive-auth-retirement",
           auth.url,
           authStartedPath,

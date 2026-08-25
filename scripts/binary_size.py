@@ -5,6 +5,8 @@ import hashlib
 import json
 import pathlib
 import re
+import struct
+import sys
 from collections.abc import Sequence
 
 
@@ -15,6 +17,14 @@ TARGET_PATTERN = re.compile(r"[A-Za-z0-9_.-]+")
 SEGMENT_PATTERN = re.compile(r"^Segment\s+(\S+):\s+(\d+)")
 SECTION_PATTERN = re.compile(r"^Section\s+(\S+):\s+(\d+)")
 ELF_SECTION_PATTERN = re.compile(r"^(\S+)\s+(\d+)\s+(?:0x)?[0-9A-Fa-f]+$")
+
+# Thin little-endian Mach-O 64-bit. Matches Darwin `size -m` numbers:
+# segment size is vmsize, section size is the section's size field.
+MH_MAGIC_64 = 0xFEEDFACF
+LC_SEGMENT_64 = 0x19
+MACH_HEADER_64_SIZE = 32
+SEGMENT_COMMAND_64_SIZE = 72
+SECTION_64_SIZE = 80
 
 
 class BinarySizeError(RuntimeError):
@@ -39,6 +49,84 @@ def artifact_evidence(path: pathlib.Path, source_sha: str) -> dict[str, object]:
         "size_bytes": size_bytes,
         "size_mib": size_bytes / MIB,
     }
+
+
+def _cstring(raw: bytes) -> str:
+    return raw.split(b"\0", 1)[0].decode("ascii", errors="replace")
+
+
+def dump_macho_size(path: pathlib.Path) -> str:
+    """Emit Darwin `size -m` style segment/section sizes for a thin Mach-O."""
+    if not path.is_file():
+        raise BinarySizeError(f"binary is missing or empty: {path}")
+    data = path.read_bytes()
+    if len(data) < MACH_HEADER_64_SIZE:
+        raise BinarySizeError(f"file is too small to be Mach-O 64-bit: {path}")
+    magic = struct.unpack_from("<I", data, 0)[0]
+    if magic != MH_MAGIC_64:
+        raise BinarySizeError(
+            f"unsupported Mach-O magic 0x{magic:08x} in {path}; "
+            "expected a thin little-endian 64-bit image"
+        )
+    _cputype, _cpusubtype, _filetype, ncmds, sizeofcmds, _flags, _reserved = (
+        struct.unpack_from("<iiIIIII", data, 4)
+    )
+    commands_end = MACH_HEADER_64_SIZE + sizeofcmds
+    if commands_end > len(data):
+        raise BinarySizeError(f"Mach-O load commands overflow the file: {path}")
+
+    lines: list[str] = []
+    offset = MACH_HEADER_64_SIZE
+    for _ in range(ncmds):
+        if offset + 8 > commands_end:
+            raise BinarySizeError(f"truncated Mach-O load command in {path}")
+        cmd, cmdsize = struct.unpack_from("<II", data, offset)
+        command_end = offset + cmdsize
+        if cmdsize < 8 or command_end > commands_end:
+            raise BinarySizeError(f"invalid Mach-O load command size in {path}")
+        if cmd == LC_SEGMENT_64:
+            if cmdsize < SEGMENT_COMMAND_64_SIZE:
+                raise BinarySizeError(f"truncated LC_SEGMENT_64 in {path}")
+            (
+                segname_raw,
+                _vmaddr,
+                vmsize,
+                _fileoff,
+                _filesize,
+                _maxprot,
+                _initprot,
+                nsects,
+                _segflags,
+            ) = struct.unpack_from("<16sQQQQiiII", data, offset + 8)
+            segname = _cstring(segname_raw) or "(unnamed)"
+            lines.append(f"Segment {segname}: {vmsize}")
+            section_offset = offset + SEGMENT_COMMAND_64_SIZE
+            expected_size = SEGMENT_COMMAND_64_SIZE + nsects * SECTION_64_SIZE
+            if cmdsize < expected_size:
+                raise BinarySizeError(
+                    f"LC_SEGMENT_64 {segname} is smaller than its sections: {path}"
+                )
+            section_total = 0
+            for _section_index in range(nsects):
+                if section_offset + SECTION_64_SIZE > command_end:
+                    raise BinarySizeError(
+                        f"truncated section in segment {segname}: {path}"
+                    )
+                sectname_raw, _sect_segname, _addr, sect_size = struct.unpack_from(
+                    "<16s16sQQ", data, section_offset
+                )
+                sectname = _cstring(sectname_raw) or "(unnamed)"
+                lines.append(f"\tSection {sectname}: {sect_size}")
+                section_total += sect_size
+                section_offset += SECTION_64_SIZE
+            if nsects:
+                lines.append(f"\ttotal {section_total}")
+        offset = command_end
+    if offset != commands_end:
+        raise BinarySizeError(f"Mach-O load commands do not fill sizeofcmds: {path}")
+    if not any(line.startswith("Segment ") for line in lines):
+        raise BinarySizeError(f"Mach-O image contains no LC_SEGMENT_64 commands: {path}")
+    return "\n".join(lines) + "\n"
 
 
 def parse_macho_sections(path: pathlib.Path) -> tuple[dict[str, int], dict[str, int]]:
@@ -250,6 +338,15 @@ def markdown_report(report: dict[str, object]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def parse_dump_macho_args(argv: Sequence[str] | None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Write Darwin size -m style Mach-O segment sizes",
+    )
+    parser.add_argument("--binary", type=pathlib.Path, required=True)
+    parser.add_argument("--output", type=pathlib.Path, required=True)
+    return parser.parse_args(argv)
+
+
 def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Compare stripped ReleaseSafe fx binaries",
@@ -273,7 +370,18 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    args = parse_args(argv)
+    argv_list = list(sys.argv[1:] if argv is None else argv)
+    if argv_list and argv_list[0] == "dump-macho":
+        dump_args = parse_dump_macho_args(argv_list[1:])
+        try:
+            report = dump_macho_size(dump_args.binary)
+        except BinarySizeError as error:
+            raise SystemExit(str(error)) from error
+        dump_args.output.parent.mkdir(parents=True, exist_ok=True)
+        dump_args.output.write_text(report, encoding="utf-8")
+        return 0
+
+    args = parse_args(argv_list)
     try:
         report = build_report(
             base_binary=args.base_binary,

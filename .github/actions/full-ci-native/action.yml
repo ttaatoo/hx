@@ -1,0 +1,83 @@
+name: Full CI native
+description: Build, test, smoke, and upload one platform's ReleaseSafe hx
+
+inputs:
+  platform:
+    description: Platform key used in artifact and cache names
+    required: true
+  target:
+    description: Portable Zig target used by native and E2E consumer runners. Linux must be the gnu ABI so the uploaded hx stays dynamically linked for LD_PRELOAD e2e.
+    required: true
+  optimize:
+    description: Zig optimize mode
+    required: true
+    default: ReleaseSafe
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Zig
+      uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+      with:
+        version: "0.16.0"
+        # Platform and optimize only. Do not include run_id or run_attempt:
+        # those would force a cold compile on every workflow run.
+        cache-key: full-ci-native-${{ inputs.platform }}-${{ inputs.optimize }}
+
+    - name: Check formatting
+      shell: bash
+      run: zig fmt --check src/
+
+    - name: Audit public surface
+      shell: bash
+      run: ./scripts/check-public-surface.sh
+
+    - name: Check workflow contracts
+      shell: bash
+      run: python3 -m unittest scripts.tests.test_full_ci -v
+
+    - name: Build
+      shell: bash
+      run: |
+        zig build -Dtarget=${{ inputs.target }} -Doptimize=${{ inputs.optimize }}
+        test -x zig-out/bin/hx
+        test -x zig-out/bin/mcp-stdio-dispatcher-driver
+        test -x zig-out/bin/terminal-client-fixture
+        # Bare x86_64-linux / aarch64-linux is static musl. Linux e2e loads
+        # shared interposers into hx with LD_PRELOAD, which requires glibc.
+        if [ "$(uname -s)" = Linux ]; then
+          file zig-out/bin/hx | grep -q 'dynamically linked'
+        fi
+
+    - name: Run unit tests
+      shell: bash
+      run: zig build test -Dtarget=${{ inputs.target }} -Doptimize=${{ inputs.optimize }}
+
+    - name: Smoke test fresh binary
+      shell: bash
+      run: |
+        help_stdout="$(mktemp)"
+        help_stderr="$(mktemp)"
+        status_stdout="$(mktemp)"
+        status_stderr="$(mktemp)"
+        trap 'rm -f "$help_stdout" "$help_stderr" "$status_stdout" "$status_stderr"' EXIT
+
+        ./zig-out/bin/hx help >"$help_stdout" 2>"$help_stderr"
+        test -s "$help_stdout"
+        test ! -s "$help_stderr"
+
+        ./zig-out/bin/hx status --json >"$status_stdout" 2>"$status_stderr"
+        test -s "$status_stdout"
+        test ! -s "$status_stderr"
+
+    - name: Upload ReleaseSafe binary
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: hx-full-ci-${{ inputs.platform }}-${{ github.sha }}
+        path: |
+          zig-out/bin/hx
+          zig-out/bin/mcp-stdio-dispatcher-driver
+          zig-out/bin/terminal-client-fixture
+        if-no-files-found: error
+        overwrite: true
+        retention-days: 7

@@ -10,7 +10,7 @@ Before reporting the work as ready:
 
 1. Build succeeds.
 2. Focused tests for the changed path pass locally.
-3. The **Full CI** run for the exact current commit passes on every required Linux and macOS runner.
+3. For a release-candidate PR, the **Full CI** run requested with `full-ci` passes for the exact current commit on every required Linux and macOS runner.
 4. Run the built binary locally and drive at least one real interaction that exercises the change end to end.
 5. Confirm the process did not abort, stderr is clean, and the behavior matches what you are about to tell the user.
 
@@ -276,16 +276,16 @@ Keep PR titles as clean imperative sentences, such as `Restore feedback report f
 
 Use the impact-based **Local Test Scope** during development. Build the binary and exercise the changed path with `./zig-out/bin/hx` before creating the checkpoint commit.
 
-After the focused checks pass, create a clean checkpoint commit, push the non-`main` feature branch, and open a draft PR immediately. `.github/workflows/full-ci.yml` runs the following on all four supported native runner architectures:
+After the focused checks pass, create a clean checkpoint commit, push the non-`main` feature branch, and open a draft PR immediately. Standard PR CI runs on every revision. Apply the `full-ci` label while the PR is a draft to request `.github/workflows/full-ci.yml`; the label stays attached so each later revision runs the full matrix again. A non-draft PR without that label fails its lightweight candidate gate. Full CI also runs for `main` pushes and manual dispatches. It uses the following four supported native runner architectures:
 
 * `ubuntu-24.04` (x86_64)
 * `ubuntu-24.04-arm` (aarch64)
 * `macos-15-intel` (x86_64)
 * `macos-15` (aarch64)
 
-The native matrix builds, tests, and smoke-tests ReleaseSafe on every platform; formatting and the public-surface audit run in those ReleaseSafe jobs. The E2E matrix runs four duration-balanced, isolated ReleaseSafe shards per platform with Bun and tmux. Checked-in weights assign every test file to exactly one shard on each platform, and files inside each shard run sequentially in separate Bun processes so terminal fixtures and process state cannot leak between files. A failed file receives one bounded retry after its tmux server is reset. Live model evals remain separate because they require credentials and are not deterministic.
+Each platform has its own native job that builds, tests, and smoke-tests a portable ReleaseSafe target, then uploads that platform's `hx` binary; formatting and the public-surface audit run in those ReleaseSafe jobs. That platform's four duration-balanced E2E shards start as soon as its native job uploads; they do not wait for other platforms. E2E shards download that artifact and run with Bun and tmux. They do not install Zig or compile. Checked-in weights assign every test file to exactly one shard on each platform, and files inside each shard run sequentially in separate Bun processes so terminal fixtures and process state cannot leak between files. A failed file receives one bounded retry after its tmux server is reset. Live model evals remain separate because they require credentials and are not deterministic.
 
-A Full CI result is valid only when it belongs to the exact current commit and all four `Full suite (...)` jobs succeed. Each platform aggregate requires its ReleaseSafe native check plus all four ReleaseSafe E2E shards. Do not mark the draft PR ready or request review from a stale, partial, queued, cancelled, skipped, or failed run. If Full CI fails, make the smallest repair, rerun the focused local proof, push the new commit to the same draft PR, and wait for Full CI on the new exact commit. After CI passes, run the final ship gate and mark the PR ready only when it reports `SHIP` for that exact commit.
+A Full CI result is valid only when it belongs to the exact candidate commit and all four `Full suite (...)` jobs succeed. Each platform aggregate requires its ReleaseSafe native check plus all four ReleaseSafe E2E shards. Do not mark the draft PR ready or request review from a stale, partial, queued, cancelled, skipped, or failed run. If Full CI fails, make the smallest repair, rerun the focused local proof, push the new commit to the same draft PR, and wait for Full CI on that exact commit. After CI passes, run the final ship gate and mark the PR ready only when it reports `SHIP` for that exact commit.
 
 ## Reproducing Render Bugs
 
@@ -325,14 +325,14 @@ When a tmux or tape-based scenario exposes a bug, reproduce it as a Zig unit tes
 
 ## Benchmarks
 
-Startup latency benchmarks live in `benchmarks/` and run in CI via `.github/workflows/bench.yml`.
+Startup latency benchmarks live in `benchmarks/` and run in CI via `.github/workflows/bench.yml` for `main`, manual dispatches, and PRs requested with `full-ci`.
 
 ```bash
 ./benchmarks/startup.sh            # full run (100 iterations, builds ReleaseSafe, needs hyperfine)
 ./benchmarks/startup.sh --quick    # quick run (20 iterations)
 ```
 
-The CI workflow builds a ReleaseSafe binary, measures six CLI paths with hyperfine, and enforces per-command latency budgets. PRs that exceed a budget fail the check.
+The CI workflow builds a ReleaseSafe binary, measures six CLI paths with hyperfine, and enforces per-command latency budgets. Requested release candidates that exceed a budget fail the check.
 
 The startup benchmark uses `FX_BENCH=1`, an environment variable that runs through arg parsing and CLI dispatch, then exits before TTY initialization. This lives in `src/core/app/app_entry_runtime.zig`.
 
@@ -350,11 +350,12 @@ When adding features, consider their impact on startup latency. The `hx help` pa
 
 ## Binary Size Observability
 
-Every pull request runs `.github/workflows/binary-size.yml` across Linux x86_64,
-Linux arm64, macOS x86_64, and macOS arm64. Each matrix job builds the pull
-request merge commit and its base commit as stripped ReleaseSafe binaries on
-the same native runner, then reports the exact byte and MiB delta plus ELF or
-Mach-O section changes.
+Every pull request requested with `full-ci` runs `.github/workflows/binary-size.yml` across Linux x86_64,
+Linux arm64, macOS x86_64, and macOS arm64. Each matrix job cross-compiles the
+pull request merge commit and its base commit as stripped ReleaseSafe binaries
+from Linux, then reports the exact byte and MiB delta plus ELF or Mach-O
+section changes. Linux-cross Mach-O size deltas are same-toolchain head vs
+base; absolute bytes may differ from a native Darwin link.
 
 Each platform check is informational. An increase of at least 52,429 bytes
 (0.050000 MiB) emits a warning and retains that platform's binaries for
@@ -462,6 +463,6 @@ The canonical repository is `ttaatoo/hx` on GitHub. This product is based on `ve
 
 1. Run `zig fmt --check src/` and the focused tests for the changed path.
 2. Build and exercise the change locally with `./zig-out/bin/hx`.
-3. Push a clean checkpoint commit and open a draft PR immediately.
-4. Require **Full CI** and the final ship gate to pass on the exact current commit across all four native runners.
+3. Push a clean checkpoint commit, open a draft PR immediately, and apply `full-ci` before marking it ready.
+4. Require **Full CI** and the final ship gate to pass on the exact candidate commit across all four native runners.
 5. Update docs if behavior changed.

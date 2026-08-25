@@ -41,19 +41,20 @@ zig build run
 
 Keep the local development loop focused: run the narrowest test that covers the changed path, build hx, and exercise the change using `./zig-out/bin/hx`. The installed `hx` on `PATH` is not valid development evidence.
 
-Once the focused checks pass, create a clean checkpoint commit, push the non-`main` feature branch, and open a draft PR immediately. The **Full CI** workflow runs the complete deterministic suite on native Linux x86_64, Linux aarch64, macOS x86_64, and macOS aarch64 runners. The native matrix builds, tests, and smoke-tests ReleaseSafe on every platform; formatting and the public-surface audit run in those ReleaseSafe jobs. Four duration-balanced, isolated ReleaseSafe E2E shards per platform use checked-in weights to assign every Bun test file once; files inside each shard run sequentially in separate Bun processes so terminal fixtures and process state cannot leak between files. A failed file receives one bounded retry after tmux is reset.
+Once the focused checks pass, create a clean checkpoint commit, push the non-`main` feature branch, and open a draft PR immediately. Standard PR CI runs on every revision. Apply the `full-ci` label while the PR is a draft to request the **Full CI** workflow; the label stays attached so each later revision runs the complete deterministic suite again. A non-draft PR without that label fails its lightweight candidate gate. Full CI also runs for `main` pushes and manual dispatches. It runs on native Linux x86_64, Linux aarch64, macOS x86_64, and macOS aarch64 runners. Each platform has its own native job that builds, tests, and smoke-tests a portable ReleaseSafe target, then uploads that platform's `hx` binary; formatting and the public-surface audit run in those ReleaseSafe jobs. That platform's four duration-balanced E2E shards start as soon as its native job uploads; they do not wait for other platforms. Shards download that artifact instead of compiling, then use checked-in weights to assign every Bun test file once; files inside each shard run sequentially in separate Bun processes so terminal fixtures and process state cannot leak between files. A failed file receives one bounded retry after tmux is reset.
 
-Standard PR CI reports ReleaseSafe Build & Test and deterministic E2E results. Do not mark the draft PR ready until all four Full CI jobs and the final ship gate have succeeded for the exact current commit. Each platform aggregate requires its ReleaseSafe native check and all four ReleaseSafe E2E shards. A result from an older commit does not count. Live model evals are separate from this gate because they require credentials and are not deterministic.
+Standard PR CI reports ReleaseSafe Build & Test and deterministic E2E results. Do not mark the draft PR ready until all four Full CI jobs and the final ship gate have succeeded for the exact candidate commit. Each platform aggregate requires its ReleaseSafe native check and all four ReleaseSafe E2E shards. A result from an older commit does not count. Live model evals are separate from this gate because they require credentials and are not deterministic.
 
 Changes to `build.zig` or `scripts/pgso/` also run the native macOS arm64 PGSO candidate workflow. That lane produces retained size, behavior, and performance evidence but does not alter any release artifact or update channel. Its pinned toolchain, local reproduction command, corpus exclusions, and failure rules are documented in [`scripts/pgso/README.md`](scripts/pgso/README.md).
 
-Every pull request also receives informational ReleaseSafe binary-size
+Every pull request requested with `full-ci` also receives informational ReleaseSafe binary-size
 comparisons for Linux x86_64, Linux arm64, macOS x86_64, and macOS arm64. Each
-comparison builds the pull request merge commit and base commit on the same
-native runner, reports exact file and ELF or Mach-O section deltas, and emits a
-warning at increases of 52,429 bytes (0.050000 MiB) or more. The warning requests
-investigation but does not replace the full PGSO release gate or reject a valid
-feature solely for adding code.
+comparison cross-compiles the pull request merge commit and base commit from
+Linux, reports exact file and ELF or Mach-O section deltas, and emits a
+warning at increases of 52,429 bytes (0.050000 MiB) or more. Linux-cross Mach-O
+deltas are same-toolchain head vs base; absolute bytes may differ from a native
+Darwin link. The warning requests investigation but does not replace the full
+PGSO release gate or reject a valid feature solely for adding code.
 
 ## Pull Requests
 
@@ -341,7 +342,7 @@ Do not create tags manually. The workflow owns tag creation.
 
 ## Benchmarks
 
-Startup latency benchmarks run automatically on every PR and push to `main` via `.github/workflows/bench.yml`.
+Startup latency benchmarks run for `main`, manual dispatches, and PRs requested with `full-ci` via `.github/workflows/bench.yml`.
 
 The workflow builds a ReleaseSafe binary, then uses [hyperfine](https://github.com/sharkdp/hyperfine) to measure wall-clock time for six paths:
 
@@ -354,7 +355,7 @@ The workflow builds a ReleaseSafe binary, then uses [hyperfine](https://github.c
 | `hx doctor --json`     | 2ms    | System checks, subprocess spawns                   |
 | `hx sessions --json`   | 2ms    | Session directory read                             |
 
-On PRs the check **fails** if any command exceeds its budget.
+On requested release-candidate PRs the check **fails** if any command exceeds its budget.
 
 The table is the authoritative Linux CI contract. Non-Linux local runs report
 raw means for comparison but do not assign a substitute product budget because
@@ -381,6 +382,6 @@ Minimum checklist:
 
 1. Run `zig fmt --check src/` and the focused tests for the changed path.
 2. Run `zig build`, then exercise the change with `./zig-out/bin/hx`.
-3. Push the feature branch and open a draft PR immediately.
-4. Require all four **Full CI** jobs and the final ship gate to pass for the exact current commit before marking the PR ready.
+3. Push the feature branch, open a draft PR immediately, and apply `full-ci` before marking it ready.
+4. Require all four **Full CI** jobs and the final ship gate to pass for the exact candidate commit before marking the PR ready.
 5. Update `README.md` if user-facing behavior changed.
