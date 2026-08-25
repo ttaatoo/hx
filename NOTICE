@@ -1,12 +1,13 @@
 hx
 Copyright 2026 hx contributors
 
-This product is based on fx
+hx is an independently evolved project derived from vercel-labs/fx:
 https://github.com/vercel-labs/fx
 Copyright Vercel, Inc. and fx contributors
 
 hx is published at https://github.com/ttaatoo/hx.
-This is not official Vercel fx.
+This is not an official Vercel product and is not affiliated with or endorsed
+by Vercel.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

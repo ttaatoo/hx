@@ -24,13 +24,13 @@ if (installedPackage.version !== runnerVersion) {
 const runner = join(runnerRoot, "dist", "index.js");
 const client = resolve(packageRoot, "client.ts");
 const baseline = resolve(packageRoot, "expected-failures.yml");
-const fxBin = resolve(packageRoot, "../../../zig-out/bin/hx");
-if (!existsSync(fxBin)) {
+const hxBin = resolve(packageRoot, "../../../zig-out/bin/hx");
+if (!existsSync(hxBin)) {
   throw new Error(
-    `missing freshly built Fx binary at ${fxBin}; run FX_SOUND=0 zig build from the repository root`,
+    `missing freshly built hx binary at ${hxBin}; run FX_SOUND=0 zig build from the repository root`,
   );
 }
-const resultRoot = mkdtempSync(join(tmpdir(), "fx-mcp-conformance-results-"));
+const resultRoot = mkdtempSync(join(tmpdir(), "hx-mcp-conformance-results-"));
 console.log(
   `MCP conformance ${protocolVersion}, runner ${runnerVersion} (${runnerRevision})`,
 );

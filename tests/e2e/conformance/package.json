@@ -1,5 +1,5 @@
 {
-  "name": "fx-mcp-conformance",
+  "name": "hx-mcp-conformance",
   "private": true,
   "type": "module",
   "packageManager": "npm@10.9.2",
@@ -12,6 +12,10 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/conformance": "0.2.0-alpha.10"
+  },
+  "overrides": {
+    "fast-uri": "3.1.5",
+    "hono": "4.12.34"
   },
   "conformance": {
     "protocolVersion": "2026-07-28",

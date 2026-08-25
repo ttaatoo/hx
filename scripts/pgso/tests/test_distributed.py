@@ -4,6 +4,7 @@ import unittest
 
 import pathlib
 import dataclasses
+import re
 
 from scripts.pgso.corpus import Corpus, Scenario
 from scripts.pgso.distributed import (
@@ -34,6 +35,56 @@ def scenario(name: str, timeout_seconds: float) -> Scenario:
 
 
 class WorkflowContractTests(unittest.TestCase):
+    def test_concurrency_separates_manual_and_release_callers(self) -> None:
+        repo_root = pathlib.Path(__file__).resolve().parents[3]
+        workflow = (repo_root / ".github/workflows/pgso-macos-arm64.yml").read_text()
+
+        self.assertIn(
+            "group: pgso-macos-arm64-${{ github.workflow }}-${{ github.ref }}",
+            workflow,
+        )
+
+    def test_release_package_uses_hx_and_contains_required_notices(self) -> None:
+        repo_root = pathlib.Path(__file__).resolve().parents[3]
+        workflow = (repo_root / ".github/workflows/pgso-macos-arm64.yml").read_text()
+        distributed = (repo_root / "scripts/pgso/distributed.py").read_text()
+        package_step = workflow.split(
+            "      - name: Package stable release candidate\n", 1
+        )[1].split("\n      - name: Upload stable release artifact", 1)[0]
+
+        self.assertIn('destination = output / "candidate" / "hx"', distributed)
+        self.assertIn("candidate/hx", package_step)
+        self.assertIn("LICENSE NOTICE THIRD_PARTY_NOTICES.md", package_step)
+        self.assertIn(
+            "tar -czf \"$archive\" -C \"$package_dir\" hx LICENSE NOTICE THIRD_PARTY_NOTICES.md",
+            package_step,
+        )
+        self.assertNotIn(
+            "tar -czf \"$archive\" -C \"$package_dir\" fx",
+            package_step,
+        )
+        self.assertIn("artifact_name=hx-macos-aarch64", package_step)
+        self.assertIn("archive_name=hx-macos-aarch64.tar.gz", package_step)
+
+    def test_external_actions_are_pinned_to_full_commits(self) -> None:
+        repo_root = pathlib.Path(__file__).resolve().parents[3]
+        sources = (
+            repo_root / ".github/workflows/pgso-macos-arm64.yml",
+            repo_root / ".github/actions/setup-pgso/action.yml",
+        )
+        for source in sources:
+            text = source.read_text()
+            for action, reference in re.findall(
+                r"uses:\s+([^\s]+)@([^\s#]+)", text
+            ):
+                if action.startswith("./"):
+                    continue
+                self.assertRegex(
+                    reference,
+                    r"^[0-9a-f]{40}$",
+                    f"{source}: {action} is not pinned to a full commit",
+                )
+
     def test_behavior_workers_install_pinned_zig_without_llvm(self) -> None:
         repo_root = pathlib.Path(__file__).resolve().parents[3]
         action = (repo_root / ".github/actions/setup-pgso/action.yml").read_text()
@@ -51,6 +102,30 @@ class WorkflowContractTests(unittest.TestCase):
         )
         self.assertIn('          zig: "true"', behavior_job)
         self.assertNotIn('          llvm: "true"', behavior_job)
+
+    def test_pgso_tools_pin_direct_downloads_and_verify_llvm_bottle(self) -> None:
+        repo_root = pathlib.Path(__file__).resolve().parents[3]
+        action = (repo_root / ".github/actions/setup-pgso/action.yml").read_text()
+
+        self.assertNotIn("brew install tmux", action)
+        self.assertIn(
+            "92e6de1be9ec176428fd2367677e61ceffc2ee1cb119035037a27d346b0403bb",
+            action,
+        )
+        self.assertIn(
+            "b6d8d9c76585db8ef5fa00d4931902fa4b8cbe8166f528f44fc403961a3f3759",
+            action,
+        )
+        self.assertIn('test "$("$tmux_bin" -V)" = "tmux 3.6a"', action)
+        self.assertIn('.versions.stable == "21.1.8"', action)
+        self.assertIn(
+            "71f4ead77d52d42da9dd7f34441b45304474837b7ace887c7669048f830df6e6",
+            action,
+        )
+        self.assertLess(
+            action.index('.versions.stable == "21.1.8"'),
+            action.index("brew install llvm@21"),
+        )
 
     def test_heavy_workers_measure_candidate_built_profile_pairs(self) -> None:
         repo_root = pathlib.Path(__file__).resolve().parents[3]

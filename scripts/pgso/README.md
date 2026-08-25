@@ -1,6 +1,12 @@
 # macOS arm64 PGSO candidate pipeline
 
-This directory owns the non-publishing Stage 1 build for a smaller macOS arm64 `fx` candidate. It preserves Zig ReleaseSafe semantics and the complete product feature set, then uses native LLVM profiles to keep measured hot code speed-oriented and compile profile-proven cold functions for size.
+This directory owns the non-publishing PGSO qualification for a macOS arm64
+`hx` candidate. It preserves Zig ReleaseSafe semantics and the complete
+product feature set, then uses native LLVM profiles to keep measured hot code
+speed-oriented and compile profile-proven cold functions for size.
+
+The PGSO selector and LLVM module remain named `fx` for profile compatibility;
+the executable and release archive are named `hx`.
 
 The candidate is accepted only when it is no larger than **7.800 MiB**, has the preferred **0.250 MiB** of size headroom, passes the deterministic product corpus, and stays within a **10%** p50 and p95 performance regression limit. The ordinary ReleaseSafe binary remains the control and recovery path.
 
@@ -13,10 +19,20 @@ The driver fails unless all of these match exactly:
 - Zig `0.16.0`
 - LLVM `21.1.8` tools and profile runtime from one configured LLVM root
 - Bun `1.3.14`
+- tmux `3.6a`, built with libevent `2.1.12-stable`
 - Hyperfine `1.20.0`
 - the selected source commit, update channel, bitcode hash, corpus hash, and profile-generation flags
 
-The pipeline does not use the host CPU as the release target. The final candidate must match the control's architecture and minimum macOS version, contain a valid code signature, contain no profile sections or profile-runtime dependency, and produce no profile output when executed.
+CI pins third-party actions to commit SHAs. It verifies the expected Homebrew
+LLVM bottle metadata before installation, and it verifies the installed LLVM
+version. It builds tmux and libevent from release archives with fixed SHA-256
+checksums. Bun and Hyperfine also use fixed versions and verified setup paths.
+
+The pipeline does not use the host CPU as the release target. The final
+candidate must match the control's architecture and minimum macOS version,
+contain a valid code signature, contain no profile sections or profile-runtime
+dependency, and produce no profile output when executed. The qualification
+path does not perform Apple Developer signing, notarization, or stapling.
 
 ## Commands
 
@@ -41,7 +57,7 @@ python3 -m scripts.pgso all \
 
 `build` verifies the control, bitcode, instrumented link, profile-section alignment, signature, and one profile-producing smoke. `train` additionally runs the versioned corpus and creates a checked candidate. Both are useful diagnostics but finish with `eligible: false` because they do not run the complete release-safety gate.
 
-`all` runs the complete fresh-build path: training, profile use, candidate verification, the candidate behavior corpus, six startup comparisons, and six heavy-workload comparisons. It is the canonical CI entry point. `report --output-dir <path>` is the only command that may reuse an existing directory, and it only reads a complete eligible manifest.
+`all` runs the complete fresh-build path: training, profile use, candidate verification, the candidate behavior corpus, six startup comparisons, and six heavy-workload comparisons. It is the canonical local qualification entry point. `report --output-dir <path>` is the only command that may reuse an existing directory, and it only reads a complete eligible manifest.
 
 The production workflow runs the same gate as a distributed DAG. One seed job
 builds the control, bitcode, and instrumented binary. Up to twenty training
@@ -60,6 +76,27 @@ phase interfaces: `train-shard`, `candidate`, `behavior-shard`, `measure`, and
 binary, candidate, assignment, or shard identity mismatch. The aggregate
 command requires all 29 training scenarios, all 41 behavior scenarios, and all
 12 performance gates exactly once before it emits `eligible: true`.
+
+## GitHub Actions workflow and release contract
+
+`.github/workflows/pgso-macos-arm64.yml` runs the same checks as a distributed
+workflow: `seed` builds immutable inputs, `train` creates one profile per
+assigned scenario, `candidate` merges profiles and builds the sole candidate,
+the `behavior`, `startup`, and `heavy` jobs verify it, and `aggregate` checks
+the complete evidence set. The aggregate job fails closed when the candidate
+exceeds the hard **7.800 MiB** ceiling (and also requires the configured
+0.250 MiB preferred headroom). The package step runs `scripts.pgso report`
+again before copying any file.
+
+The workflow is reusable. A release caller sets `package_release: true` and
+then consumes the uploaded artifact named by the reusable output
+`release_artifact` (`hx-macos-aarch64`). The output `release_archive` is
+`hx-macos-aarch64.tar.gz`. The artifact contains the archive and its
+`shasum -a 256` sidecar; the archive contains exactly `hx`, `LICENSE`,
+`NOTICE`, and `THIRD_PARTY_NOTICES.md`. The reusable workflow does not publish
+the release or perform Apple Developer signing, notarization, or stapling. The
+caller downloads this artifact and attaches those two files to the GitHub
+Release.
 
 ## Corpus
 
@@ -120,8 +157,8 @@ The driver also streams operational progress to the invoking terminal or GitHub 
 Corpus scenarios inherit only a small operating-system environment allowlist. Credentials, live-test flags, tracing settings, and repository dotenv files are excluded unless a value is explicitly declared in the versioned corpus. The runner temporarily installs the assigned artifact at `zig-out/bin/hx` for E2E compatibility, then restores the prior file (or prior absence) after success, failure, timeout, or cancellation.
 
 The native workflow uploads bounded phase evidence rather than caches or
-intermediate compiler objects. Pull requests and manual runs have read-only
-repository permissions and do not change release, dev-channel, CDN, tag, or
-GitHub Release state. The stable release workflow may call the same gate with
-release packaging enabled; only the candidate copied by the successful final
-aggregate is packaged as `hx-macos-aarch64.tar.gz`.
+intermediate compiler objects. Manual runs have read-only repository
+permissions and do not change release, dev-channel, CDN, tag, or GitHub
+Release state. A stable release caller may enable packaging as described
+above; only the candidate copied by the successful final aggregate is
+packaged as `hx-macos-aarch64.tar.gz`.

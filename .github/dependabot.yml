@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+  - package-ecosystem: bun
+    directory: /tests/e2e
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+  - package-ecosystem: bun
+    directory: /tests/evals
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+  - package-ecosystem: npm
+    directory: /tests/e2e/conformance
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3

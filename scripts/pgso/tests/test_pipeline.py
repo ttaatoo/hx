@@ -242,6 +242,15 @@ class PgsoPipelineTests(unittest.TestCase):
                 self.assertEqual(bitcode_name, paths.bitcode.name)
                 self.assertEqual(binary_name, paths.candidate_binary.name)
 
+    def test_product_artifact_uses_hx_binary_and_internal_fx_bitcode(self) -> None:
+        spec = ArtifactSpec(repo_root=self.root / "repo")
+        paths = PipelinePaths.create(self.root / "run-product")
+
+        self.assertEqual("hx", paths.control_binary.name)
+        self.assertEqual("hx", paths.candidate_binary.name)
+        self.assertEqual("fx.bc", paths.bitcode.name)
+        self.assertEqual("fx", spec.selector)
+
     def test_link_arguments_preserve_alignment_and_candidate_contract(self) -> None:
         compiler_runtime_object = self.root / "libcompiler_rt_zcu.o"
         instrumented = instrumented_link_argv(

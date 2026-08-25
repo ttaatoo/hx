@@ -3,15 +3,12 @@ name: Full CI
 on:
   workflow_dispatch:
   push:
-    branches-ignore:
-      - main
 
 concurrency:
   group: full-ci-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
-  actions: read
   contents: read
 
 jobs:
@@ -33,10 +30,10 @@ jobs:
             runner: macos-15
         optimize: [ReleaseSafe]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Zig
-        uses: mlugg/setup-zig@v2
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
           version: "0.16.0"
           cache-key: full-ci-native-${{ matrix.platform.name }}-${{ matrix.optimize }}
@@ -109,18 +106,18 @@ jobs:
       SHARD_INDEX: ${{ matrix.shard.index }}
       SHARD_COUNT: ${{ matrix.shard.shard_count }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
       - name: Setup Zig
-        uses: mlugg/setup-zig@v2
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
           version: "0.16.0"
           use-cache: false
 
       - name: Restore native Zig cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
           path: .zig-cache
           key: full-ci-e2e-read-only-${{ matrix.platform.name }}-${{ matrix.optimize }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -131,7 +128,7 @@ jobs:
         run: zig build -Doptimize=${{ matrix.optimize }}
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: "1.3.14"
 
@@ -227,6 +224,9 @@ jobs:
       - e2e
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    permissions:
+      # gh api reads this run's job conclusions to verify every matrix leg.
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -259,3 +259,17 @@ jobs:
             | (($selected | map(.name) | sort) == $expected and
                all($selected[]; .conclusion == "success"))
           ' <<< "$jobs"
+
+  ship-gate:
+    name: Ship gate
+    if: ${{ always() }}
+    needs: full-suite
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require all Full suite matrix jobs
+        env:
+          FULL_SUITE_RESULT: ${{ needs.full-suite.result }}
+        run: |
+          set -euo pipefail
+          test "$FULL_SUITE_RESULT" = success

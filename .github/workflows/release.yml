@@ -10,8 +10,7 @@ on:
         type: boolean
         default: false
 
-permissions:
-  contents: read
+permissions: {}
 
 concurrency:
   group: stable-release
@@ -20,8 +19,11 @@ concurrency:
 jobs:
   check-version:
     runs-on: ubuntu-latest
+    timeout-minutes: 100
     permissions:
       contents: read
+      checks: read
+      actions: read
     outputs:
       needed: ${{ steps.check.outputs.needed }}
       version: ${{ steps.check.outputs.version }}
@@ -45,14 +47,19 @@ jobs:
           TAG="v${VERSION}"
           echo "version=${TAG}" >> "$GITHUB_OUTPUT"
 
-          if gh release view "$TAG" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
-            echo "needed=false" >> "$GITHUB_OUTPUT"
-            if [ "$FORCE" = "true" ]; then
-              echo "GitHub Release ${TAG} already exists; refusing to clobber even with force"
+          RELEASE_JSON=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" 2>/dev/null || true)
+          if [ -n "$RELEASE_JSON" ]; then
+            if jq -e '.draft == true' <<< "$RELEASE_JSON" >/dev/null; then
+              echo "GitHub Release ${TAG} is still a draft; resuming its guarded publication"
             else
-              echo "GitHub Release ${TAG} exists, no release needed"
+              echo "needed=false" >> "$GITHUB_OUTPUT"
+              if [ "$FORCE" = "true" ]; then
+                echo "GitHub Release ${TAG} already exists; refusing to clobber even with force"
+              else
+                echo "GitHub Release ${TAG} exists, no release needed"
+              fi
+              exit 0
             fi
-            exit 0
           fi
 
           if git rev-parse "$TAG" >/dev/null 2>&1; then
@@ -68,6 +75,86 @@ jobs:
             echo "Tag ${TAG} is missing"
           fi
 
+          TARGET_SHA="$GITHUB_SHA"
+          CURRENT_MAIN_SHA=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')
+          if [ "$CURRENT_MAIN_SHA" != "$TARGET_SHA" ]; then
+            echo "::error::main moved from ${TARGET_SHA} to ${CURRENT_MAIN_SHA}; refusing to release a stale commit"
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+          echo "Checking the exact commit ${TARGET_SHA} for the Full CI workflow and Ship gate"
+          for attempt in $(seq 1 270); do
+            RUNS=$(gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/full-ci.yml/runs?head_sha=${TARGET_SHA}&event=push&per_page=100")
+            GATE_RUN_ID=""
+            while read -r run_id; do
+              [ -n "$run_id" ] || continue
+              JOBS=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs?per_page=100")
+              if jq -e '
+                any(.jobs[]?;
+                  .name == "Ship gate" and
+                  .status == "completed" and
+                  .conclusion == "success")
+              ' <<< "$JOBS" >/dev/null; then
+                GATE_RUN_ID="$run_id"
+                break
+              fi
+            done < <(jq -r --arg sha "$TARGET_SHA" '
+              .workflow_runs[]?
+              | select(
+                  .name == "Full CI" and
+                  .path == ".github/workflows/full-ci.yml" and
+                  .event == "push" and
+                  .head_sha == $sha and
+                  .status == "completed" and
+                  .conclusion == "success")
+              | .id
+            ' <<< "$RUNS")
+            if [ -n "$GATE_RUN_ID" ]; then
+              echo "Exact-commit Full CI run ${GATE_RUN_ID} and its Ship gate passed for ${TARGET_SHA}"
+              break
+            fi
+
+            if jq -e --arg sha "$TARGET_SHA" '
+              ([.workflow_runs[]? | select(
+                .name == "Full CI" and
+                .path == ".github/workflows/full-ci.yml" and
+                .event == "push" and
+                .head_sha == $sha and
+                .status != "completed")] | length == 0) and
+              any(.workflow_runs[]?;
+                .name == "Full CI" and
+                .path == ".github/workflows/full-ci.yml" and
+                .event == "push" and
+                .head_sha == $sha and
+                .status == "completed" and
+                .conclusion != "success")
+            ' <<< "$RUNS" >/dev/null; then
+              echo "::error::Exact-commit Full CI workflow failed for ${TARGET_SHA}"
+              echo "needed=false" >> "$GITHUB_OUTPUT"
+              exit 1
+            fi
+
+            STATE=$(jq -r --arg sha "$TARGET_SHA" '
+              [.workflow_runs[]? | select(
+                .name == "Full CI" and
+                .path == ".github/workflows/full-ci.yml" and
+                .event == "push" and
+                .head_sha == $sha)]
+              | if length == 0 then "missing"
+                else map((.id | tostring) + ":" + (.status // "unknown") + ":" + (.conclusion // "pending")) | join(",")
+                end
+            ' <<< "$RUNS")
+            if [ "$attempt" -eq 270 ]; then
+              echo "::error::Exact-commit Full CI workflow and Ship gate did not pass for ${TARGET_SHA} (last state: ${STATE})"
+              echo "needed=false" >> "$GITHUB_OUTPUT"
+              exit 1
+            fi
+            echo "Full CI for ${TARGET_SHA} is ${STATE}; waiting before retry ${attempt}/270"
+            sleep 20
+          done
+
           echo "needed=true" >> "$GITHUB_OUTPUT"
           echo "No GitHub Release for ${TAG}; release needed"
 
@@ -76,6 +163,8 @@ jobs:
     if: needs.check-version.outputs.needed == 'true'
     name: Build ${{ matrix.name }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -114,47 +203,25 @@ jobs:
             hx-${{ matrix.name }}.tar.gz
             hx-${{ matrix.name }}.tar.gz.sha256
 
-  build-macos-arm64:
+  build-macos-arm64-pgso:
     needs: check-version
     if: needs.check-version.outputs.needed == 'true'
-    name: Build macos-aarch64
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-
-      - name: Require native arm64 host
-        run: test "$(uname -m)" = arm64
-
-      - name: Setup Zig
-        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
-        with:
-          version: "0.16.0"
-
-      - name: Build
-        run: zig build -Doptimize=ReleaseSafe
-
-      - name: Package
-        run: |
-          set -euo pipefail
-          package_dir="$RUNNER_TEMP/hx-package-macos-aarch64"
-          mkdir -p "$package_dir"
-          cp zig-out/bin/hx LICENSE NOTICE THIRD_PARTY_NOTICES.md "$package_dir/"
-          tar -czf hx-macos-aarch64.tar.gz -C "$package_dir" hx LICENSE NOTICE THIRD_PARTY_NOTICES.md
-          shasum -a 256 hx-macos-aarch64.tar.gz > hx-macos-aarch64.tar.gz.sha256
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: hx-macos-aarch64
-          path: |
-            hx-macos-aarch64.tar.gz
-            hx-macos-aarch64.tar.gz.sha256
+    permissions:
+      actions: read
+      contents: read
+    uses: ./.github/workflows/pgso-macos-arm64.yml
+    with:
+      package_release: true
 
   release:
-    needs: [check-version, build, build-macos-arm64]
+    needs: [check-version, build, build-macos-arm64-pgso]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: read
+      id-token: write
+      attestations: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -166,6 +233,17 @@ jobs:
           pattern: hx-*
           merge-multiple: true
 
+      - name: Verify PGSO release artifact contract
+        env:
+          PGSO_ARCHIVE: ${{ needs.build-macos-arm64-pgso.outputs.release_archive }}
+          PGSO_ARTIFACT: ${{ needs.build-macos-arm64-pgso.outputs.release_artifact }}
+        run: |
+          set -euo pipefail
+          test "$PGSO_ARTIFACT" = hx-macos-aarch64
+          test "$PGSO_ARCHIVE" = hx-macos-aarch64.tar.gz
+          test -s "$PGSO_ARCHIVE"
+          test -s "${PGSO_ARCHIVE}.sha256"
+
       - name: Alias macOS arm64 tarball for the Homebrew formula
         run: |
           set -euo pipefail
@@ -176,12 +254,146 @@ jobs:
             sha256sum hx-macos-arm64.tar.gz > hx-macos-arm64.tar.gz.sha256
           fi
 
+      - name: Generate SPDX SBOM
+        env:
+          RELEASE_TAG: ${{ needs.check-version.outputs.version }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 <<'PYEOF'
+          import datetime as dt
+          import hashlib
+          import json
+          import os
+          import tarfile
+          from pathlib import Path
+
+          tag = os.environ["RELEASE_TAG"]
+          repository = os.environ["GITHUB_REPOSITORY"]
+          target_sha = os.environ["TARGET_SHA"]
+          platforms = (
+              "linux-x86_64",
+              "linux-aarch64",
+              "macos-x86_64",
+              "macos-arm64",
+          )
+          packages = []
+          files = []
+          relationships = []
+          required_files = {"hx", "LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"}
+
+          def spdx_id(prefix, value):
+              safe = "".join(char if char.isalnum() or char in ".-" else "-" for char in value)
+              return f"SPDXRef-{prefix}-{safe}"
+
+          for platform in platforms:
+              archive = Path(f"hx-{platform}.tar.gz")
+              checksum_file = Path(f"{archive}.sha256")
+              if not archive.is_file() or not checksum_file.is_file():
+                  raise SystemExit(f"missing release asset or checksum: {archive}")
+
+              archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+              published_sha = checksum_file.read_text(encoding="utf-8").split()[0]
+              if archive_sha != published_sha:
+                  raise SystemExit(f"checksum mismatch for {archive}")
+
+              package_id = spdx_id("Package", archive.name)
+              package_files = []
+              with tarfile.open(archive, "r:gz") as bundle:
+                  members = [member for member in bundle.getmembers() if member.isfile()]
+                  names = {member.name for member in members}
+                  if not required_files.issubset(names):
+                      raise SystemExit(f"{archive} does not contain the required license payload")
+                  for member in members:
+                      member_path = Path(member.name)
+                      if member_path.is_absolute() or ".." in member_path.parts:
+                          raise SystemExit(f"unsafe path in {archive}: {member.name}")
+                      content = bundle.extractfile(member).read()
+                      file_id = spdx_id("File", f"{platform}-{member.name}")
+                      files.append(
+                          {
+                              "SPDXID": file_id,
+                              "fileName": member.name,
+                              "fileTypes": ["BINARY"] if member.name == "hx" else ["TEXT"],
+                              "fileSize": len(content),
+                              "checksums": [
+                                  {"algorithm": "SHA256", "checksumValue": hashlib.sha256(content).hexdigest()}
+                              ],
+                              "licenseConcluded": "NOASSERTION",
+                              "copyrightText": "NOASSERTION",
+                          }
+                      )
+                      package_files.append(file_id)
+
+              packages.append(
+                  {
+                      "SPDXID": package_id,
+                      "name": archive.name,
+                      "versionInfo": tag.removeprefix("v"),
+                      "downloadLocation": (
+                          f"https://github.com/{repository}/releases/download/{tag}/{archive.name}"
+                      ),
+                      "filesAnalyzed": True,
+                      "licenseConcluded": "Apache-2.0",
+                      "licenseDeclared": "Apache-2.0",
+                      "copyrightText": "NOASSERTION",
+                      "checksums": [{"algorithm": "SHA256", "checksumValue": archive_sha}],
+                  }
+              )
+              relationships.extend(
+                  {
+                      "spdxElementId": package_id,
+                      "relationshipType": "CONTAINS",
+                      "relatedSpdxElement": file_id,
+                  }
+                  for file_id in package_files
+              )
+
+          sbom = {
+              "spdxVersion": "SPDX-2.3",
+              "dataLicense": "CC0-1.0",
+              "SPDXID": "SPDXRef-DOCUMENT",
+              "name": f"hx-{tag} release",
+              "documentNamespace": f"https://github.com/{repository}/releases/download/{tag}/hx-{tag}.spdx.json",
+              "creationInfo": {
+                  "created": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+                  "creators": ["Tool: hx release workflow"],
+              },
+              "documentDescribes": [package["SPDXID"] for package in packages],
+              "packages": packages,
+              "files": files,
+              "relationships": relationships,
+              "comment": f"Release artifacts built from commit {target_sha}.",
+          }
+          output = Path(f"hx-{tag}.spdx.json")
+          output.write_text(json.dumps(sbom, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          if output.stat().st_size == 0 or len(sbom["packages"]) != 4 or len(sbom["files"]) < 16:
+              raise SystemExit("generated SPDX SBOM is empty or incomplete")
+          print(f"Generated {output} with {len(sbom['packages'])} packages and {len(sbom['files'])} files")
+          PYEOF
+          jq -e '.spdxVersion == "SPDX-2.3" and (.packages | length == 4) and (.files | length >= 16)' \
+            "hx-${RELEASE_TAG}.spdx.json" >/dev/null
+
+      - name: Attest release artifacts
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        with:
+          subject-path: |
+            hx-*.tar.gz
+            hx-*.tar.gz.sha256
+            hx-${{ needs.check-version.outputs.version }}.spdx.json
+
       - name: Create git tag
         env:
           RELEASE_TAG: ${{ needs.check-version.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           [[ "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          CURRENT_MAIN_SHA=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')
+          if [ "$CURRENT_MAIN_SHA" != "$GITHUB_SHA" ]; then
+            echo "::error::main moved from ${GITHUB_SHA} to ${CURRENT_MAIN_SHA}; refusing to tag a stale commit"
+            exit 1
+          fi
           if git rev-parse "$RELEASE_TAG" >/dev/null 2>&1; then
             TAG_SHA=$(git rev-parse "${RELEASE_TAG}^{commit}")
             if [ "$TAG_SHA" != "$GITHUB_SHA" ]; then
@@ -204,13 +416,148 @@ jobs:
           fi
           echo "Extracted release notes ($LINES lines)"
 
+      - name: Revalidate exact main commit before draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          CURRENT_MAIN_SHA=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')
+          if [ "$CURRENT_MAIN_SHA" != "$GITHUB_SHA" ]; then
+            echo "::error::main moved from ${GITHUB_SHA} to ${CURRENT_MAIN_SHA}; refusing to create a stale release"
+            exit 1
+          fi
+          TAG_SHA=$(git rev-parse "${{ needs.check-version.outputs.version }}^{commit}")
+          test "$TAG_SHA" = "$GITHUB_SHA"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           tag_name: ${{ needs.check-version.outputs.version }}
           target_commitish: ${{ github.sha }}
           body_path: /tmp/release-notes.md
+          draft: true
           fail_on_unmatched_files: true
           files: |
             hx-*.tar.gz
             hx-*.tar.gz.sha256
+            hx-${{ needs.check-version.outputs.version }}.spdx.json
+
+      - name: Publish immutable GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.check-version.outputs.version }}
+        run: |
+          set -euo pipefail
+          RELEASE_ID=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" --jq '.id')
+          test -n "$RELEASE_ID"
+          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" \
+            -H 'Accept: application/vnd.github+json' \
+            -F draft=false >/dev/null
+          echo "Published ${RELEASE_TAG} with all tarballs, checksums, and the SPDX SBOM"
+
+      - name: Open Homebrew formula update PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.check-version.outputs.version }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          VERSION="${RELEASE_TAG#v}"
+          BRANCH="release-formula-${VERSION}"
+          MAC_ARM_SHA=$(cut -d' ' -f1 hx-macos-arm64.tar.gz.sha256)
+          MAC_INTEL_SHA=$(cut -d' ' -f1 hx-macos-x86_64.tar.gz.sha256)
+          LINUX_ARM_SHA=$(cut -d' ' -f1 hx-linux-aarch64.tar.gz.sha256)
+          LINUX_INTEL_SHA=$(cut -d' ' -f1 hx-linux-x86_64.tar.gz.sha256)
+          for checksum in "$MAC_ARM_SHA" "$MAC_INTEL_SHA" "$LINUX_ARM_SHA" "$LINUX_INTEL_SHA"; do
+            if ! [[ "$checksum" =~ ^[0-9a-f]{64}$ ]]; then
+              echo "::error::invalid release checksum ${checksum}"
+              exit 1
+            fi
+          done
+
+          python3 - "$VERSION" "$MAC_ARM_SHA" "$MAC_INTEL_SHA" "$LINUX_ARM_SHA" "$LINUX_INTEL_SHA" <<'PYEOF'
+          import re
+          import sys
+          from pathlib import Path
+
+          version, mac_arm, mac_intel, linux_arm, linux_intel = sys.argv[1:]
+          formula = Path("Formula/hx.rb").read_text(encoding="utf-8")
+          if ":no_check" in formula:
+              raise SystemExit("Formula/hx.rb still contains sha256 :no_check")
+          formula, version_count = re.subn(
+              r'(?m)^  version "[^"]+"$',
+              f'  version "{version}"',
+              formula,
+              count=1,
+          )
+          if version_count != 1:
+              raise SystemExit("Formula/hx.rb must contain exactly one version declaration")
+
+          checksums = {
+              "hx-macos-arm64.tar.gz": mac_arm,
+              "hx-macos-x86_64.tar.gz": mac_intel,
+              "hx-linux-aarch64.tar.gz": linux_arm,
+              "hx-linux-x86_64.tar.gz": linux_intel,
+          }
+          for asset, checksum in checksums.items():
+              pattern = rf'(?m)^(\s+url "[^\n"]+{re.escape(asset)}"\n)(\s+sha256 )("[^"]+"|:no_check)$'
+              formula, replacements = re.subn(pattern, rf'\g<1>\g<2>"{checksum}"', formula, count=1)
+              if replacements != 1:
+                  raise SystemExit(f"could not update checksum for {asset}")
+          if formula.count("sha256 ") != 4 or ":no_check" in formula:
+              raise SystemExit("Formula/hx.rb must have four pinned stable checksums")
+          Path("/tmp/hx.rb").write_text(formula, encoding="utf-8")
+          PYEOF
+
+          REF="refs/heads/${BRANCH}"
+          BRANCH_SHA=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${BRANCH}" --jq '.object.sha' 2>/dev/null || true)
+          if [ -z "$BRANCH_SHA" ]; then
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+              -f ref="$REF" \
+              -f sha="$TARGET_SHA" >/dev/null
+            BRANCH_SHA="$TARGET_SHA"
+          elif [ "$BRANCH_SHA" != "$TARGET_SHA" ]; then
+            echo "::error::Formula branch ${BRANCH} already points at ${BRANCH_SHA}, not ${TARGET_SHA}; refusing to overwrite it"
+            exit 1
+          fi
+
+          EXISTING_PR=$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING_PR" ]; then
+            echo "Formula update PR #${EXISTING_PR} already exists; inspect it before merging"
+            exit 0
+          fi
+
+          jq -n \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg branch "$BRANCH" \
+            --arg expected_head "$BRANCH_SHA" \
+            --arg headline "Pin Homebrew checksums for ${RELEASE_TAG}" \
+            --arg formula "$(base64 -w 0 /tmp/hx.rb)" \
+            '{
+              query: "mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid } } }",
+              variables: {
+                input: {
+                  branch: {
+                    repositoryNameWithOwner: $repository,
+                    branchName: $branch
+                  },
+                  expectedHeadOid: $expected_head,
+                  message: {headline: $headline},
+                  fileChanges: {
+                    additions: [{path: "Formula/hx.rb", contents: $formula}]
+                  }
+                }
+              }
+            }' > /tmp/create-formula-commit.json
+          COMMIT_SHA=$(gh api graphql --input /tmp/create-formula-commit.json --jq '.data.createCommitOnBranch.commit.oid')
+          if [ -z "$COMMIT_SHA" ]; then
+            echo "::error::GitHub did not return the formula update commit SHA"
+            exit 1
+          fi
+
+          gh pr create \
+            --repo "${GITHUB_REPOSITORY}" \
+            --head "$BRANCH" \
+            --base main \
+            --title "Pin Homebrew checksums for ${RELEASE_TAG}" \
+            --body "The ${RELEASE_TAG} release is published and immutable. This PR updates Formula/hx.rb to the four SHA-256 values computed from its published tarballs. It contains no source or binary changes."

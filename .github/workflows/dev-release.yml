@@ -28,10 +28,10 @@ jobs:
           - name: macos-aarch64
             target: aarch64-macos
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Zig
-        uses: mlugg/setup-zig@v2
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
         with:
           version: "0.16.0"
 
@@ -47,7 +47,7 @@ jobs:
           sha256sum hx-${{ matrix.name }}.tar.gz > hx-${{ matrix.name }}.tar.gz.sha256
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: hx-${{ matrix.name }}
           path: |

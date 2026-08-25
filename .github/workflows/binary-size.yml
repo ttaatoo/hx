@@ -47,12 +47,12 @@ jobs:
       TARGET: ${{ matrix.target }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
       - name: Setup Zig
-        uses: mlugg/setup-zig@v2
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
           version: "0.16.0"
           use-cache: false
@@ -152,7 +152,7 @@ jobs:
 
       - name: Upload size evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: binary-size-evidence-${{ matrix.name }}-${{ github.event.pull_request.number }}
           path: |
@@ -167,7 +167,7 @@ jobs:
 
       - name: Upload binaries for investigation
         if: steps.size.outputs.warning == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: binary-size-binaries-${{ matrix.name }}-${{ github.event.pull_request.number }}
           path: |

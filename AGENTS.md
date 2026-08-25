@@ -206,13 +206,23 @@ Do not bypass the permission system for new tools.
 
 * Zig unit tests go inside the source file they test, using `test "description" { ... }` blocks.
 
-* Run the narrowest relevant tests while developing. The complete `zig build test` suite runs in ReleaseSafe in **Full CI** after the feature branch is pushed, and it must pass before the draft PR is marked ready.
-
 * Use `std.testing.expect`, `std.testing.expectEqual`, `std.testing.expectEqualStrings` for assertions.
 
 * In test blocks, use `std.testing.io` for the `Io` parameter. `io_mod.getIo()` automatically returns `std.testing.io` in test builds.
 
 * Use `io_mod.dirRealpathAlloc(alloc, dir, sub_path)` to resolve paths within `std.testing.tmpDir()`.
+
+## Local Test Scope
+
+Use impact-based test scope during local iteration:
+
+* **Small change:** Run the owning module tests and required format, compile, or type checks.
+
+* **Complex change:** Run tests for the affected modules and their direct dependency modules.
+
+* **Large or core-module refactor:** A complete local test suite is allowed only for this class. Use it when the narrower affected scope cannot verify the change.
+
+Run the selected scope after the affected implementation stabilizes. Rerun it only after a failure or another change to the verified path. This policy controls local test breadth; it does not replace the final build, binary interaction, exact-commit Full CI, or ship gate.
 
 ## Testing (TypeScript)
 
@@ -264,7 +274,7 @@ Keep PR titles as clean imperative sentences, such as `Restore feedback report f
 
 ## Full CI on Feature Branches
 
-Do not run the complete deterministic test suite locally as the default development loop. Run the focused test for the changed path, build the binary, and exercise that path with `./zig-out/bin/hx`.
+Use the impact-based **Local Test Scope** during development. Build the binary and exercise the changed path with `./zig-out/bin/hx` before creating the checkpoint commit.
 
 After the focused checks pass, create a clean checkpoint commit, push the non-`main` feature branch, and open a draft PR immediately. `.github/workflows/full-ci.yml` runs the following on all four supported native runner architectures:
 

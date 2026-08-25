@@ -333,7 +333,7 @@ Releases are triggered automatically when the version in `src/main.zig` has no G
 
 This repository distributes binaries from GitHub Releases. Homebrew stable installs those assets. Do not reuse an inherited tag such as `v0.0.4`; bump the version instead.
 
-After CI passes for a push to `main`, the dev release workflow publishes commit-addressed binaries and then updates `dev.json`. Dogfooders opt in with `hx upgrade --channel dev`; the choice is stored in their user settings and applies to manual upgrades, automatic upgrades, and the `ctrl+g` handoff. `hx upgrade --channel stable` returns to tagged releases. Dev publishing does not create tags or GitHub Releases.
+The manually dispatched dev release workflow builds four platform-specific ReleaseSafe archives and uploads them as GitHub Actions artifacts. It does not publish commit-addressed binaries or update `dev.json`, so the current workflow does not provide a published dev channel for `hx upgrade --channel dev`. `hx upgrade --channel stable` returns to tagged releases. Dev builds do not create tags or GitHub Releases.
 
 Release notes are public product copy. Describe user-visible behavior, always spell the product `hx`, and omit contributor attribution, tracker references, repository or website work, delivery infrastructure, CI and test details, branch history, and implementation-only refactors. Use commits and pull requests as research evidence only. Changelog formatting and release-marker rules live in `AGENTS.md`.
 
