@@ -36,6 +36,8 @@ jobs:
         uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
           version: "0.16.0"
+          # Platform and optimize only. Do not include run_id or run_attempt:
+          # those would force a cold compile on every workflow run.
           cache-key: full-ci-native-${{ matrix.platform.name }}-${{ matrix.optimize }}
 
       - name: Check formatting
@@ -43,6 +45,9 @@ jobs:
 
       - name: Audit public surface
         run: ./scripts/check-public-surface.sh
+
+      - name: Check workflow contracts
+        run: python3 -m unittest scripts.tests.test_full_ci -v
 
       - name: Build
         run: zig build -Doptimize=${{ matrix.optimize }}
@@ -67,8 +72,18 @@ jobs:
           test -s "$status_stdout"
           test ! -s "$status_stderr"
 
+      - name: Upload ReleaseSafe binary
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: hx-full-ci-${{ matrix.platform.name }}-${{ github.sha }}
+          path: zig-out/bin/hx
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+
   e2e:
     name: E2E (${{ matrix.optimize }}, ${{ matrix.platform.name }}, shard ${{ matrix.shard.label }})
+    needs: native
     runs-on: ${{ matrix.platform.runner }}
     timeout-minutes: 120
     strategy:
@@ -77,16 +92,12 @@ jobs:
         platform:
           - name: linux-x86_64
             runner: ubuntu-24.04
-            zig_tarball: zig-x86_64-linux
           - name: linux-aarch64
             runner: ubuntu-24.04-arm
-            zig_tarball: zig-aarch64-linux
           - name: macos-x86_64
             runner: macos-15-intel
-            zig_tarball: zig-x86_64-macos
           - name: macos-aarch64
             runner: macos-15
-            zig_tarball: zig-aarch64-macos
         optimize: [ReleaseSafe]
         shard:
           - index: 0
@@ -110,22 +121,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Zig
-        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+      # E2E shards consume the native job's ReleaseSafe binary. Do not install
+      # Zig or compile here: that was 16 extra full compiles per run.
+      - name: Download ReleaseSafe binary
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          version: "0.16.0"
-          use-cache: false
+          name: hx-full-ci-${{ matrix.platform.name }}-${{ github.sha }}
+          path: zig-out/bin
 
-      - name: Restore native Zig cache
-        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
-        with:
-          path: .zig-cache
-          key: full-ci-e2e-read-only-${{ matrix.platform.name }}-${{ matrix.optimize }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            setup-zig-cache-v2-native-${{ matrix.platform.zig_tarball }}-0.16.0-full-ci-native-${{ matrix.platform.name }}-${{ matrix.optimize }}-
-
-      - name: Build
-        run: zig build -Doptimize=${{ matrix.optimize }}
+      - name: Restore executable bit
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f zig-out/bin/hx
+          test -s zig-out/bin/hx
+          chmod +x zig-out/bin/hx
+          ./zig-out/bin/hx help >/dev/null
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
