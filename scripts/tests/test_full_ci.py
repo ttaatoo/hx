@@ -152,7 +152,8 @@ class FullCiWorkflowTests(unittest.TestCase):
             "name: hx-full-ci-${{ inputs.platform }}-${{ github.sha }}",
             self.e2e_action,
         )
-        self.assertIn("path: .", self.e2e_action)
+        self.assertIn("path: zig-out/bin", self.e2e_action)
+        self.assertNotIn("path: .", self.e2e_action)
         self.assertIn("chmod +x zig-out/bin/hx", self.e2e_action)
         self.assertIn("zig-out/bin/mcp-stdio-dispatcher-driver", self.e2e_action)
         self.assertIn("zig-out/bin/terminal-client-fixture", self.e2e_action)

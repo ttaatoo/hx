@@ -15,21 +15,29 @@ runs:
       uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: hx-full-ci-${{ inputs.platform }}-${{ github.sha }}
-        # Preserve zig-out/bin/<name> from the native upload.
-        path: .
+        # upload-artifact v4 roots the zip at the least common ancestor of the
+        # uploaded files (zig-out/bin). Download into that directory so hx and
+        # the e2e fixtures land at zig-out/bin/<name>, not the repo root.
+        path: zig-out/bin
 
     - name: Restore executable bit
       shell: bash
       run: |
         set -euo pipefail
-          test -f zig-out/bin/hx
-          test -s zig-out/bin/hx
-          test -f zig-out/bin/mcp-stdio-dispatcher-driver
-          test -f zig-out/bin/terminal-client-fixture
-          chmod +x zig-out/bin/hx \
-            zig-out/bin/mcp-stdio-dispatcher-driver \
-            zig-out/bin/terminal-client-fixture
-          ./zig-out/bin/hx help >/dev/null
+        if ! test -f zig-out/bin/hx ||
+          ! test -s zig-out/bin/hx ||
+          ! test -f zig-out/bin/mcp-stdio-dispatcher-driver ||
+          ! test -f zig-out/bin/terminal-client-fixture
+        then
+          printf 'Downloaded artifact did not restore zig-out/bin fixtures\n' >&2
+          ls -la zig-out/bin >&2 || true
+          find . -maxdepth 3 \( -name hx -o -name mcp-stdio-dispatcher-driver -o -name terminal-client-fixture \) -print >&2 || true
+          exit 1
+        fi
+        chmod +x zig-out/bin/hx \
+          zig-out/bin/mcp-stdio-dispatcher-driver \
+          zig-out/bin/terminal-client-fixture
+        ./zig-out/bin/hx help >/dev/null
 
     - name: Setup Bun
       uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
