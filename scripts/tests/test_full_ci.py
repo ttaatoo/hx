@@ -138,9 +138,15 @@ class FullCiWorkflowTests(unittest.TestCase):
             "cache-key: full-ci-native-${{ inputs.platform }}-${{ inputs.optimize }}",
             self.native_action,
         )
+        self.assertNotIn("zig build-exe", self.native_action)
         self.assertNotIn("use-cache: false", self.native_action)
         self.assertNotIn("github.run_id", self.native_action)
         self.assertNotIn("github.run_attempt", self.native_action)
+        build_zig = (REPO_ROOT / "build.zig").read_text(encoding="utf-8")
+        self.assertIn('.name = "terminal-client-fixture"', build_zig)
+        self.assertIn("src/terminal_client_fixture.zig", build_zig)
+        self.assertIn(".optimize = .Debug", build_zig)
+        self.assertIn("b.installArtifact(terminal_client_fixture)", build_zig)
 
     def test_e2e_reuses_native_binary_and_never_compiles(self) -> None:
         self.assertIn("actions/download-artifact@", self.e2e_action)

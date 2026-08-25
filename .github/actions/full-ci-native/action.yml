@@ -40,12 +40,9 @@ runs:
       shell: bash
       run: |
         zig build -Dtarget=${{ inputs.target }} -Doptimize=${{ inputs.optimize }}
-        zig build-exe \
-          -O${{ inputs.optimize }} \
-          -lc \
-          -target ${{ inputs.target }} \
-          -femit-bin=zig-out/bin/terminal-client-fixture \
-          src/terminal_client_fixture.zig
+        test -x zig-out/bin/hx
+        test -x zig-out/bin/mcp-stdio-dispatcher-driver
+        test -x zig-out/bin/terminal-client-fixture
 
     - name: Run unit tests
       shell: bash
