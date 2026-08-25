@@ -3,14 +3,20 @@ name: Full CI
 on:
   workflow_dispatch:
   push:
+    branches: [main]
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled, ready_for_review]
 
 concurrency:
-  group: full-ci-${{ github.ref }}
+  # A skipped metadata event must not cancel an in-flight candidate matrix.
+  group: full-ci-${{ github.event.pull_request.number || github.ref }}-${{ (github.event.action == 'labeled' || github.event.action == 'unlabeled') && github.event.label.name != 'full-ci' && 'metadata' || 'candidate' }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
+# Full CI is a release-candidate gate. A draft PR requests it with the
+# `full-ci` label; later revisions retain the label and request it again.
 # Native and E2E are separate jobs per platform so Linux E2E can start as soon
 # as Linux native uploads. A matrix `needs: native` waits for every platform,
 # including queued macos-15-intel, before any shard starts.
@@ -18,8 +24,56 @@ permissions:
 # E2E (ReleaseSafe, $target, shard N/4) for release.yml and full-suite.
 
 jobs:
+  candidate:
+    name: Full CI candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      run_full: ${{ steps.decide.outputs.run_full }}
+    steps:
+      - id: decide
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action }}
+          EVENT_LABEL: ${{ github.event.label.name }}
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels) }}
+        run: |
+          set -euo pipefail
+          run_full=true
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            has_full_ci=false
+            if jq -e 'any(.[]?; .name == "full-ci")' <<< "$PR_LABELS" >/dev/null; then
+              has_full_ci=true
+            fi
+
+            if [ "$EVENT_ACTION" = "labeled" ] && [ "$EVENT_LABEL" != "full-ci" ]; then
+              run_full=false
+            elif [ "$EVENT_ACTION" = "unlabeled" ] && [ "$EVENT_LABEL" != "full-ci" ] && [ "$has_full_ci" = true ]; then
+              run_full=false
+            elif [ "$has_full_ci" = true ]; then
+              run_full=true
+            elif [ "$PR_DRAFT" = true ]; then
+              run_full=false
+            else
+              echo "::error::A non-draft PR must have the full-ci label before it can be a release candidate."
+              exit 1
+            fi
+          fi
+
+          echo "run_full=${run_full}" >> "$GITHUB_OUTPUT"
+          if [ "$run_full" = true ]; then
+            echo "Running the complete Full CI matrix."
+          else
+            echo "Draft PR has not requested the complete Full CI matrix."
+          fi
+
   native-linux-x86_64:
     name: Native checks (ReleaseSafe, linux-x86_64)
+    needs: candidate
+    if: needs.candidate.outputs.run_full == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -27,10 +81,13 @@ jobs:
       - uses: ./.github/actions/full-ci-native
         with:
           platform: linux-x86_64
+          target: x86_64-linux
           optimize: ReleaseSafe
 
   native-linux-aarch64:
     name: Native checks (ReleaseSafe, linux-aarch64)
+    needs: candidate
+    if: needs.candidate.outputs.run_full == 'true'
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 60
     steps:
@@ -38,10 +95,13 @@ jobs:
       - uses: ./.github/actions/full-ci-native
         with:
           platform: linux-aarch64
+          target: aarch64-linux
           optimize: ReleaseSafe
 
   native-macos-x86_64:
     name: Native checks (ReleaseSafe, macos-x86_64)
+    needs: candidate
+    if: needs.candidate.outputs.run_full == 'true'
     runs-on: macos-15-intel
     timeout-minutes: 60
     steps:
@@ -49,10 +109,13 @@ jobs:
       - uses: ./.github/actions/full-ci-native
         with:
           platform: macos-x86_64
+          target: x86_64-macos
           optimize: ReleaseSafe
 
   native-macos-aarch64:
     name: Native checks (ReleaseSafe, macos-aarch64)
+    needs: candidate
+    if: needs.candidate.outputs.run_full == 'true'
     runs-on: macos-15
     timeout-minutes: 60
     steps:
@@ -60,6 +123,7 @@ jobs:
       - uses: ./.github/actions/full-ci-native
         with:
           platform: macos-aarch64
+          target: aarch64-macos
           optimize: ReleaseSafe
 
   e2e-linux-x86_64:
@@ -156,8 +220,8 @@ jobs:
 
   full-suite:
     name: Full suite (${{ matrix.name }})
-    if: ${{ always() }}
     needs:
+      - candidate
       - native-linux-x86_64
       - native-linux-aarch64
       - native-macos-x86_64
@@ -166,6 +230,7 @@ jobs:
       - e2e-linux-aarch64
       - e2e-macos-x86_64
       - e2e-macos-aarch64
+    if: ${{ always() && needs.candidate.outputs.run_full == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -206,7 +271,7 @@ jobs:
 
   ship-gate:
     name: Ship gate
-    if: ${{ always() }}
+    if: ${{ always() && needs.full-suite.result == 'success' }}
     needs: full-suite
     runs-on: ubuntu-24.04
     timeout-minutes: 5

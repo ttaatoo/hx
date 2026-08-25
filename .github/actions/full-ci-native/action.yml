@@ -5,6 +5,9 @@ inputs:
   platform:
     description: Platform key used in artifact and cache names
     required: true
+  target:
+    description: Portable Zig target used by native and E2E consumer runners
+    required: true
   optimize:
     description: Zig optimize mode
     required: true
@@ -35,11 +38,11 @@ runs:
 
     - name: Build
       shell: bash
-      run: zig build -Doptimize=${{ inputs.optimize }}
+      run: zig build -Dtarget=${{ inputs.target }} -Doptimize=${{ inputs.optimize }}
 
     - name: Run unit tests
       shell: bash
-      run: zig build test -Doptimize=${{ inputs.optimize }}
+      run: zig build test -Dtarget=${{ inputs.target }} -Doptimize=${{ inputs.optimize }}
 
     - name: Smoke test fresh binary
       shell: bash

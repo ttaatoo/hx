@@ -370,11 +370,18 @@ class BinarySizeCliTests(unittest.TestCase):
 
 
 class BinarySizeWorkflowTests(unittest.TestCase):
-    def test_pr_workflow_compares_all_supported_release_safe_targets(self) -> None:
+    def test_candidate_workflow_compares_all_supported_release_safe_targets(self) -> None:
         self.assertTrue(WORKFLOW_PATH.is_file(), "binary-size workflow is missing")
         workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
 
         self.assertIn("pull_request:", workflow)
+        self.assertIn("types: [labeled, synchronize]", workflow)
+        self.assertIn(
+            "contains(github.event.pull_request.labels.*.name, 'full-ci')",
+            workflow,
+        )
+        self.assertIn("github.event.label.name == 'full-ci'", workflow)
+        self.assertIn("'metadata' || 'candidate'", workflow)
         self.assertNotIn("pull_request_target", workflow)
         self.assertIn("contents: read", workflow)
         self.assertIn("runs-on: ${{ matrix.runner }}", workflow)

@@ -9,11 +9,12 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "full-ci.yml"
 NATIVE_ACTION_PATH = REPO_ROOT / ".github" / "actions" / "full-ci-native" / "action.yml"
 E2E_ACTION_PATH = REPO_ROOT / ".github" / "actions" / "full-ci-e2e" / "action.yml"
+BENCHMARK_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "bench.yml"
 PLATFORMS = (
-    ("linux-x86_64", "ubuntu-24.04"),
-    ("linux-aarch64", "ubuntu-24.04-arm"),
-    ("macos-x86_64", "macos-15-intel"),
-    ("macos-aarch64", "macos-15"),
+    ("linux-x86_64", "ubuntu-24.04", "x86_64-linux"),
+    ("linux-aarch64", "ubuntu-24.04-arm", "aarch64-linux"),
+    ("macos-x86_64", "macos-15-intel", "x86_64-macos"),
+    ("macos-aarch64", "macos-15", "aarch64-macos"),
 )
 JOB_HEADER = re.compile(r"^  ([A-Za-z0-9_-]+):\s*$", re.M)
 
@@ -52,14 +53,44 @@ class FullCiWorkflowTests(unittest.TestCase):
         cls.workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
         cls.native_action = NATIVE_ACTION_PATH.read_text(encoding="utf-8")
         cls.e2e_action = E2E_ACTION_PATH.read_text(encoding="utf-8")
+        cls.benchmark_workflow = BENCHMARK_WORKFLOW_PATH.read_text(encoding="utf-8")
         cls.jobs = workflow_jobs(cls.workflow)
 
-    def test_full_ci_still_runs_on_every_push(self) -> None:
-        self.assertIn("\n  push:\n", self.workflow)
-        self.assertNotIn("branches: [main]", self.workflow)
+    def test_full_ci_runs_for_main_and_requested_pr_candidates(self) -> None:
+        self.assertIn("\n  push:\n    branches: [main]", self.workflow)
+        self.assertIn("\n  pull_request:\n", self.workflow)
+        self.assertIn(
+            "types: [opened, reopened, synchronize, labeled, unlabeled, ready_for_review]",
+            self.workflow,
+        )
+
+    def test_candidate_gate_requires_the_full_ci_label_for_non_draft_prs(self) -> None:
+        candidate = self.jobs["candidate"]
+        self.assertIn("name: Full CI candidate", candidate)
+        self.assertIn("run_full: ${{ steps.decide.outputs.run_full }}", candidate)
+        self.assertIn('"full-ci"', candidate)
+        self.assertIn('"pull_request"', candidate)
+        self.assertIn('"labeled"', candidate)
+        self.assertIn('"unlabeled"', candidate)
+        self.assertIn("PR_DRAFT:", candidate)
+        self.assertIn("A non-draft PR must have the full-ci label", candidate)
+        for name, _runner, _target in PLATFORMS:
+            native = self.jobs[f"native-{name}"]
+            self.assertIn("needs: candidate", native)
+            self.assertIn("needs.candidate.outputs.run_full == 'true'", native)
+        full_suite = self.jobs["full-suite"]
+        self.assertIn("- candidate", full_suite)
+        self.assertIn("needs.candidate.outputs.run_full == 'true'", full_suite)
+        self.assertIn("needs.full-suite.result == 'success'", self.jobs["ship-gate"])
+
+    def test_metadata_label_events_do_not_cancel_candidate_work(self) -> None:
+        self.assertIn(
+            "group: full-ci-${{ github.event.pull_request.number || github.ref }}-${{ (github.event.action == 'labeled' || github.event.action == 'unlabeled') && github.event.label.name != 'full-ci' && 'metadata' || 'candidate' }}",
+            self.workflow,
+        )
 
     def test_job_names_match_release_gate_pollers(self) -> None:
-        for name, _runner in PLATFORMS:
+        for name, _runner, _target in PLATFORMS:
             self.assertIn(f"name: Native checks (ReleaseSafe, {name})", self.workflow)
             self.assertIn(
                 f"name: E2E (ReleaseSafe, {name}, shard ${{{{ matrix.shard.label }}}})",
@@ -72,10 +103,11 @@ class FullCiWorkflowTests(unittest.TestCase):
         )
 
     def test_native_and_e2e_keep_all_four_platforms(self) -> None:
-        for name, runner in PLATFORMS:
+        for name, runner, target in PLATFORMS:
             native = self.jobs[f"native-{name}"]
             e2e = self.jobs[f"e2e-{name}"]
             self.assertIn(f"runs-on: {runner}", native)
+            self.assertIn(f"target: {target}", native)
             self.assertIn(f"runs-on: {runner}", e2e)
             self.assertIn('label: "1/4"', e2e)
             self.assertIn('label: "2/4"', e2e)
@@ -85,9 +117,14 @@ class FullCiWorkflowTests(unittest.TestCase):
         self.assertNotIn("\n  e2e:\n", self.workflow)
 
     def test_native_uploads_releasesafe_binary_and_keeps_zig_cache(self) -> None:
-        self.assertIn("zig build -Doptimize=${{ inputs.optimize }}", self.native_action)
+        self.assertIn("target:", self.native_action)
         self.assertIn(
-            "zig build test -Doptimize=${{ inputs.optimize }}", self.native_action
+            "zig build -Dtarget=${{ inputs.target }} -Doptimize=${{ inputs.optimize }}",
+            self.native_action,
+        )
+        self.assertIn(
+            "zig build test -Dtarget=${{ inputs.target }} -Doptimize=${{ inputs.optimize }}",
+            self.native_action,
         )
         self.assertIn("actions/upload-artifact@", self.native_action)
         self.assertIn(
@@ -115,7 +152,10 @@ class FullCiWorkflowTests(unittest.TestCase):
         )
         self.assertIn("path: zig-out/bin", self.e2e_action)
         self.assertIn("chmod +x zig-out/bin/hx", self.e2e_action)
-        self.assertIn("FX_REQUIRE_TMUX", "\n".join(self.jobs[f"e2e-{n}"] for n, _ in PLATFORMS))
+        self.assertIn(
+            "FX_REQUIRE_TMUX",
+            "\n".join(self.jobs[f"e2e-{n}"] for n, _, _ in PLATFORMS),
+        )
         self.assertIn("bun ci-shards.ts", self.e2e_action)
         self.assertIn("bun test --max-concurrency 1", self.e2e_action)
         self.assertIn("Retrying failed E2E file after resetting tmux", self.e2e_action)
@@ -126,7 +166,7 @@ class FullCiWorkflowTests(unittest.TestCase):
         self.assertNotIn("github.run_attempt", self.e2e_action)
         self.assertNotIn("timeout-minutes", self.e2e_action)
         self.assertNotIn("fetch-depth: 0", self.e2e_action)
-        for name, _runner in PLATFORMS:
+        for name, _runner, _target in PLATFORMS:
             self.assertNotIn("fetch-depth: 0", self.jobs[f"e2e-{name}"])
             self.assertNotIn("zig build", self.jobs[f"e2e-{name}"])
             self.assertNotIn("setup-zig", self.jobs[f"e2e-{name}"])
@@ -134,13 +174,26 @@ class FullCiWorkflowTests(unittest.TestCase):
     def test_e2e_needs_only_its_own_platform_native_job(self) -> None:
         self.assertNotIn("needs: native\n", self.workflow)
         self.assertNotIn("needs:\n      - native\n", self.workflow)
-        for name, _runner in PLATFORMS:
+        for name, _runner, _target in PLATFORMS:
             needed = job_needs(self.jobs[f"e2e-{name}"])
             self.assertEqual([f"native-{name}"], needed)
-            for other, _other_runner in PLATFORMS:
+            for other, _other_runner, _other_target in PLATFORMS:
                 if other == name:
                     continue
                 self.assertNotIn(f"native-{other}", needed)
+
+    def test_benchmarks_run_for_main_or_requested_candidates(self) -> None:
+        self.assertIn("\n  push:\n    branches: [main]", self.benchmark_workflow)
+        self.assertIn("\n  pull_request:\n    types: [labeled, synchronize]", self.benchmark_workflow)
+        self.assertIn(
+            "contains(github.event.pull_request.labels.*.name, 'full-ci')",
+            self.benchmark_workflow,
+        )
+        self.assertIn(
+            "github.event.label.name == 'full-ci'",
+            self.benchmark_workflow,
+        )
+        self.assertIn("'metadata' || 'candidate'", self.benchmark_workflow)
 
 
 if __name__ == "__main__":
