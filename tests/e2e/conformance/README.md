@@ -1,7 +1,7 @@
 # MCP conformance baseline
 
 This package runs the official MCP client conformance suite against the freshly
-built Fx binary. It is pinned to:
+built hx binary. It is pinned to:
 
 - MCP protocol version `2026-07-28`
 - `@modelcontextprotocol/conformance@0.2.0-alpha.10`
@@ -9,7 +9,7 @@ built Fx binary. It is pinned to:
   `a9896553900a2ef61787b57adfcbbe936a8ab1f9`
 
 This directory is an isolated npm subproject. npm owns its checked-in
-`package-lock.json` and installs the pinned official runner. Bun executes Fx's
+`package-lock.json` and installs the pinned official runner. Bun executes hx's
 TypeScript adapter after installation; it does not resolve dependencies here.
 Do not run `bun install` or create a Bun lockfile in this directory.
 

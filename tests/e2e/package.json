@@ -1,5 +1,5 @@
 {
-  "name": "fx-e2e",
+  "name": "hx-e2e",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,7 @@
     "test:tui": "bun test tui-*.test.ts"
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "typescript": "latest"
+    "@types/bun": "1.4.0",
+    "typescript": "7.0.2"
   }
 }

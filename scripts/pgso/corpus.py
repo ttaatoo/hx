@@ -390,7 +390,7 @@ def _installed_training_binary(
 ) -> Iterator[pathlib.Path]:
     if not binary.is_file() or binary.stat().st_size == 0:
         raise PgsoError(f"training binary is missing or empty: {binary}")
-    canonical = corpus.repo_root / "zig-out" / "bin" / "fx"
+    canonical = corpus.repo_root / "zig-out" / "bin" / "hx"
     canonical.parent.mkdir(parents=True, exist_ok=True)
     if canonical.is_symlink():
         raise PgsoError(f"canonical training binary cannot be a symlink: {canonical}")
@@ -765,7 +765,7 @@ def run_behavior_corpus(
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Inspect the fx PGSO corpus")
+    parser = argparse.ArgumentParser(description="Inspect the hx PGSO corpus")
     parser.add_argument(
         "--manifest",
         required=True,

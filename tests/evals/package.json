@@ -1,5 +1,5 @@
 {
-  "name": "fx-evals",
+  "name": "hx-evals",
   "private": true,
   "type": "module",
   "scripts": {
@@ -7,7 +7,7 @@
     "eval:matrix": "bun run run-matrix.ts"
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "typescript": "latest"
+    "@types/bun": "1.4.0",
+    "typescript": "7.0.2"
   }
 }

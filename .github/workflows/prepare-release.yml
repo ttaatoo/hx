@@ -12,10 +12,7 @@ on:
           - minor
           - major
 
-permissions:
-  actions: write
-  contents: write
-  pull-requests: write
+permissions: {}
 
 concurrency:
   group: prepare-release
@@ -24,8 +21,12 @@ concurrency:
 jobs:
   prepare:
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
@@ -43,6 +44,19 @@ jobs:
           echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
           echo "new=$NEW" >> "$GITHUB_OUTPUT"
           echo "Bumping $CURRENT -> $NEW (${{ inputs.bump }})"
+
+      - name: Verify stable formula checksums are pinned
+        run: |
+          set -euo pipefail
+          if grep -q ':no_check' Formula/hx.rb; then
+            echo "::error::Formula/hx.rb must not use sha256 :no_check"
+            exit 1
+          fi
+          CHECKSUMS=$(grep -Ec '^\s+sha256 "[0-9a-f]{64}"$' Formula/hx.rb)
+          if [ "$CHECKSUMS" -ne 4 ]; then
+            echo "::error::Formula/hx.rb must contain four real platform SHA-256 values (found ${CHECKSUMS})"
+            exit 1
+          fi
 
       - name: Collect changes since last tag
         id: changes
@@ -220,8 +234,9 @@ jobs:
           - Bump version to ${NEW} in \`src/main.zig\`
           - Update \`README.md\` install example to v${NEW}
           - Add the draft changelog entry for ${NEW}
+          - Leave \`Formula/hx.rb\` unchanged until the release assets exist; the release workflow opens a separate formula-update PR with the four computed SHA-256 values after publication.
 
-          When merged, CI will detect the version change, cross-compile platform binaries, and publish the GitHub release automatically.
+          When merged, CI will detect the version change, require the exact-commit Full CI Ship gate, build four platform binaries, publish the immutable GitHub release with its SPDX SBOM and attestations, and open the formula-update PR.
           EOF
           )"
 

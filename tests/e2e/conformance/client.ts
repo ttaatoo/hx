@@ -85,8 +85,8 @@ for (const call of toolCalls) {
   permission[`mcp_conformance_${call.name}`] = "allow";
 }
 
-const fxBin = resolve(import.meta.dirname, "../../../zig-out/bin/hx");
-const root = mkdtempSync(join(tmpdir(), "fx-mcp-conformance-client-"));
+const hxBin = resolve(import.meta.dirname, "../../../zig-out/bin/hx");
+const root = mkdtempSync(join(tmpdir(), "hx-mcp-conformance-client-"));
 const home = join(root, "home");
 const workspace = join(root, "workspace");
 mkdirSync(join(home, ".hx", "skills"), { recursive: true, mode: 0o700 });
@@ -166,7 +166,7 @@ try {
   });
   const child = Bun.spawn(
     [
-      fxBin,
+      hxBin,
       "ask",
       "--json",
       "--yolo",

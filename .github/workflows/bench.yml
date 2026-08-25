@@ -18,10 +18,10 @@ jobs:
     name: Startup Latency
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Zig
-        uses: mlugg/setup-zig@v2
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
           version: "0.16.0"
 
@@ -29,9 +29,17 @@ jobs:
         run: zig build -Doptimize=ReleaseSafe
 
       - name: Install hyperfine
+        env:
+          # PGSO pins Hyperfine 1.20.0; this is its amd64 Debian asset digest.
+          HYPERFINE_VERSION: "1.20.0"
+          HYPERFINE_SHA256: "e0391897ffb490af8a6b64e0e4281ac2c8e10cbcbb875bd22a376f44cdb263ab"
         run: |
-          wget -q https://github.com/sharkdp/hyperfine/releases/download/v1.19.0/hyperfine_1.19.0_amd64.deb
-          sudo dpkg -i hyperfine_1.19.0_amd64.deb
+          set -euo pipefail
+          archive="$RUNNER_TEMP/hyperfine_${HYPERFINE_VERSION}_amd64.deb"
+          wget --quiet --output-document="$archive" \
+            "https://github.com/sharkdp/hyperfine/releases/download/v${HYPERFINE_VERSION}/hyperfine_${HYPERFINE_VERSION}_amd64.deb"
+          printf '%s  %s\n' "$HYPERFINE_SHA256" "$archive" | sha256sum --check --strict -
+          sudo dpkg -i "$archive"
 
       - name: Run benchmarks
         run: ./benchmarks/startup.sh --ci
@@ -42,5 +50,6 @@ jobs:
       - name: Run UI activity progress benchmark
         run: |
           for run in 1 2 3; do
+            echo "UI activity benchmark run ${run}/3"
             zig build run-bench-ui-activity -Doptimize=ReleaseSafe
           done

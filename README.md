@@ -13,11 +13,11 @@
 
 # hx
 
-A Unix-like coding agent based on [vercel-labs/fx](https://github.com/vercel-labs/fx). Licensed under Apache-2.0. Thanks to the fx project and its contributors.
+A Unix-like coding agent derived from [vercel-labs/fx](https://github.com/vercel-labs/fx). Licensed under Apache-2.0. Thanks to the fx project and its contributors.
 
 hx is a coding agent harness and CLI written in Zig, optimized for research and embeddability as part of larger systems.
 
-It focuses on minimalism and performance across the board, from system prompt design to its tools, feature set, and 7.8 MiB binary.
+It focuses on minimalism and performance across the board, from system prompt design to its tools and feature set. New stable macOS arm64 releases must pass the 7.800 MiB PGSO size gate.
 
 For end users, its CLI output style and form factor aim to be closer to a Unix shell than a heavy "IDE in the terminal" TUI.
 
@@ -25,7 +25,28 @@ It's open source (Apache-2.0), model-agnostic, and suitable for both local and c
 
 hx runs on Linux and macOS (x86_64 and aarch64). It does not support Windows, WebAssembly, or in-browser hosts.
 
-This is not official Vercel fx. Official fx is at https://fx.sh and [vercel-labs/fx](https://github.com/vercel-labs/fx).
+## Project lineage
+
+hx is an independently evolved project derived from
+[vercel-labs/fx](https://github.com/vercel-labs/fx). It is not an official Vercel
+product, and it is not affiliated with or endorsed by Vercel. Official fx is at
+[fx.sh](https://fx.sh).
+
+The last synchronization reference was upstream commit
+[`c864c677722679c4d5fb9473f1e8c41e4156df94`](https://github.com/vercel-labs/fx/commit/c864c677722679c4d5fb9473f1e8c41e4156df94),
+dated 2026-08-25. hx does not promise periodic or automatic synchronization
+with upstream.
+
+To check upstream security fixes, fetch the optional `upstream` remote, review
+commits after that reference, and compare them with the upstream
+[release notes](https://github.com/vercel-labs/fx/releases) and
+[security advisories](https://github.com/vercel-labs/fx/security/advisories)
+before manually porting a relevant fix:
+
+```bash
+git fetch upstream main --tags
+git log --oneline c864c677722679c4d5fb9473f1e8c41e4156df94..upstream/main
+```
 
 ## Install
 
@@ -165,7 +186,9 @@ Run the test suite with `zig build test`. See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 [Apache-2.0](LICENSE)
 
-See [NOTICE](NOTICE) for attribution. This product is based on [vercel-labs/fx](https://github.com/vercel-labs/fx).
+See [NOTICE](NOTICE) for attribution. hx is an independently evolved project
+derived from [vercel-labs/fx](https://github.com/vercel-labs/fx), not an official
+Vercel product.
 
 Third-party licenses and attributions are listed in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

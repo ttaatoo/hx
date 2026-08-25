@@ -56,7 +56,9 @@ PROFILE_SECTIONS = (
 )
 
 ARTIFACT_LAYOUTS = {
-    "fx": (None, "fx", "fx.bc"),
+    # `fx` remains the LLVM/PGSO selector and bitcode module name. The
+    # published executable was rebranded as `hx`.
+    "fx": (None, "hx", "fx.bc"),
     "file_index": ("bench-file-index", "file-index-bench", "file-index.bc"),
     "ui_activity": (
         "bench-ui-activity",

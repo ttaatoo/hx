@@ -21,6 +21,8 @@ tmp/
 # Dependencies
 node_modules/
 bun.lock
+!tests/e2e/bun.lock
+!tests/evals/bun.lock
 .next/
 
 # Zig build output and fetched packages
