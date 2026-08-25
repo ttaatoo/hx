@@ -81,7 +81,7 @@ jobs:
       - uses: ./.github/actions/full-ci-native
         with:
           platform: linux-x86_64
-          target: x86_64-linux
+          target: x86_64-linux-gnu
           optimize: ReleaseSafe
 
   native-linux-aarch64:
@@ -95,7 +95,7 @@ jobs:
       - uses: ./.github/actions/full-ci-native
         with:
           platform: linux-aarch64
-          target: aarch64-linux
+          target: aarch64-linux-gnu
           optimize: ReleaseSafe
 
   native-macos-x86_64:

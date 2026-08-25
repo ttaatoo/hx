@@ -11,8 +11,8 @@ NATIVE_ACTION_PATH = REPO_ROOT / ".github" / "actions" / "full-ci-native" / "act
 E2E_ACTION_PATH = REPO_ROOT / ".github" / "actions" / "full-ci-e2e" / "action.yml"
 BENCHMARK_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "bench.yml"
 PLATFORMS = (
-    ("linux-x86_64", "ubuntu-24.04", "x86_64-linux"),
-    ("linux-aarch64", "ubuntu-24.04-arm", "aarch64-linux"),
+    ("linux-x86_64", "ubuntu-24.04", "x86_64-linux-gnu"),
+    ("linux-aarch64", "ubuntu-24.04-arm", "aarch64-linux-gnu"),
     ("macos-x86_64", "macos-15-intel", "x86_64-macos"),
     ("macos-aarch64", "macos-15", "aarch64-macos"),
 )
@@ -139,6 +139,9 @@ class FullCiWorkflowTests(unittest.TestCase):
             self.native_action,
         )
         self.assertNotIn("zig build-exe", self.native_action)
+        self.assertIn("dynamically linked", self.native_action)
+        self.assertNotIn("target: x86_64-linux\n", self.workflow)
+        self.assertNotIn("target: aarch64-linux\n", self.workflow)
         self.assertNotIn("use-cache: false", self.native_action)
         self.assertNotIn("github.run_id", self.native_action)
         self.assertNotIn("github.run_attempt", self.native_action)

@@ -4382,10 +4382,22 @@ test("durable authority survives reconnect and rejects every foreign scope", asy
   host.kill("SIGKILL");
   await waitForExit(host);
   const replacement = startHost(home, undefined, 10_000);
-  await waitFor(() =>
-    existsSync(paths.identity) &&
-    readFileSync(paths.identity, "utf8") !== priorIdentity
-  );
+  await waitFor(() => {
+    try {
+      return existsSync(paths.identity) &&
+        readFileSync(paths.identity, "utf8") !== priorIdentity;
+    } catch (error) {
+      if (
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === "ENOENT"
+      ) {
+        return false;
+      }
+      throw error;
+    }
+  });
   const afterHostRestart = await handshake(paths.socket, { minimum: 4, current: 5 });
   const recoveredRead = await requestAction(
     afterHostRestart.client,

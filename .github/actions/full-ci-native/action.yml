@@ -6,7 +6,7 @@ inputs:
     description: Platform key used in artifact and cache names
     required: true
   target:
-    description: Portable Zig target used by native and E2E consumer runners
+    description: Portable Zig target used by native and E2E consumer runners. Linux must be the gnu ABI so the uploaded hx stays dynamically linked for LD_PRELOAD e2e.
     required: true
   optimize:
     description: Zig optimize mode
@@ -43,6 +43,11 @@ runs:
         test -x zig-out/bin/hx
         test -x zig-out/bin/mcp-stdio-dispatcher-driver
         test -x zig-out/bin/terminal-client-fixture
+        # Bare x86_64-linux / aarch64-linux is static musl. Linux e2e loads
+        # shared interposers into hx with LD_PRELOAD, which requires glibc.
+        if [ "$(uname -s)" = Linux ]; then
+          file zig-out/bin/hx | grep -q 'dynamically linked'
+        fi
 
     - name: Run unit tests
       shell: bash
