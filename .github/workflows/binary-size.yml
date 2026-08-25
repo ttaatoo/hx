@@ -22,6 +22,8 @@ jobs:
           # Cross-compile every target from Linux. GitHub-hosted Ubuntu already
           # produces these triples in ci.yml and release.yml. This keeps the
           # four-platform size check without consuming macOS hosted runners.
+          # Linux-cross Mach-O size deltas are same-toolchain head vs base;
+          # absolute bytes may differ from a native Darwin link.
           - name: linux-x86_64
             target: x86_64-linux
             runner: ubuntu-24.04

@@ -283,7 +283,7 @@ After the focused checks pass, create a clean checkpoint commit, push the non-`m
 * `macos-15-intel` (x86_64)
 * `macos-15` (aarch64)
 
-The native matrix builds, tests, and smoke-tests ReleaseSafe on every platform, then uploads that platform's `hx` binary; formatting and the public-surface audit run in those ReleaseSafe jobs. The E2E matrix downloads that artifact and runs four duration-balanced, isolated ReleaseSafe shards per platform with Bun and tmux. E2E shards do not install Zig or compile. Checked-in weights assign every test file to exactly one shard on each platform, and files inside each shard run sequentially in separate Bun processes so terminal fixtures and process state cannot leak between files. A failed file receives one bounded retry after its tmux server is reset. Live model evals remain separate because they require credentials and are not deterministic.
+Each platform has its own native job that builds, tests, and smoke-tests ReleaseSafe, then uploads that platform's `hx` binary; formatting and the public-surface audit run in those ReleaseSafe jobs. That platform's four duration-balanced E2E shards start as soon as its native job uploads; they do not wait for other platforms. E2E shards download that artifact and run with Bun and tmux. They do not install Zig or compile. Checked-in weights assign every test file to exactly one shard on each platform, and files inside each shard run sequentially in separate Bun processes so terminal fixtures and process state cannot leak between files. A failed file receives one bounded retry after its tmux server is reset. Live model evals remain separate because they require credentials and are not deterministic.
 
 A Full CI result is valid only when it belongs to the exact current commit and all four `Full suite (...)` jobs succeed. Each platform aggregate requires its ReleaseSafe native check plus all four ReleaseSafe E2E shards. Do not mark the draft PR ready or request review from a stale, partial, queued, cancelled, skipped, or failed run. If Full CI fails, make the smallest repair, rerun the focused local proof, push the new commit to the same draft PR, and wait for Full CI on the new exact commit. After CI passes, run the final ship gate and mark the PR ready only when it reports `SHIP` for that exact commit.
 
@@ -354,7 +354,8 @@ Every pull request runs `.github/workflows/binary-size.yml` across Linux x86_64,
 Linux arm64, macOS x86_64, and macOS arm64. Each matrix job cross-compiles the
 pull request merge commit and its base commit as stripped ReleaseSafe binaries
 from Linux, then reports the exact byte and MiB delta plus ELF or Mach-O
-section changes.
+section changes. Linux-cross Mach-O size deltas are same-toolchain head vs
+base; absolute bytes may differ from a native Darwin link.
 
 Each platform check is informational. An increase of at least 52,429 bytes
 (0.050000 MiB) emits a warning and retains that platform's binaries for
