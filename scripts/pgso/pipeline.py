@@ -56,8 +56,10 @@ PROFILE_SECTIONS = (
 )
 
 ARTIFACT_LAYOUTS = {
-    # `fx` remains the LLVM/PGSO selector and bitcode module name. The
-    # published executable was rebranded as `hx`.
+    # `fx` remains the PGSO selector and bitcode filename (`fx.bc`).
+    # The published executable and LLVM PGO profile module are `hx`:
+    # Zig exe `.name = "hx"` emits IR-level records as `hx;<function>`.
+    # Keeping `fx.bc` / `-Dpgso-artifact=fx` does not keep the PGO module name.
     "fx": (None, "hx", "fx.bc"),
     "file_index": ("bench-file-index", "file-index-bench", "file-index.bc"),
     "ui_activity": (

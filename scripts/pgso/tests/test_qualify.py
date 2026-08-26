@@ -620,7 +620,7 @@ class PgsoQualificationTests(unittest.TestCase):
             output_text.write_text("supplement\n")
             return ProfileSupplement(
                 text="supplement\n",
-                function_names=("fx;core.output.diff.compute",),
+                function_names=("hx;core.output.diff.compute",),
                 total_counter_value=8,
             )
 

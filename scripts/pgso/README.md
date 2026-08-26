@@ -5,8 +5,9 @@ This directory owns the non-publishing PGSO qualification for a macOS arm64
 product feature set, then uses native LLVM profiles to keep measured hot code
 speed-oriented and compile profile-proven cold functions for size.
 
-The PGSO selector and LLVM module remain named `fx` for profile compatibility;
-the executable and release archive are named `hx`.
+The PGSO selector and bitcode artifact remain named `fx` (`fx.bc`).
+The production LLVM PGO profile module is `hx` because the Zig exe
+`.name` is `hx`. The published executable and release archive are `hx`.
 
 The candidate is accepted only when it is no larger than **7.800 MiB**, has the preferred **0.250 MiB** of size headroom, passes the deterministic product corpus, and stays within a **10%** p50 and p95 performance regression limit. The ordinary ReleaseSafe binary remains the control and recovery path.
 
