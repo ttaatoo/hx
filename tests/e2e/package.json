@@ -10,7 +10,7 @@
     "test:tui": "bun test tui-*.test.ts"
   },
   "devDependencies": {
-    "@types/bun": "1.4.0",
+    "@types/bun": "1.4.1",
     "typescript": "7.0.2"
   }
 }
