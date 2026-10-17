@@ -11,7 +11,7 @@
     "test": "bun run.ts"
   },
   "devDependencies": {
-    "@modelcontextprotocol/conformance": "0.2.0-alpha.10"
+    "@modelcontextprotocol/conformance": "0.2.0-alpha.11"
   },
   "overrides": {
     "fast-uri": "3.1.5",
